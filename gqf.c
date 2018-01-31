@@ -1711,6 +1711,8 @@ void qf_destroy(QF *qf, bool mem)
 		free(qf->metadata);
 		free(qf->blocks);
 	} else {
+	int rc=msync(qf->metadata, qf->metadata->size + sizeof(qfmetadata),MS_SYNC);
+	assert(rc==0);
 	munmap(qf->metadata, qf->metadata->size + sizeof(qfmetadata));
 	close(qf->mem->fd);
 	}
