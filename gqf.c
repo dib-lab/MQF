@@ -13,6 +13,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <fstream>
 
 #include "gqf.h"
 
@@ -1634,20 +1635,30 @@ void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t value_bits,
 			perror("Couldn't open file:\n");
 			exit(EXIT_FAILURE);
 		}
-		
+
 		/* prashantpandey: Commenting out fallocate call to preallocate space for
 		 * the file on disk because fallocate is not supported on MAC OS. Revisit
 		 * it later. */
-		/*int ret;*/
-		/*ret = fallocate(qf->mem->fd, 0, 0, size+sizeof(qfmetadata));*/
-		/*if (ret < 0) {*/
-			/*perror("Couldn't fallocate file:\n");*/
-			/*exit(EXIT_FAILURE);*/
-		/*}*/
+		// int ret;
+		// ret = fallocate(qf->mem->fd, 0, 0, size+sizeof(qfmetadata));
+		// if (ret < 0) {
+		// 	perror("Couldn't fallocate file:\n");
+		// 	exit(EXIT_FAILURE);
+		// }
+
+		// allocate space for mmaped file
+		std::ofstream outputFile(path);
+		outputFile.seekp(size+sizeof(qfmetadata));
+		outputFile<<0;
+		outputFile.close();
+
+
+
 		qf->metadata = (qfmetadata *)mmap(NULL, size+sizeof(qfmetadata), PROT_READ |
 																			PROT_WRITE, MAP_SHARED, qf->mem->fd, 0);
 
 		qf->metadata->seed = seed;
+
 		qf->metadata->nslots = num_slots;
 		qf->metadata->xnslots = qf->metadata->nslots +
 														10*sqrt((double)qf->metadata->nslots);
