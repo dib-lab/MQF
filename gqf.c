@@ -899,7 +899,7 @@ static inline void insert_replace_slots_and_shift_remainders_and_runends_and_off
 	for (i = 0; i < total_remainders; i++)
 		set_slot(qf, overwrite_index + i, remainders[i]);
 	
-	/*modify_metadata(qf, &qf->metadata->noccupied_slots, ninserts);*/
+	modify_metadata(qf, &qf->metadata->noccupied_slots, ninserts);
 }
 
 static inline void remove_replace_slots_and_shift_remainders_and_runends_and_offsets(QF		        *qf,
@@ -1007,8 +1007,8 @@ static inline void remove_replace_slots_and_shift_remainders_and_runends_and_off
 		original_block++;
 	}
 
-	/*int num_slots_freed = old_length - total_remainders;*/
-	/*modify_metadata(qf, &qf->metadata->noccupied_slots, -num_slots_freed);*/
+	int num_slots_freed = old_length - total_remainders;
+	modify_metadata(qf, &qf->metadata->noccupied_slots, -num_slots_freed);
 	/*qf->metadata->noccupied_slots -= (old_length - total_remainders);*/
 	if (!total_remainders) {
 		/*modify_metadata(qf, &qf->metadata->ndistinct_elts, -1);*/
@@ -1193,7 +1193,7 @@ static inline bool insert1(QF *qf, __uint128_t hash, bool lock, bool spin)
 			(hash_bucket_block_offset % 64);
 
 		/*modify_metadata(qf, &qf->metadata->ndistinct_elts, 1);*/
-		/*modify_metadata(qf, &qf->metadata->noccupied_slots, 1);*/
+		modify_metadata(qf, &qf->metadata->noccupied_slots, 1);
 		/*modify_metadata(qf, &qf->metadata->nelts, 1);*/
 	} else {
 		uint64_t runend_index              = run_end(qf, hash_bucket_index);
@@ -1403,7 +1403,7 @@ static inline bool insert1(QF *qf, __uint128_t hash, bool lock, bool spin)
 					get_block(qf, i)->offset++;
 				assert(get_block(qf, i)->offset != 0);
 			}
-			/*modify_metadata(qf, &qf->metadata->noccupied_slots, 1);*/
+			modify_metadata(qf, &qf->metadata->noccupied_slots, 1);
 		}
 		/*modify_metadata(qf, &qf->metadata->nelts, 1);*/
 		METADATA_WORD(qf, occupieds, hash_bucket_index) |= 1ULL <<
@@ -1442,7 +1442,7 @@ static inline bool insert(QF *qf, __uint128_t hash, uint64_t count, bool lock,
 			(hash_bucket_block_offset % 64);
 		
 		/*modify_metadata(qf, &qf->metadata->ndistinct_elts, 1);*/
-		/*modify_metadata(qf, &qf->metadata->noccupied_slots, 1);*/
+		modify_metadata(qf, &qf->metadata->noccupied_slots, 1);
 		/*modify_metadata(qf, &qf->metadata->nelts, 1);*/
 		/* This trick will, I hope, keep the fast case fast. */
 		if (count > 1) {
