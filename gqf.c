@@ -1930,7 +1930,7 @@ int qfi_next(QFi *qfi)
 #ifdef LOG_CLUSTER_LENGTH
 			qfi->cur_length++;
 #endif
-			if (qfi->current > qfi->qf->metadata->nslots)
+			if (qfi->current > qfi->qf->metadata->xnslots)
 				return 1;
 			return 0;
 		}
