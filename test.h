@@ -5,7 +5,7 @@
 
 TEST_CASE( "get/set fixed counters" ) {
   QF qf;
-  for(int counter_size=1;counter_size<4;counter_size++){
+  for(int counter_size=1;counter_size<=5;counter_size++){
     uint64_t qbits=15;
     uint64_t num_hash_bits=qbits+8;
     uint64_t maximum_count=(1ULL<<counter_size)-1;
