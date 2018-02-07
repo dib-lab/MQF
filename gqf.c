@@ -849,6 +849,38 @@ static inline void shift_runends(QF *qf, int64_t first, uint64_t last,
 
 }
 
+static inline void shift_fixed_counters(QF *qf, int64_t first, uint64_t last,
+																 uint64_t distance)
+{
+	assert(last < qf->metadata->xnslots && distance < 64);
+	uint64_t first_word = first / 64;
+	uint64_t bstart = first % 64;
+	uint64_t last_word = (last + distance + 1) / 64;
+	uint64_t bend = (last + distance + 1) % 64;
+	uint64_t* curr, *prev;
+	uint64_t tmp =last_word;
+	for(int i=0;i<qf->metadata->fixed_counter_size;i++){
+		last_word=tmp;
+		if (last_word != first_word) {
+			curr=get_block(qf, last_word)->fixed_counter;
+			prev=get_block(qf, last_word-1)->fixed_counter;
+			curr[i] = shift_into_b(prev[i],curr[i],0, bend, distance);
+			bend = 64;
+			last_word--;
+			while (last_word != first_word) {
+				curr=get_block(qf, last_word)->fixed_counter;
+				prev=get_block(qf, last_word-1)->fixed_counter;
+				curr[i] = shift_into_b(prev[i],curr[i],0, bend, distance);
+				last_word--;
+			}
+		}
+		curr=get_block(qf, last_word)->fixed_counter;
+		curr[i] = shift_into_b(0,curr[i], bstart, bend, distance);
+	}
+
+}
+
+
 static inline void insert_replace_slots_and_shift_remainders_and_runends_and_offsets(QF		*qf,
 																																										 int		 operation,
 																																										 uint64_t		 bucket_index,
