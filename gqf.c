@@ -45,7 +45,7 @@ typedef struct __attribute__ ((__packed__)) qfblock {
 	uint8_t offset;
 	uint64_t occupieds[METADATA_WORDS_PER_BLOCK];
 	uint64_t runends[METADATA_WORDS_PER_BLOCK];
-
+	uint64_t fixed_counter[];
 #if BITS_PER_SLOT == 8
 	uint8_t  slots[SLOTS_PER_BLOCK];
 #elif BITS_PER_SLOT == 16
@@ -446,7 +446,31 @@ static inline qfblock * get_block(const QF *qf, uint64_t block_index)
 						SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
 }
 #endif
+static inline uint64_t get_fixed_counter(const QF *qf, uint64_t index)
+{
+	uint64_t res=0;
+	uint64_t base=1;
+	uint64_t* p=get_block(qf, index /SLOTS_PER_BLOCK)->fixed_counter;
+	for(int i=qf->metadata->fixed_counter_size-1;i>=0;i--){
+	res+= base*(( p[i] >> ((index % SLOTS_PER_BLOCK) %64)) & 1ULL);
+	base*=2;
+	}
+	return res;
+}
+static inline void set_fixed_counter(const QF *qf, uint64_t index,uint64_t value)
+{
+	uint64_t* p=get_block(qf, index /SLOTS_PER_BLOCK)->fixed_counter;
+	for(int i=qf->metadata->fixed_counter_size-1;i>=0;i--){
+		if(value%2){
+			p[i]|= 1ULL << ((index % SLOTS_PER_BLOCK) %64);
+		}
+		else{
+			p[i]&= ~(1ULL << ((index % SLOTS_PER_BLOCK) %64));
+		}
+		value=value>>1;
+	}
 
+}
 static inline int is_runend(const QF *qf, uint64_t index)
 {
 	return (METADATA_WORD(qf, runends, index) >> ((index % SLOTS_PER_BLOCK) %
@@ -1574,7 +1598,7 @@ inline static void _remove(QF *qf, __uint128_t hash, uint64_t count)
  * Code that uses the above to implement key-value-counter operations. *
  ***********************************************************************/
 
-void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t value_bits,
+void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t value_bits,uint64_t fixed_counter_size,
 						 bool mem, const char * path, uint32_t seed)
 {
 	uint64_t num_slots, xnslots, nblocks;
@@ -1597,9 +1621,9 @@ void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t value_bits,
 	assert (BITS_PER_SLOT == 0 || BITS_PER_SLOT == qf->metadata->bits_per_slot);
 	assert(bits_per_slot > 1);
 #if BITS_PER_SLOT == 8 || BITS_PER_SLOT == 16 || BITS_PER_SLOT == 32 || BITS_PER_SLOT == 64
-	size = nblocks * sizeof(qfblock);
+	size = nblocks * sizeof(qfblock) +  (64)*fixed_counter_size;
 #else
-	size = nblocks * (sizeof(qfblock) + SLOTS_PER_BLOCK * bits_per_slot / 8);
+	size = nblocks * (sizeof(qfblock) + SLOTS_PER_BLOCK * bits_per_slot / 8 + (64)*fixed_counter_size );
 #endif
 
 	qf->mem = (qfmem *)calloc(sizeof(qfmem), 1);
@@ -1614,6 +1638,7 @@ void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t value_bits,
 			10*sqrt((double)qf->metadata->nslots);
 		qf->metadata->key_bits = key_bits;
 		qf->metadata->value_bits = value_bits;
+		qf->metadata->fixed_counter_size = fixed_counter_size;
 		qf->metadata->key_remainder_bits = key_remainder_bits;
 		qf->metadata->bits_per_slot = bits_per_slot;
 
@@ -1664,6 +1689,7 @@ void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t value_bits,
 														10*sqrt((double)qf->metadata->nslots);
 		qf->metadata->key_bits = key_bits;
 		qf->metadata->value_bits = value_bits;
+		qf->metadata->fixed_counter_size = fixed_counter_size;
 		qf->metadata->key_remainder_bits = key_remainder_bits;
 		qf->metadata->bits_per_slot = bits_per_slot;
 
@@ -1683,6 +1709,8 @@ void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t value_bits,
 	qf->mem->metadata_lock = 0;
 	qf->mem->locks = (volatile int *)calloc(qf->metadata->num_locks,
 																					sizeof(volatile int));
+
+
 #ifdef LOG_WAIT_TIME
 	qf->mem->wait_times = (wait_time_data* )calloc(qf->metadata->num_locks+1,
 																						sizeof(wait_time_data));

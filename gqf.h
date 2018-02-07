@@ -81,7 +81,7 @@ extern "C" {
 
 	typedef quotient_filter_iterator QFi;
 
-	void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t value_bits, bool mem, const char *path, uint32_t seed);
+	void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t value_bits,uint64_t fixed_counter_size, bool mem, const char *path, uint32_t seed);
 
 	void qf_reset(QF *qf);
 
