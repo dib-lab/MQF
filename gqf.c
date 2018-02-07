@@ -2148,3 +2148,9 @@ uint64_t qf_magnitude(QF *qf)
 {
 	return sqrt(qf_inner_product(qf, qf));
 }
+
+
+
+#ifdef TEST
+	#include "test.h"
+#endif
