@@ -147,7 +147,53 @@ TEST_CASE( "Adding fixed counters to items" ) {
   }
 }
 
-TEST_CASE( "Inserting items in cqf(90% load factor )" ) {
+TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
+  QF qf;
+  int counter_size=2;
+  uint64_t qbits=15;
+  uint64_t num_hash_bits=qbits+8;
+  uint64_t maximum_count=(1ULL<<counter_size)-1;
+  INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
+
+  uint64_t nvals = (1ULL<<qbits)*2;
+  uint64_t *vals;
+  vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
+  for(int i=0;i<nvals;i++)
+  {
+    vals[i]=rand();
+    vals[i]=(vals[i]<<32)|rand();
+    vals[i]=vals[i]%(qf.metadata->range);
+  }
+  double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
+  uint64_t insertedItems=0;
+  while(loadFactor<0.9){
+
+    qf_insert(&qf,vals[insertedItems],0,1,false,false);
+    insertedItems++;
+    loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
+  }
+  uint64_t count;
+  for(int i=0;i<insertedItems;i++)
+  {
+    count = qf_count_key_value(&qf, vals[i], 0);
+    CHECK(count >= 1);
+  }
+  QFi qfi;
+  qf_iterator(&qf, &qfi, 0);
+  do {
+    uint64_t key, value, count;
+    qfi_get(&qfi, &key, &value, &count);
+    count=qf_count_key_value(&qf, key, 0);
+    CHECK(count >= 1);
+  } while(!qfi_next(&qfi));
+
+  qf_destroy(&qf,true);
+
+}
+
+
+TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )" ) {
   QF qf;
   int counter_size=2;
   uint64_t qbits=15;
