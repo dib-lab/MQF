@@ -148,6 +148,7 @@ TEST_CASE( "Adding fixed counters to items" ) {
 }
 
 TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
+  //except first item is inserted 5 times to full test _insert1
   QF qf;
   int counter_size=2;
   uint64_t qbits=15;
@@ -173,8 +174,14 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
     insertedItems++;
     loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   }
+  qf_insert(&qf,vals[0],0,1,false,false);
+  qf_insert(&qf,vals[0],0,1,false,false);
+  qf_insert(&qf,vals[0],0,1,false,false);
+  qf_insert(&qf,vals[0],0,1,false,false);
   uint64_t count;
-  for(int i=0;i<insertedItems;i++)
+  count = qf_count_key_value(&qf, vals[0], 0);
+  CHECK(count >= 5);
+  for(int i=1;i<insertedItems;i++)
   {
     count = qf_count_key_value(&qf, vals[i], 0);
     CHECK(count >= 1);
@@ -185,7 +192,13 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
     uint64_t key, value, count;
     qfi_get(&qfi, &key, &value, &count);
     count=qf_count_key_value(&qf, key, 0);
-    CHECK(count >= 1);
+    if(key==vals[0]){
+      CHECK(count >= 5);
+    }
+    else{
+      CHECK(count >= 1);
+    }
+
   } while(!qfi_next(&qfi));
 
   qf_destroy(&qf,true);
