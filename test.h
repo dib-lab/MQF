@@ -23,43 +23,43 @@ TEST_CASE( "get/set fixed counters" ) {
       CHECK( get_fixed_counter(&qf,100) == i );
       REQUIRE( get_fixed_counter(&qf,101) == 0 );
       last=i;
-  }
+    }
 
-  //test on block boundaries
+    //test on block boundaries
 
-  REQUIRE( get_fixed_counter(&qf,63) == 0 );
-  REQUIRE( get_fixed_counter(&qf,64) == 0 );
-  REQUIRE( get_fixed_counter(&qf,65) == 0 );
+    REQUIRE( get_fixed_counter(&qf,63) == 0 );
+    REQUIRE( get_fixed_counter(&qf,64) == 0 );
+    REQUIRE( get_fixed_counter(&qf,65) == 0 );
 
-  c=1;
-  set_fixed_counter(&qf,63,c);
-  c=(c+1)%maximum_count;
-  set_fixed_counter(&qf,64,c);
-  c=(c+1)%maximum_count;
-  set_fixed_counter(&qf,65,c);
+    c=1;
+    set_fixed_counter(&qf,63,c);
+    c=(c+1)%maximum_count;
+    set_fixed_counter(&qf,64,c);
+    c=(c+1)%maximum_count;
+    set_fixed_counter(&qf,65,c);
 
-  c=1;
-  REQUIRE( get_fixed_counter(&qf,63) == c );
-  c=(c+1)%maximum_count;
-  REQUIRE( get_fixed_counter(&qf,64) == c );
-  c=(c+1)%maximum_count;
-  REQUIRE( get_fixed_counter(&qf,65) == c );
+    c=1;
+    REQUIRE( get_fixed_counter(&qf,63) == c );
+    c=(c+1)%maximum_count;
+    REQUIRE( get_fixed_counter(&qf,64) == c );
+    c=(c+1)%maximum_count;
+    REQUIRE( get_fixed_counter(&qf,65) == c );
 
-  // test special slots
-  c=1;
-  uint64_t special_slots[]={
-    0,
-    (1ULL<qbits),
-    qf.metadata->xnslots-1
-  };
-  for(int i=0;i<3;i++){
-    INFO("Testing Special Slot "<<special_slots[i]);
-    REQUIRE( get_fixed_counter(&qf,special_slots[i]) == 0 );
-    set_fixed_counter(&qf,special_slots[i],c);
-    REQUIRE( get_fixed_counter(&qf,special_slots[i]) == c );
-  }
+    // test special slots
+    c=1;
+    uint64_t special_slots[]={
+      0,
+      (1ULL<qbits),
+      qf.metadata->xnslots-1
+    };
+    for(int i=0;i<3;i++){
+      INFO("Testing Special Slot "<<special_slots[i]);
+      REQUIRE( get_fixed_counter(&qf,special_slots[i]) == 0 );
+      set_fixed_counter(&qf,special_slots[i],c);
+      REQUIRE( get_fixed_counter(&qf,special_slots[i]) == c );
+    }
 
-  qf_destroy(&qf,true);
+    qf_destroy(&qf,true);
   }
 }
 
@@ -126,7 +126,7 @@ TEST_CASE( "Adding fixed counters to items" ) {
     CHECK( qf_count_key_value(&qf,150,0)==1);
 
     qf_set_fixed_counter(&qf,150,maximum_count);
-  //  CHECK( qf_get_fixed_counter(&qf,150)==maximum_count);
+    //  CHECK( qf_get_fixed_counter(&qf,150)==maximum_count);
     CHECK( qf_count_key_value(&qf,150,0)==1);
 
     qf_insert(&qf,1500,0,1,false,false);
