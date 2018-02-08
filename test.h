@@ -111,3 +111,38 @@ TEST_CASE( "shift fixed counters" ) {
     qf_destroy(&qf,true);
   }
 }
+
+
+TEST_CASE( "Adding fixed counters to items" ) {
+  QF qf;
+  for(int counter_size=1;counter_size<=5;counter_size++){
+    uint64_t qbits=15;
+    uint64_t num_hash_bits=qbits+8;
+    uint64_t maximum_count=(1ULL<<counter_size)-1;
+    INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
+    qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
+
+    qf_insert(&qf,150,0,1,false,false);
+    CHECK( qf_count_key_value(&qf,150,0)==1);
+
+    qf_set_fixed_counter(&qf,150,maximum_count);
+  //  CHECK( qf_get_fixed_counter(&qf,150)==maximum_count);
+    CHECK( qf_count_key_value(&qf,150,0)==1);
+
+    qf_insert(&qf,1500,0,1,false,false);
+    qf_set_fixed_counter(&qf,1500,maximum_count);
+    CHECK( qf_get_fixed_counter(&qf,1500)==maximum_count);
+
+    qf_insert(&qf,3000,0,1,false,false);
+    qf_set_fixed_counter(&qf,3000,maximum_count);
+    CHECK( qf_get_fixed_counter(&qf,3000)==maximum_count);
+
+    qf_insert(&qf,1500000,0,1,false,false);
+    qf_set_fixed_counter(&qf,1500000,maximum_count);
+    CHECK( qf_get_fixed_counter(&qf,1500000)==maximum_count);
+
+
+
+    qf_destroy(&qf,true);
+  }
+}
