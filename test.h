@@ -156,7 +156,7 @@ TEST_CASE( "Add fixed counters to items" ) {
   }
 }
 
-TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ,"[!hide]") {
+TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
   //except first item is inserted 5 times to full test _insert1
   QF qf;
   int counter_size=2;
@@ -215,7 +215,7 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ,"[!hide
 }
 
 
-TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )","[!hide]" ) {
+TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )" ) {
   QF qf;
   int counter_size=2;
   uint64_t qbits=15;
@@ -260,7 +260,8 @@ TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )","[!hid
 
 }
 
-TEST_CASE( "Removing items in cqf(90% load factor )" ,"[!hide]") {
+
+TEST_CASE( "Removing items in cqf(90% load factor )","[!mayfail]" ) {
   QF qf;
   int counter_size=2;
   uint64_t qbits=15;
@@ -319,7 +320,7 @@ TEST_CASE( "Removing items in cqf(90% load factor )" ,"[!hide]") {
   qf_destroy(&qf,true);
 
 }
-TEST_CASE( "Merging Cqf","[!hide]" ) {
+TEST_CASE( "Merging Cqf") {
   QF cf,cf1,cf2;
  QFi cfi;
  uint64_t qbits = 18;
@@ -386,7 +387,7 @@ TEST_CASE( "Merging Cqf","[!hide]" ) {
 
 
 
-TEST_CASE( "Inserting items( repeated 50 times)  abd set fixed size counters in cqf(90% load factor )" ,"[!mayfail]") {
+TEST_CASE( "Inserting items( repeated 50 times)  abd set fixed size counters in cqf(90% load factor )") {
   QF qf;
   int counter_size=3;
   uint64_t qbits=7;
@@ -407,7 +408,7 @@ TEST_CASE( "Inserting items( repeated 50 times)  abd set fixed size counters in 
   double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   uint64_t insertedItems=0;
   uint64_t count;
-  while(loadFactor<0.5){
+  while(loadFactor<0.9){
 
     qf_insert(&qf,vals[insertedItems],0,50,false,false);
     qf_set_fixed_counter(&qf,vals[insertedItems],vals[insertedItems]%(maximum_count+1));
