@@ -113,7 +113,7 @@ TEST_CASE( "shift fixed counters" ) {
 }
 
 
-TEST_CASE( "Adding fixed counters to items" ) {
+TEST_CASE( "Add fixed counters to items" ) {
   QF qf;
   for(int counter_size=1;counter_size<=5;counter_size++){
     uint64_t qbits=15;
@@ -122,14 +122,23 @@ TEST_CASE( "Adding fixed counters to items" ) {
     INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
     qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
 
-    qf_insert(&qf,150,0,1,false,false);
-    CHECK( qf_count_key_value(&qf,150,0)==1);
-
+    qf_insert(&qf,150,0,50,false,false);
+    CHECK( qf_count_key_value(&qf,150,0)==50);
     qf_set_fixed_counter(&qf,150,maximum_count);
-    //  CHECK( qf_get_fixed_counter(&qf,150)==maximum_count);
-    CHECK( qf_count_key_value(&qf,150,0)==1);
+    CHECK( qf_get_fixed_counter(&qf,150)==maximum_count);
+    CHECK( qf_count_key_value(&qf,150,0)==50);
 
-    qf_insert(&qf,1500,0,1,false,false);
+    for(int i=120;i<=149;i++){
+      qf_insert(&qf,i,0,50,false,false);
+      CHECK( qf_count_key_value(&qf,i,0)==50);
+      qf_set_fixed_counter(&qf,i,1);
+      CHECK( qf_get_fixed_counter(&qf,i)==1);
+      CHECK( qf_count_key_value(&qf,i,0)==50);
+    }
+    CHECK( qf_get_fixed_counter(&qf,150)==maximum_count);
+    CHECK( qf_count_key_value(&qf,150,0)==50);
+
+    qf_insert(&qf,1500,0,50,false,false);
     qf_set_fixed_counter(&qf,1500,maximum_count);
     CHECK( qf_get_fixed_counter(&qf,1500)==maximum_count);
 
@@ -147,7 +156,7 @@ TEST_CASE( "Adding fixed counters to items" ) {
   }
 }
 
-TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
+TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ,"[!hide]") {
   //except first item is inserted 5 times to full test _insert1
   QF qf;
   int counter_size=2;
@@ -206,7 +215,7 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
 }
 
 
-TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )" ) {
+TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )","[!hide]" ) {
   QF qf;
   int counter_size=2;
   uint64_t qbits=15;
@@ -251,7 +260,7 @@ TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )" ) {
 
 }
 
-TEST_CASE( "Removing items in cqf(90% load factor )" ,"[!mayfail]") {
+TEST_CASE( "Removing items in cqf(90% load factor )" ,"[!hide]") {
   QF qf;
   int counter_size=2;
   uint64_t qbits=15;
@@ -310,7 +319,7 @@ TEST_CASE( "Removing items in cqf(90% load factor )" ,"[!mayfail]") {
   qf_destroy(&qf,true);
 
 }
-TEST_CASE( "Merging Cqf" ) {
+TEST_CASE( "Merging Cqf","[!hide]" ) {
   QF cf,cf1,cf2;
  QFi cfi;
  uint64_t qbits = 18;
@@ -372,5 +381,70 @@ TEST_CASE( "Merging Cqf" ) {
    qfi_get(&cfi, &key, &value, &count);
    CHECK(count>=50);
  } while(!qfi_next(&cfi));
+
+}
+
+
+
+TEST_CASE( "Inserting items( repeated 50 times)  abd set fixed size counters in cqf(90% load factor )" ,"[!mayfail]") {
+  QF qf;
+  int counter_size=3;
+  uint64_t qbits=7;
+  uint64_t num_hash_bits=qbits+8;
+  uint64_t maximum_count=(1ULL<<counter_size)-1;
+  INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
+
+  uint64_t nvals = (1ULL<<qbits);
+  uint64_t *vals;
+  vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
+  for(int i=0;i<nvals;i++)
+  {
+    vals[i]=rand();
+    vals[i]=(vals[i]<<32)|rand();
+    vals[i]=vals[i]%(qf.metadata->range);
+  }
+  double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
+  uint64_t insertedItems=0;
+  uint64_t count;
+  while(loadFactor<0.5){
+
+    qf_insert(&qf,vals[insertedItems],0,50,false,false);
+    qf_set_fixed_counter(&qf,vals[insertedItems],vals[insertedItems]%(maximum_count+1));
+
+    count = qf_get_fixed_counter(&qf,vals[insertedItems]);
+    CHECK(count == vals[insertedItems]%(maximum_count+1));
+    insertedItems++;
+    loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
+    for(int i=0;i<insertedItems;i++)
+    {
+      count = qf_count_key_value(&qf, vals[i], 0);
+      REQUIRE(count >= 50);
+      count = qf_get_fixed_counter(&qf,vals[i]);
+      INFO("bug in  "<<i<<" of "<<insertedItems<<" loadFactor "<<loadFactor);
+      REQUIRE(count == vals[i]%(maximum_count+1));
+    }
+
+  }
+
+  for(int i=0;i<insertedItems;i++)
+  {
+    count = qf_count_key_value(&qf, vals[i], 0);
+    CHECK(count >= 50);
+    count = qf_get_fixed_counter(&qf,vals[i]);
+    CHECK(count == vals[i]%(maximum_count+1));
+  }
+  QFi qfi;
+  qf_iterator(&qf, &qfi, 0);
+  do {
+    uint64_t key, value, count;
+    qfi_get(&qfi, &key, &value, &count);
+    count=qf_count_key_value(&qf, key, 0);
+    CHECK(count >= 50);
+    count = qf_get_fixed_counter(&qf,key);
+    CHECK(count == key%(maximum_count+1));
+  } while(!qfi_next(&qfi));
+
+  qf_destroy(&qf,true);
 
 }
