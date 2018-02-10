@@ -261,7 +261,52 @@ TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )" ) {
 }
 
 
-TEST_CASE( "Removing items in cqf(90% load factor )","[!mayfail]" ) {
+TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )","[!mayfail]" ) {
+  QF qf;
+  int counter_size=2;
+  uint64_t qbits=15;
+  uint64_t num_hash_bits=qbits+8;
+  uint64_t maximum_count=(1ULL<<counter_size)-1;
+  INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
+
+  uint64_t nvals = (1ULL<<qbits);
+  uint64_t *vals;
+  uint64_t *nRepetitions;
+  vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
+  nRepetitions= (uint64_t*)malloc(nvals*sizeof(nRepetitions[0]));
+  uint64_t count;
+  for(int i=0;i<nvals;i++)
+  {
+    vals[i]=rand();
+    vals[i]=(vals[i]<<32)|rand();
+    vals[i]=vals[i]%(qf.metadata->range);
+
+    nRepetitions[i]=rand()%1000;
+  }
+  double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
+  uint64_t insertedItems=0;
+  while(loadFactor<0.65){
+    qf_insert(&qf,vals[insertedItems],0,nRepetitions[insertedItems],false,false);
+    count = qf_count_key_value(&qf, vals[insertedItems], 0);
+    CHECK(count >= nRepetitions[insertedItems]);
+    insertedItems++;
+    loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
+  }
+  INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
+
+  for(int i=0;i<insertedItems;i++)
+  {
+    count = qf_count_key_value(&qf, vals[i], 0);
+    INFO("value = "<<vals[i]);
+    CHECK(count >= nRepetitions[i]);
+  }
+
+  qf_destroy(&qf,true);
+
+}
+
+TEST_CASE( "Removing items from cqf(90% load factor )" ,"[!mayfail]") {
   QF qf;
   int counter_size=2;
   uint64_t qbits=15;
