@@ -442,14 +442,14 @@ static inline qfblock * get_block(const QF *qf, uint64_t block_index)
 static inline qfblock * get_block(const QF *qf, uint64_t block_index)
 {
 	return (qfblock *)(((char *)qf->blocks) + block_index * (sizeof(qfblock) +
-						SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
+						SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8 +8*qf->metadata->fixed_counter_size));
 }
 #endif
 static inline uint64_t get_fixed_counter(const QF *qf, uint64_t index)
 {
 	uint64_t res=0;
 	uint64_t base=1;
-	uint64_t* p=(uint64_t*)get_block(qf, index /SLOTS_PER_BLOCK)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8);
+	uint64_t* p=(uint64_t*)((uint8_t*)get_block(qf, index /SLOTS_PER_BLOCK)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
 	for(int i=qf->metadata->fixed_counter_size-1;i>=0;i--){
 	res+= base*(( p[i] >> ((index % SLOTS_PER_BLOCK) %64)) & 1ULL);
 	base*=2;
@@ -458,7 +458,7 @@ static inline uint64_t get_fixed_counter(const QF *qf, uint64_t index)
 }
 static inline void set_fixed_counter(const QF *qf, uint64_t index,uint64_t value)
 {
-	uint64_t* p=(uint64_t*)get_block(qf, index /SLOTS_PER_BLOCK)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8);
+	uint64_t* p=(uint64_t*)((uint8_t*)get_block(qf, index /SLOTS_PER_BLOCK)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
 	uint64_t bitmask=1ULL << ((index % SLOTS_PER_BLOCK) %64);
 	for(int i=qf->metadata->fixed_counter_size-1;i>=0;i--){
 		if(value%2){
@@ -862,19 +862,19 @@ static inline void shift_fixed_counters(QF *qf, int64_t first, uint64_t last,
 	for(int i=0;i<qf->metadata->fixed_counter_size;i++){
 		last_word=tmp;
 		if (last_word != first_word) {
-			curr=(uint64_t*)get_block(qf, last_word)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8);
-			prev=(uint64_t*)get_block(qf, last_word-1)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8);
+			curr=(uint64_t*)((uint8_t*)get_block(qf, last_word)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
+			prev=(uint64_t*)((uint8_t*)get_block(qf, last_word-1)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
 			curr[i] = shift_into_b(prev[i],curr[i],0, bend, distance);
 			bend = 64;
 			last_word--;
 			while (last_word != first_word) {
-				curr=(uint64_t*)get_block(qf, last_word)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8);
-				prev=(uint64_t*)get_block(qf, last_word-1)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8);
+				curr=(uint64_t*)((uint8_t*)get_block(qf, last_word)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
+				prev=(uint64_t*)((uint8_t*)get_block(qf, last_word-1)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
 				curr[i] = shift_into_b(prev[i],curr[i],0, bend, distance);
 				last_word--;
 			}
 		}
-		curr=(uint64_t*)get_block(qf, last_word)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8);
+		curr=(uint64_t*)((uint8_t*)get_block(qf, last_word)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
 		curr[i] = shift_into_b(0,curr[i], bstart, bend, distance);
 	}
 
@@ -904,7 +904,11 @@ static inline void insert_replace_slots_and_shift_remainders_and_runends_and_off
 
 		for (i = 0; i < ninserts - 1; i++)
 			shift_runends(qf, empties[i+1] + 1, empties[i] - 1, i + 1);
+		for (i = 0; i < ninserts - 1; i++)
+			shift_fixed_counters(qf, empties[i+1] + 1, empties[i] - 1, i + 1);
+
 		shift_runends(qf, insert_index, empties[ninserts - 1] - 1, ninserts);
+		shift_fixed_counters(qf, insert_index, empties[ninserts - 1] - 1, ninserts);
 
 
 		for (i = noverwrites; i < total_remainders - 1; i++)
@@ -955,6 +959,7 @@ static inline void insert_replace_slots_and_shift_remainders_and_runends_and_off
 	for (i = 0; i < total_remainders; i++)
 		set_slot(qf, overwrite_index + i, remainders[i]);
 
+
 	modify_metadata(qf, &qf->metadata->noccupied_slots, ninserts);
 }
 
@@ -971,6 +976,8 @@ static inline void remove_replace_slots_and_shift_remainders_and_runends_and_off
 	// Update the slots
 	for (i = 0; i < total_remainders; i++)
 		set_slot(qf, overwrite_index + i, remainders[i]);
+
+
 
 	// If this is the last thing in its run, then we may need to set a new runend bit
 	if (is_runend(qf, overwrite_index + old_length - 1)) {
@@ -1421,6 +1428,7 @@ static inline bool insert1(QF *qf, __uint128_t hash, bool lock, bool spin)
 			set_slot(qf, insert_index, new_value);
 
 			shift_runends(qf, insert_index, empty_slot_index-1, 1);
+			shift_fixed_counters(qf, insert_index, empty_slot_index-1, 1);
 			switch (operation) {
 				case 0:
 					METADATA_WORD(qf, runends, insert_index)   |= 1ULL << ((insert_index
