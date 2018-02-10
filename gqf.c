@@ -858,9 +858,10 @@ static inline void shift_fixed_counters(QF *qf, int64_t first, uint64_t last,
 	uint64_t last_word = (last + distance + 1) / 64;
 	uint64_t bend = (last + distance + 1) % 64;
 	uint64_t* curr, *prev;
-	uint64_t tmp =last_word;
+	uint64_t tmp =last_word, tmp_bend=bend;
 	for(int i=0;i<qf->metadata->fixed_counter_size;i++){
 		last_word=tmp;
+		bend=tmp_bend;
 		if (last_word != first_word) {
 			curr=(uint64_t*)((uint8_t*)get_block(qf, last_word)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
 			prev=(uint64_t*)((uint8_t*)get_block(qf, last_word-1)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
