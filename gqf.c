@@ -14,6 +14,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <fstream>
+#include <algorithm>
 
 #include "gqf.h"
 
@@ -905,11 +906,15 @@ static inline void insert_replace_slots_and_shift_remainders_and_runends_and_off
 
 		for (i = 0; i < ninserts - 1; i++)
 			shift_runends(qf, empties[i+1] + 1, empties[i] - 1, i + 1);
-		for (i = 0; i < ninserts - 1; i++)
-			shift_fixed_counters(qf, empties[i+1] + 1, empties[i] - 1, i + 1);
 
 		shift_runends(qf, insert_index, empties[ninserts - 1] - 1, ninserts);
+
+		for (i = 0; i < ninserts - 1; i++)
+			shift_fixed_counters(qf, empties[i+1] + 1, empties[i] - 1, i + 1);
 		shift_fixed_counters(qf, insert_index, empties[ninserts - 1] - 1, ninserts);
+
+
+
 
 
 		for (i = noverwrites; i < total_remainders - 1; i++)
@@ -1096,57 +1101,14 @@ static inline void remove_replace_slots_and_shift_remainders_and_runends_and_off
 static inline uint64_t *encode_counter(QF *qf, uint64_t remainder, uint64_t
 																			 counter, uint64_t *slots)
 {
-	uint64_t digit = remainder;
 	uint64_t base = (1ULL << qf->metadata->bits_per_slot) - 1;
 	uint64_t *p = slots;
-
 	if (counter == 0)
 		return p;
 
+	*--p = std::min(counter,base);
 	*--p = remainder;
 
-	if (counter == 1)
-		return p;
-
-	if (counter == 2) {
-		*--p = remainder;
-		return p;
-	}
-
-	if (counter == 3 && remainder == 0) {
-		*--p = remainder;
-		*--p = remainder;
-		return p;
-	}
-
-	if (counter == 3 && remainder > 0) {
-		*--p = 0;
-		*--p = remainder;
-		return p;
-	}
-
-	if (remainder == 0)
-		*--p = remainder;
-	else
-		base--;
-
-	if (remainder)
-		counter -= 3;
-	else
-		counter -= 4;
-	do {
-		digit = counter % base;
-		digit++; /* Zero not allowed */
-		if (remainder && digit >= remainder)
-			digit++; /* Cannot overflow since digit is mod 2^r-2 */
-		*--p = digit;
-		counter /= base;
-	} while (counter);
-
-	if (remainder && digit >= remainder)
-		*--p = 0;
-
-	*--p = remainder;
 
 	return p;
 }
@@ -1156,73 +1118,19 @@ REQUIRES: index points to first slot of a counter. */
 static inline uint64_t decode_counter(const QF *qf, uint64_t index, uint64_t
 																			*remainder, uint64_t *count)
 {
-	uint64_t base;
-	uint64_t rem;
-	uint64_t cnt;
-	uint64_t digit;
-	uint64_t end;
 
-	*remainder = rem = get_slot(qf, index);
+	*remainder  = get_slot(qf, index);
 
-	if (is_runend(qf, index)) { /* Entire run is "0" */
-		*count = 1;
+	uint64_t fixed_counter=get_fixed_counter(qf,index);
+
+	if(fixed_counter == (1ULL << qf->metadata->fixed_counter_size)-1){
+		*count = get_slot(qf, index + 1);
+		return index+1;
+	}
+	else{
+		*count=0;
 		return index;
 	}
-
-	digit = get_slot(qf, index + 1);
-
-	if (is_runend(qf, index + 1)) {
-		*count = digit == rem ? 2 : 1;
-		return index + (digit == rem ? 1 : 0);
-	}
-
-	if (rem > 0 && digit >= rem) {
-		*count = digit == rem ? 2 : 1;
-		return index + (digit == rem ? 1 : 0);
-	}
-
-	if (rem > 0 && digit == 0 && get_slot(qf, index + 2) == rem) {
-		*count = 3;
-		return index + 2;
-	}
-
-	if (rem == 0 && digit == 0) {
-		if (get_slot(qf, index + 2) == 0) {
-			*count = 3;
-			return index + 2;
-		} else {
-			*count = 2;
-			return index + 1;
-		}
-	}
-
-	cnt = 0;
-	base = (1ULL << qf->metadata->bits_per_slot) - (rem ? 2 : 1);
-
-	end = index + 1;
-	while (digit != rem && !is_runend(qf, end)) {
-		if (digit > rem)
-			digit--;
-		if (digit && rem)
-			digit--;
-		cnt = cnt * base + digit;
-
-		end++;
-		digit = get_slot(qf, end);
-	}
-
-	if (rem) {
-		*count = cnt + 3;
-		return end;
-	}
-
-	if (is_runend(qf, end) || get_slot(qf, end + 1) != 0) {
-		*count = 1;
-		return index;
-	}
-
-	*count = cnt + 4;
-	return end + 1;
 }
 
 /* return the next slot which corresponds to a
@@ -1888,47 +1796,6 @@ void qf_deserialize(QF *qf, const char *filename)
 
 	fclose(fin);
 }
-
-bool qf_insert(QF *qf, uint64_t key, uint64_t value, uint64_t count, bool
-							 lock, bool spin)
-{
-	/*uint64_t hash = (key << qf->metadata->value_bits) | (value & BITMASK(qf->metadata->value_bits));*/
-	if (count == 1)
-		return insert1(qf, key, lock, spin);
-	else
-		return insert(qf, key, count, lock, spin);
-}
-
-uint64_t qf_count_key_value(const QF *qf, uint64_t key, uint64_t value)
-{
-	__uint128_t hash = key;
-	uint64_t hash_remainder   = hash & BITMASK(qf->metadata->bits_per_slot);
-	int64_t hash_bucket_index = hash >> qf->metadata->bits_per_slot;
-
-	if (!is_occupied(qf, hash_bucket_index))
-		return 0;
-
-	int64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(qf,
-																																hash_bucket_index-1)
-		+ 1;
-	if (runstart_index < hash_bucket_index)
-		runstart_index = hash_bucket_index;
-
-	/* printf("MC RUNSTART: %02lx RUNEND: %02lx\n", runstart_index, runend_index); */
-
-	uint64_t current_remainder, current_count, current_end;
-	do {
-		current_end = decode_counter(qf, runstart_index, &current_remainder,
-																 &current_count);
-		if (current_remainder == hash_remainder)
-			return current_count;
-
-		runstart_index = current_end + 1;
-	} while (!is_runend(qf, current_end));
-	return 0;
-}
-
-
 uint64_t qf_set_fixed_counter(QF *qf, uint64_t key, uint64_t value)
 {
 	__uint128_t hash = key;
@@ -1992,6 +1859,66 @@ uint64_t qf_get_fixed_counter(const QF *qf, uint64_t key)
 }
 
 
+bool qf_insert(QF *qf, uint64_t key, uint64_t value, uint64_t count, bool
+							 lock, bool spin)
+{
+	/*uint64_t hash = (key << qf->metadata->value_bits) | (value & BITMASK(qf->metadata->value_bits));*/
+	uint64_t current_count=qf_count_key_value(qf,key,0);
+	if(current_count==0){
+		insert(qf, key,1, lock, spin);
+		qf_set_fixed_counter(qf,key,0);
+		count--;
+	}
+	if(count ==0)
+		return true;
+	uint64_t fixed_counter=qf_get_fixed_counter(qf,key);
+	uint64_t fixed_counter_max=(1ULL<<qf->metadata->fixed_counter_size)-1;
+	if(fixed_counter<fixed_counter_max){
+			uint64_t tmp_count=std::min(fixed_counter_max-fixed_counter,count);
+			qf_set_fixed_counter(qf,key,fixed_counter+tmp_count);
+			count-=tmp_count;
+	}
+	if(count == 0)
+		return true;
+	else if (0 && count == 1)
+	 return insert1(qf, key, lock, spin);
+	else
+		return insert(qf, key, count, lock, spin);
+}
+
+uint64_t qf_count_key_value(const QF *qf, uint64_t key, uint64_t value)
+{
+	__uint128_t hash = key;
+	uint64_t hash_remainder   = hash & BITMASK(qf->metadata->bits_per_slot);
+	int64_t hash_bucket_index = hash >> qf->metadata->bits_per_slot;
+
+	if (!is_occupied(qf, hash_bucket_index))
+		return 0;
+
+	int64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(qf,
+																																hash_bucket_index-1)
+		+ 1;
+	if (runstart_index < hash_bucket_index)
+		runstart_index = hash_bucket_index;
+
+	/* printf("MC RUNSTART: %02lx RUNEND: %02lx\n", runstart_index, runend_index); */
+
+	uint64_t current_remainder, current_count, current_end,fixed_counter;
+	do {
+		current_end = decode_counter(qf, runstart_index, &current_remainder,
+																 &current_count);
+		if (current_remainder == hash_remainder){
+			return get_fixed_counter(qf,runstart_index)+current_count+1;
+		}
+
+		runstart_index = current_end + 1;
+	} while (!is_runend(qf, current_end));
+	return 0;
+}
+
+
+
+
 /* initialize the iterator at the run corresponding
  * to the position index
  */
@@ -2034,7 +1961,7 @@ int qfi_get(QFi *qfi, uint64_t *key, uint64_t *value, uint64_t *count)
 
 	uint64_t current_remainder, current_count;
 	decode_counter(qfi->qf, qfi->current, &current_remainder, &current_count);
-
+	current_count+=get_fixed_counter(qfi->qf,qfi->current);
 	*key = (qfi->run << qfi->qf->metadata->bits_per_slot) | current_remainder;
 	*value = 0;   // for now we are not using value
 	*count = current_count;
