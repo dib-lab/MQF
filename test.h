@@ -369,7 +369,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )") {
   qf_destroy(&qf,true);
 
 }
-TEST_CASE( "Serializing and deserializing") {
+TEST_CASE( "Writing and Reading to/from Disk") {
   QF qf;
   int counter_size=2;
   uint64_t qbits=16;
@@ -407,16 +407,32 @@ TEST_CASE( "Serializing and deserializing") {
 
   qf_serialize(&qf,"tmp.ser");
   qf_destroy(&qf,true);
-  qf_deserialize(&qf,"tmp.ser");
 
-  for(int i=0;i<insertedItems;i++)
-  {
-    count = qf_count_key_value(&qf, vals[i], 0);
-    INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
-    CHECK(count >= nRepetitions[i]);
+  SECTION("Reading using deserialize "){
+    qf_deserialize(&qf,"tmp.ser");
+
+    for(int i=0;i<insertedItems;i++)
+    {
+      count = qf_count_key_value(&qf, vals[i], 0);
+      INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
+      CHECK(count >= nRepetitions[i]);
+    }
+
+    qf_destroy(&qf,true);
   }
 
-  qf_destroy(&qf,true);
+  // SECTION("Reading using qf_read(mmap)"){
+  //   qf_read(&qf,"tmp.ser");
+  //
+  //   for(int i=0;i<insertedItems;i++)
+  //   {
+  //     count = qf_count_key_value(&qf, vals[i], 0);
+  //     INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
+  //     CHECK(count >= nRepetitions[i]);
+  //   }
+  //
+  //   qf_destroy(&qf,true);
+  // }
 
 }
 
@@ -469,7 +485,7 @@ INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
 }
 
 
-TEST_CASE( "Removing items from cqf(90% load factor )" ,"[!hide]") {
+TEST_CASE( "Removing items from cqf(90% load factor )" ,"[!mayfail]") {
   QF qf;
   int counter_size=2;
   uint64_t qbits=16;
