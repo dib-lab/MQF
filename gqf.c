@@ -1766,6 +1766,10 @@ void qf_read(QF *qf, const char *path)
 																qf->mem->fd, 0);
 
 	qf->blocks = (qfblock *)(qf->metadata + 1);
+	qf->metadata->num_locks = (qf->metadata->xnslots/NUM_SLOTS_TO_LOCK)+2;
+	qf->mem->metadata_lock = 0;
+	qf->mem->locks = (volatile int *)calloc(qf->metadata->num_locks,
+																					sizeof(volatile int));
 }
 
 void qf_reset(QF *qf)

@@ -404,9 +404,23 @@ TEST_CASE( "Writing and Reading to/from Disk") {
     loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   }
   INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
-
+  INFO("nslots ="<<qf.metadata->nslots);
   qf_serialize(&qf,"tmp.ser");
   qf_destroy(&qf,true);
+
+  SECTION("Reading using qf_read(mmap)"){
+    QF qf2;
+    qf_read(&qf2,"tmp.ser");
+    INFO("nslots ="<<qf2.metadata->nslots);
+    for(int i=0;i<insertedItems;i++)
+    {
+      count = qf_count_key_value(&qf2, vals[i], 0);
+      INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
+      CHECK(count >= nRepetitions[i]);
+    }
+
+    qf_destroy(&qf2,false);
+  }
 
   SECTION("Reading using deserialize "){
     qf_deserialize(&qf,"tmp.ser");
@@ -421,18 +435,7 @@ TEST_CASE( "Writing and Reading to/from Disk") {
     qf_destroy(&qf,true);
   }
 
-  // SECTION("Reading using qf_read(mmap)"){
-  //   qf_read(&qf,"tmp.ser");
-  //
-  //   for(int i=0;i<insertedItems;i++)
-  //   {
-  //     count = qf_count_key_value(&qf, vals[i], 0);
-  //     INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
-  //     CHECK(count >= nRepetitions[i]);
-  //   }
-  //
-  //   qf_destroy(&qf,true);
-  // }
+
 
 }
 
@@ -485,7 +488,7 @@ TEST_CASE( "MMap test") {
 }
 
 
-TEST_CASE( "Removing items from cqf(90% load factor )" ) {
+TEST_CASE( "Removing items from cqf(90% load factor )") {
   QF qf;
   int counter_size=2;
   uint64_t qbits=16;
