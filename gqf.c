@@ -1023,6 +1023,7 @@ static inline void remove_replace_slots_and_shift_remainders_and_runends_and_off
 
 		if (current_bucket <= current_slot) {
 			set_slot(qf, current_slot, get_slot(qf, current_slot + current_distance));
+			set_fixed_counter(qf, current_slot, get_fixed_counter(qf, current_slot + current_distance));
 			if (is_runend(qf, current_slot) !=
 					is_runend(qf, current_slot + current_distance))
 				METADATA_WORD(qf, runends, current_slot) ^= 1ULL << (current_slot % 64);
@@ -1032,6 +1033,7 @@ static inline void remove_replace_slots_and_shift_remainders_and_runends_and_off
 			uint64_t i;
 			for (i = current_slot; i < current_slot + current_distance; i++) {
 				set_slot(qf, i, 0);
+				set_fixed_counter(qf,i,0);
 				METADATA_WORD(qf, runends, i) &= ~(1ULL << (i % 64));
 			}
 
@@ -1539,16 +1541,34 @@ inline static void _remove(QF *qf, __uint128_t hash, uint64_t count)
 	if (original_runstart_index == runstart_index && is_runend(qf, current_end))
 		only_item_in_the_run = 1;
 
+	uint64_t fcounter=get_fixed_counter(qf,runstart_index);
+	uint64_t newcount,rem;
+	if(count > current_count)
+	{
+		newcount=0;
+		rem=count-current_count;
+	}
+	else{
+		newcount=current_count-count;
+		rem=0;
+	}
+	fcounter= rem > fcounter ? 0 : fcounter - rem;
+	set_fixed_counter(qf,runstart_index,fcounter);
 	/* endode the new counter */
 	uint64_t *p = encode_counter(qf, hash_remainder,
-															 count > current_count ? 0 : current_count - count,
+															 newcount,
 															 &new_values[67]);
+	uint64_t total_reminders=&new_values[67] - p;
+	if(fcounter==0 && newcount==0){
+		total_reminders=0;
+		p=&new_values[67];
+	}
 	remove_replace_slots_and_shift_remainders_and_runends_and_offsets(qf,
 																																		only_item_in_the_run,
 																																		hash_bucket_index,
 																																		runstart_index,
 																																		p,
-																																		&new_values[67] - p,
+																																		total_reminders,
 																																		current_end - runstart_index + 1);
 
 	// update the nelements.

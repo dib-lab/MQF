@@ -476,7 +476,7 @@ TEST_CASE( "MMap test") {
   {
     INFO("Check = "<<vals[i]);
     count = qf_count_key_value(&qf, vals[i], 0);
-INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
+    INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
     CHECK(count >= nRepetitions[i]);
   }
 
@@ -485,7 +485,7 @@ INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
 }
 
 
-TEST_CASE( "Removing items from cqf(90% load factor )" ,"[!mayfail]") {
+TEST_CASE( "Removing items from cqf(90% load factor )" ) {
   QF qf;
   int counter_size=2;
   uint64_t qbits=16;
@@ -498,9 +498,21 @@ TEST_CASE( "Removing items from cqf(90% load factor )" ,"[!mayfail]") {
   vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
   for(int i=0;i<nvals;i++)
   {
-    vals[i]=rand();
-    vals[i]=(vals[i]<<32)|rand();
-    vals[i]=vals[i]%(qf.metadata->range);
+    uint64_t newvalue=0;
+    while(newvalue==0){
+      newvalue=rand();
+      newvalue=(newvalue<<32)|rand();
+      newvalue=newvalue%(qf.metadata->range);
+      for(int j=0;j<i;j++)
+      {
+        if(vals[j]==newvalue)
+        {
+          newvalue=0;
+          break;
+        }
+      }
+    }
+    vals[i]=newvalue;
   }
   double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   uint64_t insertedItems=0;
@@ -514,7 +526,13 @@ TEST_CASE( "Removing items from cqf(90% load factor )" ,"[!mayfail]") {
   for(int i=0;i<insertedItems;i++)
   {
     if(i%2==0){
+      count = qf_count_key_value(&qf, vals[i], 0);
+      if(count==100){
+        printf("coubn ==100\n" );
+      }
     _remove(&qf,vals[i],50);
+    count = qf_count_key_value(&qf, vals[i], 0);
+    CHECK(count ==0);
     }
   }
   for(int i=0;i<insertedItems;i++)
