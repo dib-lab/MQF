@@ -313,6 +313,7 @@ TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )","[!hid
 TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )","[!mayfail]" ) {
   QF qf;
   int counter_size=2;
+  srand (1);
   uint64_t qbits=11;
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
@@ -338,6 +339,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )","[
   double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   uint64_t insertedItems=0;
   while(insertedItems<nvals && loadFactor<0.9){
+    printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
     INFO("Inserting "<< vals[insertedItems] << " Repeated "<<nRepetitions[insertedItems]);
     qf_insert(&qf,vals[insertedItems],0,nRepetitions[insertedItems],false,false);
     qf_dump(&qf);
