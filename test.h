@@ -4,7 +4,7 @@
 #include<iostream>
 using namespace std;
 
-TEST_CASE( "get/set fixed counters" ,"[!hide]") {
+TEST_CASE( "get/set fixed counters" ) {
   QF qf;
   for(int counter_size=1;counter_size<=5;counter_size++){
     uint64_t qbits=15;
@@ -64,7 +64,7 @@ TEST_CASE( "get/set fixed counters" ,"[!hide]") {
   }
 }
 
-TEST_CASE( "shift fixed counters" ,"[!hide]") {
+TEST_CASE( "shift fixed counters" ) {
   QF qf;
   for(int counter_size=1;counter_size<=5;counter_size++){
     uint64_t qbits=15;
@@ -113,7 +113,7 @@ TEST_CASE( "shift fixed counters" ,"[!hide]") {
   }
 }
 
-
+// not applicable after using fixed counters in the counting
 TEST_CASE( "Add fixed counters to items","[!hide]") {
   QF qf;
   for(int counter_size=1;counter_size<=5;counter_size++){
@@ -157,7 +157,7 @@ TEST_CASE( "Add fixed counters to items","[!hide]") {
   }
 }
 
-TEST_CASE( "simple counting test","[!hide]" ) {
+TEST_CASE( "simple counting test" ) {
   //except first item is inserted 5 times to full test _insert1
   QF qf;
   int counter_size=2;
@@ -189,7 +189,7 @@ TEST_CASE( "simple counting test","[!hide]" ) {
   CHECK(count == (50));
 
 }
-TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ,"[!hide]") {
+TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
   //except first item is inserted 5 times to full test _insert1
   QF qf;
   int counter_size=2;
@@ -264,10 +264,10 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ,"[!hide
 }
 
 
-TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )","[!hide]" ) {
+TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )" ) {
   QF qf;
   int counter_size=2;
-  uint64_t qbits=4;
+  uint64_t qbits=16;
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
@@ -310,7 +310,7 @@ TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )","[!hid
 }
 
 
-TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )","[!mayfail]" ) {
+TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )" ) {
   QF qf;
   int counter_size=2;
   srand (1);
@@ -334,18 +334,18 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )","[
     vals[i]=(vals[i]<<32)|rand();
     vals[i]=vals[i]%(qf.metadata->range);
 
-    nRepetitions[i]=rand()%258;
+    nRepetitions[i]=(rand()%257)+1;
   }
   double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   uint64_t insertedItems=0;
   while(insertedItems<nvals && loadFactor<0.9){
-    printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
+  //  printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
     INFO("Inserting "<< vals[insertedItems] << " Repeated "<<nRepetitions[insertedItems]);
     qf_insert(&qf,vals[insertedItems],0,nRepetitions[insertedItems],false,false);
-    qf_dump(&qf);
+    //qf_dump(&qf);
     INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
     count = qf_count_key_value(&qf, vals[insertedItems], 0);
-    //CHECK(count >= nRepetitions[insertedItems]);
+    CHECK(count >= nRepetitions[insertedItems]);
     insertedItems++;
     loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
 
@@ -362,7 +362,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )","[
   qf_destroy(&qf,true);
 
 }
-TEST_CASE( "Writing and Reading to/from Disk","[!hide]") {
+TEST_CASE( "Writing and Reading to/from Disk") {
   QF qf;
   int counter_size=2;
   uint64_t qbits=16;
@@ -385,7 +385,7 @@ TEST_CASE( "Writing and Reading to/from Disk","[!hide]") {
     vals[i]=(vals[i]<<32)|rand();
     vals[i]=vals[i]%(qf.metadata->range);
 
-    nRepetitions[i]=rand()%258;
+    nRepetitions[i]=(rand()%257)+1;
   }
   double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   uint64_t insertedItems=0;
@@ -432,7 +432,7 @@ TEST_CASE( "Writing and Reading to/from Disk","[!hide]") {
 
 }
 
-TEST_CASE( "MMap test","[!hide]") {
+TEST_CASE( "MMap test") {
   QF qf;
   int counter_size=2;
   uint64_t qbits=16;
@@ -455,7 +455,7 @@ TEST_CASE( "MMap test","[!hide]") {
     vals[i]=(vals[i]<<32)|rand();
     vals[i]=vals[i]%(qf.metadata->range);
 
-    nRepetitions[i]=rand()%258;
+    nRepetitions[i]=(rand()%257)+1;
   }
   double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   uint64_t insertedItems=0;
@@ -481,7 +481,7 @@ TEST_CASE( "MMap test","[!hide]") {
 }
 
 
-TEST_CASE( "Removing items from cqf(90% load factor )","[!hide]") {
+TEST_CASE( "Removing items from cqf(90% load factor )") {
   QF qf;
   int counter_size=2;
   uint64_t qbits=16;
@@ -558,7 +558,7 @@ TEST_CASE( "Removing items from cqf(90% load factor )","[!hide]") {
   qf_destroy(&qf,true);
 
 }
-TEST_CASE( "Merging Cqf","[!hide]") {
+TEST_CASE( "Merging Cqf") {
   QF cf,cf1,cf2;
  QFi cfi;
  uint64_t qbits = 18;
@@ -624,7 +624,7 @@ TEST_CASE( "Merging Cqf","[!hide]") {
 }
 
 
-
+// not applicable after using fixed counters in the counting
 TEST_CASE( "Inserting items( repeated 50 times)  and set fixed size counters in cqf(90% load factor )","[!hide]") {
   QF qf;
   int counter_size=3;

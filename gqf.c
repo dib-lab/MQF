@@ -754,7 +754,7 @@ static inline void shift_remainders(QF *qf, const uint64_t start_index, const
 static inline void qf_dump_block(const QF *qf, uint64_t i)
 {
 	uint64_t j;
-
+ 	printf("#Block %lu \n",i );
 	printf("%-192d", get_block(qf, i)->offset);
 	printf("\n");
 
@@ -778,7 +778,7 @@ static inline void qf_dump_block(const QF *qf, uint64_t i)
 		printf("%02lx ", get_block(qf, i)->slots[j]);
 #else
 	for (j = 0; j < SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8; j++)
-		printf("%lu ", get_block(qf, i)->slots[j]);
+		printf("%02x ", get_block(qf, i)->slots[j]);
 #endif
 
 	printf("\n fixed counter \n");
@@ -1443,7 +1443,7 @@ static inline bool insert(QF *qf, __uint128_t hash, uint64_t count, bool lock,
 	uint64_t hash_bucket_index        = hash >> qf->metadata->bits_per_slot;
 	uint64_t hash_bucket_block_offset = hash_bucket_index % SLOTS_PER_BLOCK;
 	/*uint64_t hash_bucket_lock_offset  = hash_bucket_index % NUM_SLOTS_TO_LOCK;*/
-	printf("index= %lu remainder= %lu count=%lu\n",hash_bucket_index,hash_remainder,count);
+	//printf("index= %lu remainder= %lu count=%lu\n",hash_bucket_index,hash_remainder,count);
 	if (lock) {
 		if (!qf_lock(qf, hash_bucket_index, spin, false))
 			return false;
@@ -1932,6 +1932,10 @@ uint64_t qf_get_fixed_counter(const QF *qf, uint64_t key)
 bool qf_insert(QF *qf, uint64_t key, uint64_t value, uint64_t count, bool
 							 lock, bool spin)
 {
+	if(count==0)
+	{
+		return true;
+	}
 	/*uint64_t hash = (key << qf->metadata->value_bits) | (value & BITMASK(qf->metadata->value_bits));*/
 	if (0 && count == 1)
 	 return insert(qf, key,count, lock, spin);
