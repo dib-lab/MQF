@@ -1126,36 +1126,46 @@ static inline void remove_replace_slots_and_shift_remainders_and_runends_and_off
 
 /*
 	 Counter format:
-	 0 xs:    <empty string>
-	 1 x:     x
-	 2 xs:    xx
-	 3 0s:    000
-	 >2 xs:   xbc...cx  for x != 0, b < x, c != 0, x
-	 >3 0s:   0c...c00  for c != 0
-	 */
+	 1- count <= 2^(fixed counter size)
+	 	Slots :           [Remaining]
+		Fixed counters :  [count-1]
+
+	 2- count > 2^(fixed counter size)
+	 Slots :           [Remaining] [first digit] [second digit] ... [last digit]
+	 Fixed counters :  [Maximum]     [Maximum]   [Maximum]      ... [up to Maximum -1]
+
+ */
 static inline uint64_t *encode_counter(QF *qf, uint64_t remainder, uint64_t
 																			 counter, uint64_t *slots, uint64_t *fixed_size_counters)
 {
-	uint64_t base = (1ULL << qf->metadata->bits_per_slot) - 1;
-	uint64_t *p = slots;
-	uint64_t fixed_counter_max=(1ULL<<qf->metadata->fixed_counter_size)-1;
+	//printf("inserting %lu repeated %lu\n",remainder,counter);
+	const uint64_t slots_base = (1ULL << qf->metadata->bits_per_slot) ;
+	uint64_t *p  = slots;
+	uint64_t *pf = fixed_size_counters;
+	const uint64_t fixed_counter_max=(1ULL<<qf->metadata->fixed_counter_size)-1;
 
 	if (counter == 0)
 	 	return p;
 
 	counter--;
-	uint64_t fcounter=std::min(counter,fixed_counter_max);
-	counter-=(fcounter);
+	uint64_t fcounter_first=std::min(counter,fixed_counter_max);
+	counter-=(fcounter_first);
 
-
-
-	if(fcounter==fixed_counter_max){
-		*--p = std::min(counter,base);
-		*--fixed_size_counters=0;
+	//printf("first fixed counter =%lu\n", fcounter_first);
+	if(fcounter_first==fixed_counter_max){
+		uint64_t max_count_in_fixed_counter=fixed_counter_max-1;// the fixed size count in the end of the counter should'nt be full
+		do{
+			*--p=counter%slots_base;
+			*--pf=fixed_counter_max;
+			//printf("vcount = %lu\n",counter%slots_base );
+			counter >>= qf->metadata->bits_per_slot;
+		}	while(counter>max_count_in_fixed_counter);
+		*(fixed_size_counters-1)=counter;// set the last counter
+		//printf("last fixed counter = %lu\n",counter);
 	}
 
 	*--p = remainder;
-	*--fixed_size_counters=fcounter;
+	*--pf=fcounter_first;
 
 
 	return p;
@@ -1168,15 +1178,28 @@ static inline uint64_t decode_counter(const QF *qf, uint64_t index, uint64_t
 {
 
 	*remainder  = get_slot(qf, index);
+	uint64_t fcount=get_fixed_counter(qf,index);
+	uint64_t tmp_count= fcount+1;
+	*count=0;
+	const uint64_t fixed_count_max=(1ULL << qf->metadata->fixed_counter_size)-1;
+	//printf("tmp count = %lu\n",tmp_count);
+	if(fcount == fixed_count_max){
+		uint64_t no_digits=0;
+		do{
+				index++;
+				no_digits++;
+				*count <<= qf->metadata->bits_per_slot;
+				fcount= get_fixed_counter(qf,index);
+		//		printf("quer slot =%lu  fixed count= %lu\n", get_slot(qf, index),fcount);
+				*count += get_slot(qf, index);
 
-	*count=(uint64_t)get_fixed_counter(qf,index)+(uint64_t)1;
-	if(*count == (1ULL << qf->metadata->fixed_counter_size)){
-		*count += get_slot(qf, index + 1);
-		return index+1;
+		}while(fcount == fixed_count_max);
+		*count += fcount<<(no_digits*qf->metadata->bits_per_slot + qf->metadata->fixed_counter_size);
+		//printf("fixed vcount= %lu\n", fcount<<(no_digits*qf->metadata->bits_per_slot + qf->metadata->fixed_counter_size));
 	}
-	else{
-		return index;
-	}
+	*count += tmp_count;
+	return index;
+
 }
 
 /* return the next slot which corresponds to a

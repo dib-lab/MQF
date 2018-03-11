@@ -182,11 +182,18 @@ TEST_CASE( "simple counting test" ) {
   INFO("Counter = "<<count<<" fixed counter = "<<fixed_counter)
   CHECK(count == (50));
 
-  qf_insert(&qf,1600,0,50,false,false);
-  count = qf_count_key_value(&qf, 1500, 0);
-  fixed_counter=qf_get_fixed_counter(&qf,1500);
+  qf_insert(&qf,1600,0,60,false,false);
+  count = qf_count_key_value(&qf, 1600, 0);
+  fixed_counter=qf_get_fixed_counter(&qf,1600);
   INFO("Counter = "<<count<<" fixed counter = "<<fixed_counter)
-  CHECK(count == (50));
+  CHECK(count == (60));
+
+
+  qf_insert(&qf,2000,0,4000,false,false);
+  count = qf_count_key_value(&qf, 2000, 0);
+  fixed_counter=qf_get_fixed_counter(&qf,2000);
+  INFO("Counter = "<<count<<" fixed counter = "<<fixed_counter)
+  CHECK(count == (4000));
 
 }
 TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
@@ -314,7 +321,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )" ) 
   QF qf;
   int counter_size=2;
   srand (1);
-  uint64_t qbits=11;
+  uint64_t qbits=16;
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
@@ -480,6 +487,59 @@ TEST_CASE( "MMap test") {
 
 }
 
+TEST_CASE( "Counting Big counters" ){
+  QF qf;
+  int counter_size=2;
+  srand (1);
+  uint64_t qbits=16;
+  uint64_t num_hash_bits=qbits+8;
+  uint64_t maximum_count=(1ULL<<counter_size)-1;
+  INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
+
+  uint64_t nvals = (1ULL<<qbits);
+  //uint64_t nvals = 3;
+  uint64_t *vals;
+  uint64_t *nRepetitions;
+  vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
+  nRepetitions= (uint64_t*)malloc(nvals*sizeof(nRepetitions[0]));
+  uint64_t count;
+
+  for(int i=0;i<nvals;i++)
+  {
+    vals[i]=rand();
+    vals[i]=(vals[i]<<32)|rand();
+    vals[i]=vals[i]%(qf.metadata->range);
+
+    nRepetitions[i]=(rand())+1;
+  }
+  double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
+  uint64_t insertedItems=0;
+  while(insertedItems<nvals && loadFactor<0.9){
+  //  printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
+    INFO("Inserting "<< vals[insertedItems] << " Repeated "<<nRepetitions[insertedItems]);
+    qf_insert(&qf,vals[insertedItems],0,nRepetitions[insertedItems],false,false);
+    //qf_dump(&qf);
+    INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
+    count = qf_count_key_value(&qf, vals[insertedItems], 0);
+    CHECK(count >= nRepetitions[insertedItems]);
+    insertedItems++;
+    loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
+
+  }
+  INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
+
+  for(int i=0;i<insertedItems;i++)
+  {
+    count = qf_count_key_value(&qf, vals[i], 0);
+    INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
+    CHECK(count >= nRepetitions[i]);
+  }
+
+  qf_destroy(&qf,true);
+
+
+}
 
 TEST_CASE( "Removing items from cqf(90% load factor )") {
   QF qf;
