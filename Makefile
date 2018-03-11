@@ -1,5 +1,6 @@
 TARGETS=main
 TESTS= mqf_test
+TESTFILES = tests/CountingTests.o tests/HighLevelFunctionsTests.o tests/IOTests.o
 
 ifdef D
 	DEBUG=-g
@@ -33,30 +34,33 @@ LDFLAGS = $(DEBUG) $(PROFILE) $(OPT)
 
 all: $(TARGETS)
 
-test: $(TESTS)
+
 
 # dependencies between programs and .o files
 
 main:                  main.o 								 gqf.o
-
+	$(LD) $^ $(LDFLAGS) -o $@
 # dependencies between .o files and .h files
+
+test: $(TESTS) $(TESTFILES) gqf.c test.o
+	$(LD) $(LDFLAGS) -DTEST -o mqf_test test.o $(TESTFILES) gqf.c
 
 main.o: 								 									gqf.h
 
 # dependencies between .o files and .cc (or .c) files
 
-%.o: %.cc
+
 gqf.o: gqf.c gqf.h
 
 #
 # generic build rules
 #
-mqf_test: gqf.c gqf.h test.h
-	$(CXX) $(CXXFLAGS) $(INCLUDE)  -DTEST -fprofile-arcs -ftest-coverage -lgcov -g -o $@ gqf.c
 
 
-$(TARGETS):
-	$(LD) $^ $(LDFLAGS) -o $@
+
+
+
+
 
 %.o: %.cc
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $< -c -o $@
@@ -64,5 +68,9 @@ $(TARGETS):
 %.o: %.c
 	$(CC) $(CXXFLAGS) $(INCLUDE) $< -c -o $@
 
+
+
+
+
 clean:
-	rm -f *.o $(TARGETS) $(TESTS)
+	rm -f *.o $(TARGETS) $(TESTS) $(TESTFILES)

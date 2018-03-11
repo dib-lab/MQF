@@ -1578,7 +1578,7 @@ static inline bool insert(QF *qf, __uint128_t hash, uint64_t count, bool lock,
 	return true;
 }
 
-inline static void _remove(QF *qf, __uint128_t hash, uint64_t count)
+ void _remove(QF *qf, __uint128_t hash, uint64_t count)
 {
 	uint64_t hash_remainder           = hash & BITMASK(qf->metadata->bits_per_slot);
 	uint64_t hash_bucket_index        = hash >> qf->metadata->bits_per_slot;
@@ -2291,5 +2291,5 @@ uint64_t qf_magnitude(QF *qf)
 
 
 #ifdef TEST
-	#include "test.h"
+	#include "tests/lowLevelTests.hpp"
 #endif

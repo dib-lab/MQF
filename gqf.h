@@ -162,6 +162,10 @@ extern "C" {
 	/* magnitude of a QF. */
 	uint64_t qf_magnitude(QF *qf);
 
+
+	void _remove(QF *qf, __uint128_t hash, uint64_t count);
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -6,3 +6,5 @@
 mqf_test
 
 tmp\.ser
+
+*.o
