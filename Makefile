@@ -1,5 +1,4 @@
 TARGETS=main
-TESTS= mqf_test
 TESTFILES = tests/CountingTests.o tests/HighLevelFunctionsTests.o tests/IOTests.o
 
 ifdef D
@@ -42,7 +41,7 @@ main:                  main.o 								 gqf.o
 	$(LD) $^ $(LDFLAGS) -o $@
 # dependencies between .o files and .h files
 
-test: $(TESTS) $(TESTFILES) gqf.c test.o
+test:  $(TESTFILES) gqf.c test.o
 	$(LD) $(LDFLAGS) -DTEST -o mqf_test test.o $(TESTFILES) gqf.c
 
 main.o: 								 									gqf.h
