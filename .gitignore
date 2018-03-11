@@ -1,0 +1,8 @@
+
+*.gcda
+
+*.gcno
+
+mqf_test
+
+tmp\.ser

@@ -6,7 +6,7 @@ using namespace std;
 
 TEST_CASE( "get/set fixed counters" ) {
   QF qf;
-  for(int counter_size=1;counter_size<=5;counter_size++){
+  for(uint64_t counter_size=1;counter_size<=5;counter_size++){
     uint64_t qbits=15;
     uint64_t num_hash_bits=qbits+8;
     uint64_t maximum_count=(1ULL<<counter_size)-1;
@@ -15,7 +15,7 @@ TEST_CASE( "get/set fixed counters" ) {
     uint64_t c;
     // test many set and get
     uint64_t last=0;
-    for(int i=1;i<=maximum_count;i++){
+    for(uint64_t i=1;i<=maximum_count;i++){
       REQUIRE( get_fixed_counter(&qf,99) == 0 );
       CHECK( get_fixed_counter(&qf,100) == last );
       REQUIRE( get_fixed_counter(&qf,101) == 0 );
@@ -53,7 +53,7 @@ TEST_CASE( "get/set fixed counters" ) {
       (1ULL<qbits),
       qf.metadata->xnslots-1
     };
-    for(int i=0;i<3;i++){
+    for(uint64_t i=0;i<3;i++){
       INFO("Testing Special Slot "<<special_slots[i]);
       REQUIRE( get_fixed_counter(&qf,special_slots[i]) == 0 );
       set_fixed_counter(&qf,special_slots[i],c);
@@ -66,7 +66,7 @@ TEST_CASE( "get/set fixed counters" ) {
 
 TEST_CASE( "shift fixed counters" ) {
   QF qf;
-  for(int counter_size=1;counter_size<=5;counter_size++){
+  for(uint64_t counter_size=1;counter_size<=5;counter_size++){
     uint64_t qbits=15;
     uint64_t num_hash_bits=qbits+8;
     uint64_t maximum_count=(1ULL<<counter_size)-1;
@@ -116,7 +116,7 @@ TEST_CASE( "shift fixed counters" ) {
 // not applicable after using fixed counters in the counting
 TEST_CASE( "Add fixed counters to items","[!hide]") {
   QF qf;
-  for(int counter_size=1;counter_size<=5;counter_size++){
+  for(uint64_t counter_size=1;counter_size<=5;counter_size++){
     uint64_t qbits=15;
     uint64_t num_hash_bits=qbits+8;
     uint64_t maximum_count=(1ULL<<counter_size)-1;
@@ -129,7 +129,7 @@ TEST_CASE( "Add fixed counters to items","[!hide]") {
     CHECK( qf_get_fixed_counter(&qf,150)==maximum_count);
     CHECK( qf_count_key_value(&qf,150,0)==50);
 
-    for(int i=120;i<=149;i++){
+    for(uint64_t i=120;i<=149;i++){
       qf_insert(&qf,i,0,50,false,false);
       CHECK( qf_count_key_value(&qf,i,0)==50);
       qf_set_fixed_counter(&qf,i,1);
@@ -168,7 +168,7 @@ TEST_CASE( "simple counting test" ) {
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
   qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
 
-  for(int i=0;i<=10;i++){
+  for(uint64_t i=0;i<=10;i++){
     qf_insert(&qf,100,0,1,false,false);
     count = qf_count_key_value(&qf, 100, 0);
     fixed_counter=qf_get_fixed_counter(&qf,100);
@@ -209,7 +209,7 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
   uint64_t nvals = (1ULL<<qbits)*2;
   uint64_t *vals;
   vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
-  for(int i=0;i<nvals;i++)
+  for(uint64_t i=0;i<nvals;i++)
   {
     vals[i]=rand();
     vals[i]=(vals[i]<<32)|rand();
@@ -223,7 +223,7 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
     qf_insert(&qf,vals[0],0,1,false,false);
     qf_insert(&qf,vals[0],0,1,false,false);
     qf_insert(&qf,vals[0],0,1,false,false);
-  // for(int i=0;i<32;i++)
+  // for(uint64_t i=0;i<32;i++)
   // {
   //   cout<<get_fixed_counter(&qf,i)<<"-";
   // }
@@ -231,7 +231,7 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
   while(loadFactor<0.9){
 
     qf_insert(&qf,vals[insertedItems],0,1,false,false);
-    // for(int i=0;i<32;i++)
+    // for(uint64_t i=0;i<32;i++)
     // {
     //   cout<<get_fixed_counter(&qf,i)<<"-";
     // }
@@ -246,7 +246,7 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
   count = qf_count_key_value(&qf, vals[0], 0);
   CHECK(count >= 5);
 
-  for(int i=1;i<insertedItems;i++)
+  for(uint64_t i=1;i<insertedItems;i++)
   {
     count = qf_count_key_value(&qf, vals[i], 0);
     CHECK(count >= 1);
@@ -283,7 +283,7 @@ TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )" ) {
   uint64_t nvals = (1ULL<<qbits);
   uint64_t *vals;
   vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
-  for(int i=0;i<nvals;i++)
+  for(uint64_t i=0;i<nvals;i++)
   {
     vals[i]=rand();
     vals[i]=(vals[i]<<32)|rand();
@@ -298,7 +298,7 @@ TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )" ) {
     loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   }
   uint64_t count;
-  for(int i=0;i<insertedItems;i++)
+  for(uint64_t i=0;i<insertedItems;i++)
   {
     count = qf_count_key_value(&qf, vals[i], 0);
     CHECK(count >= 50);
@@ -335,7 +335,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )" ) 
   nRepetitions= (uint64_t*)malloc(nvals*sizeof(nRepetitions[0]));
   uint64_t count;
 
-  for(int i=0;i<nvals;i++)
+  for(uint64_t i=0;i<nvals;i++)
   {
     vals[i]=rand();
     vals[i]=(vals[i]<<32)|rand();
@@ -359,7 +359,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )" ) 
   }
   INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
 
-  for(int i=0;i<insertedItems;i++)
+  for(uint64_t i=0;i<insertedItems;i++)
   {
     count = qf_count_key_value(&qf, vals[i], 0);
     INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
@@ -386,7 +386,7 @@ TEST_CASE( "Writing and Reading to/from Disk") {
   nRepetitions= (uint64_t*)malloc(nvals*sizeof(nRepetitions[0]));
   uint64_t count;
 
-  for(int i=0;i<nvals;i++)
+  for(uint64_t i=0;i<nvals;i++)
   {
     vals[i]=rand();
     vals[i]=(vals[i]<<32)|rand();
@@ -412,7 +412,7 @@ TEST_CASE( "Writing and Reading to/from Disk") {
     QF qf2;
     qf_read(&qf2,"tmp.ser");
     INFO("nslots ="<<qf2.metadata->nslots);
-    for(int i=0;i<insertedItems;i++)
+    for(uint64_t i=0;i<insertedItems;i++)
     {
       count = qf_count_key_value(&qf2, vals[i], 0);
       INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
@@ -425,7 +425,7 @@ TEST_CASE( "Writing and Reading to/from Disk") {
   SECTION("Reading using deserialize "){
     qf_deserialize(&qf,"tmp.ser");
 
-    for(int i=0;i<insertedItems;i++)
+    for(uint64_t i=0;i<insertedItems;i++)
     {
       count = qf_count_key_value(&qf, vals[i], 0);
       INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
@@ -456,7 +456,7 @@ TEST_CASE( "MMap test") {
   nRepetitions= (uint64_t*)malloc(nvals*sizeof(nRepetitions[0]));
   uint64_t count;
 
-  for(int i=0;i<nvals;i++)
+  for(uint64_t i=0;i<nvals;i++)
   {
     vals[i]=rand();
     vals[i]=(vals[i]<<32)|rand();
@@ -475,7 +475,7 @@ TEST_CASE( "MMap test") {
   }
   INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems<<" "<<vals[0]);
 
-  for(int i=0;i<insertedItems;i++)
+  for(uint64_t i=0;i<insertedItems;i++)
   {
     INFO("Check = "<<vals[i]);
     count = qf_count_key_value(&qf, vals[i], 0);
@@ -505,7 +505,7 @@ TEST_CASE( "Counting Big counters" ){
   nRepetitions= (uint64_t*)malloc(nvals*sizeof(nRepetitions[0]));
   uint64_t count;
 
-  for(int i=0;i<nvals;i++)
+  for(uint64_t i=0;i<nvals;i++)
   {
     vals[i]=rand();
     vals[i]=(vals[i]<<32)|rand();
@@ -529,7 +529,7 @@ TEST_CASE( "Counting Big counters" ){
   }
   INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
 
-  for(int i=0;i<insertedItems;i++)
+  for(uint64_t i=0;i<insertedItems;i++)
   {
     count = qf_count_key_value(&qf, vals[i], 0);
     INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
@@ -552,14 +552,14 @@ TEST_CASE( "Removing items from cqf(90% load factor )") {
   uint64_t nvals = (1ULL<<qbits);
   uint64_t *vals;
   vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
-  for(int i=0;i<nvals;i++)
+  for(uint64_t i=0;i<nvals;i++)
   {
     uint64_t newvalue=0;
     while(newvalue==0){
       newvalue=rand();
       newvalue=(newvalue<<32)|rand();
       newvalue=newvalue%(qf.metadata->range);
-      for(int j=0;j<i;j++)
+      for(uint64_t j=0;j<i;j++)
       {
         if(vals[j]==newvalue)
         {
@@ -579,7 +579,7 @@ TEST_CASE( "Removing items from cqf(90% load factor )") {
     loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   }
   uint64_t count;
-  for(int i=0;i<insertedItems;i++)
+  for(uint64_t i=0;i<insertedItems;i++)
   {
     if(i%2==0){
       count = qf_count_key_value(&qf, vals[i], 0);
@@ -591,7 +591,7 @@ TEST_CASE( "Removing items from cqf(90% load factor )") {
     CHECK(count ==0);
     }
   }
-  for(int i=0;i<insertedItems;i++)
+  for(uint64_t i=0;i<insertedItems;i++)
   {
     count = qf_count_key_value(&qf, vals[i], 0);
     if(i%2==1){
@@ -642,7 +642,7 @@ TEST_CASE( "Merging Cqf") {
  /* Generate random values */
  vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
 
- for(int i=0;i<nvals;i++)
+ for(uint64_t i=0;i<nvals;i++)
  {
    vals[i]=rand();
    vals[i]=(vals[i]<<32)|rand();
@@ -697,7 +697,7 @@ TEST_CASE( "Inserting items( repeated 50 times)  and set fixed size counters in 
   uint64_t nvals = (1ULL<<qbits);
   uint64_t *vals;
   vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
-  for(int i=0;i<nvals;i++)
+  for(uint64_t i=0;i<nvals;i++)
   {
     vals[i]=rand();
     vals[i]=(vals[i]<<32)|rand();
@@ -715,7 +715,7 @@ TEST_CASE( "Inserting items( repeated 50 times)  and set fixed size counters in 
     CHECK(count == vals[insertedItems]%(maximum_count+1));
     insertedItems++;
     loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
-    for(int i=0;i<insertedItems;i++)
+    for(uint64_t i=0;i<insertedItems;i++)
     {
       count = qf_count_key_value(&qf, vals[i], 0);
       REQUIRE(count >= 50);
@@ -726,7 +726,7 @@ TEST_CASE( "Inserting items( repeated 50 times)  and set fixed size counters in 
 
   }
 
-  for(int i=0;i<insertedItems;i++)
+  for(uint64_t i=0;i<insertedItems;i++)
   {
     count = qf_count_key_value(&qf, vals[i], 0);
     CHECK(count >= 50);
