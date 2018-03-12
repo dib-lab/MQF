@@ -28,20 +28,20 @@ TEST_CASE( "simple counting test" ) {
 
   qf_insert(&qf,1500,0,50,false,false);
   count = qf_count_key_value(&qf, 1500, 0);
-//  fixed_counter=qf_get_fixed_counter(&qf,1500);
+  //  fixed_counter=qf_get_fixed_counter(&qf,1500);
   INFO("Counter = "<<count<<" fixed counter = "<<fixed_counter)
   CHECK(count == (50));
 
   qf_insert(&qf,1600,0,60,false,false);
   count = qf_count_key_value(&qf, 1600, 0);
-//  fixed_counter=qf_get_fixed_counter(&qf,1600);
+  //  fixed_counter=qf_get_fixed_counter(&qf,1600);
   INFO("Counter = "<<count<<" fixed counter = "<<fixed_counter)
   CHECK(count == (60));
 
 
   qf_insert(&qf,2000,0,4000,false,false);
   count = qf_count_key_value(&qf, 2000, 0);
-//  fixed_counter=qf_get_fixed_counter(&qf,2000);
+  //  fixed_counter=qf_get_fixed_counter(&qf,2000);
   INFO("Counter = "<<count<<" fixed counter = "<<fixed_counter)
   CHECK(count == (4000));
 
@@ -51,7 +51,7 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
   QF qf;
   int counter_size=2;
   uint64_t qbits=16;
-  uint64_t num_hash_bits=qbits+8;
+  uint64_t num_hash_bits=qbits+9;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
   qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
@@ -172,7 +172,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )" ) 
   int counter_size=2;
   srand (1);
   uint64_t qbits=16;
-  uint64_t num_hash_bits=qbits+8;
+  uint64_t num_hash_bits=qbits+9;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
   qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
