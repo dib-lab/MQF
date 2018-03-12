@@ -444,23 +444,30 @@ static inline qfblock * get_block(const QF *qf, uint64_t block_index)
 static inline qfblock * get_block(const QF *qf, uint64_t block_index)
 {
 	return (qfblock *)(((char *)qf->blocks) + block_index * (sizeof(qfblock) +
-						SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8 +8*qf->metadata->fixed_counter_size));
+						SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8 +
+						8*qf->metadata->fixed_counter_size +
+						8*qf->metadata->tag_bits
+					 ));
 }
 #endif
 static inline uint64_t get_fixed_counter(const QF *qf, uint64_t index)
 {
 	uint64_t res=0;
 	uint64_t base=1;
-	uint64_t* p=(uint64_t*)((uint8_t*)get_block(qf, index /SLOTS_PER_BLOCK)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
+	uint64_t* p=(uint64_t*)((uint8_t*)get_block(qf, index /SLOTS_PER_BLOCK)->slots+
+																(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot )/ 8);
+
 	for(int i=qf->metadata->fixed_counter_size-1;i>=0;i--){
-	res+= base*(( p[i] >> ((index % SLOTS_PER_BLOCK) %64)) & 1ULL);
-	base*=2;
+		res+= base*(( p[i] >> ((index % SLOTS_PER_BLOCK) %64)) & 1ULL);
+		base*=2;
 	}
+
 	return res;
 }
 static inline void set_fixed_counter(const QF *qf, uint64_t index,uint64_t value)
 {
-	uint64_t* p=(uint64_t*)((uint8_t*)get_block(qf, index /SLOTS_PER_BLOCK)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
+	uint64_t* p=(uint64_t*)((uint8_t*)get_block(qf, index /SLOTS_PER_BLOCK)->slots +
+	 (SLOTS_PER_BLOCK * qf->metadata->bits_per_slot) / 8);
 	uint64_t bitmask=1ULL << ((index % SLOTS_PER_BLOCK) %64);
 	for(int i=qf->metadata->fixed_counter_size-1;i>=0;i--){
 		if(value%2){
@@ -473,6 +480,40 @@ static inline void set_fixed_counter(const QF *qf, uint64_t index,uint64_t value
 	}
 
 }
+
+static inline uint64_t get_tag(const QF *qf, uint64_t index)
+{
+	uint64_t res=0;
+	uint64_t base=1;
+	uint64_t* p=(uint64_t*)((uint8_t*)get_block(qf, index /SLOTS_PER_BLOCK)->slots+
+				 (8 *
+				 (qf->metadata->bits_per_slot + qf->metadata->fixed_counter_size)));
+
+	for(int i=qf->metadata->tag_bits-1;i>=0;i--){
+	res+= base*(( p[i] >> ((index % SLOTS_PER_BLOCK) %64)) & 1ULL);
+	base*=2;
+	}
+	return res;
+}
+static inline void set_tag(const QF *qf, uint64_t index,uint64_t value)
+{
+	uint64_t* p=(uint64_t*)((uint8_t*)get_block(qf, index /SLOTS_PER_BLOCK)->slots+
+					(8 *
+					(qf->metadata->bits_per_slot + qf->metadata->fixed_counter_size)));
+
+	uint64_t bitmask=1ULL << ((index % SLOTS_PER_BLOCK) %64);
+	for(int i=qf->metadata->tag_bits-1;i>=0;i--){
+		if(value%2){
+			p[i]|= bitmask;
+		}
+		else{
+			p[i]&= ~(bitmask);
+		}
+		value=value>>1;
+	}
+
+}
+
 static inline int is_runend(const QF *qf, uint64_t index)
 {
 	return (METADATA_WORD(qf, runends, index) >> ((index % SLOTS_PER_BLOCK) %
@@ -790,6 +831,14 @@ static inline void qf_dump_block(const QF *qf, uint64_t i)
 		printf("%lu ", get_fixed_counter(qf,j+64*i));
 	}
 
+	printf("\n tags \n");
+
+	for(int j=0;j<64;j++)
+	{
+		printf("%lu ", get_tag(qf,j+64*i));
+	}
+
+
 	printf("\n");
 	printf("\n");
 }
@@ -876,8 +925,10 @@ static inline void shift_fixed_counters(QF *qf, int64_t first, uint64_t last,
 		last_word=tmp;
 		bend=tmp_bend;
 		if (last_word != first_word) {
-			curr=(uint64_t*)((uint8_t*)get_block(qf, last_word)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
-			prev=(uint64_t*)((uint8_t*)get_block(qf, last_word-1)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
+			curr=(uint64_t*)((uint8_t*)get_block(qf, last_word)->slots+
+			(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot) / 8);
+			prev=(uint64_t*)((uint8_t*)get_block(qf, last_word-1)->slots+
+			(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot) / 8);
 			curr[i] = shift_into_b(prev[i],curr[i],0, bend, distance);
 			bend = 64;
 			last_word--;
@@ -894,6 +945,42 @@ static inline void shift_fixed_counters(QF *qf, int64_t first, uint64_t last,
 
 }
 
+static inline void shift_tags(QF *qf, int64_t first, uint64_t last,
+																 uint64_t distance)
+{
+	assert(last < qf->metadata->xnslots && distance < 64);
+	uint64_t first_word = first / 64;
+	uint64_t bstart = first % 64;
+	uint64_t last_word = (last + distance + 1) / 64;
+	uint64_t bend = (last + distance + 1) % 64;
+	uint64_t* curr, *prev;
+	uint64_t tmp =last_word, tmp_bend=bend;
+	for(int i=0;i<qf->metadata->tag_bits;i++){
+		last_word=tmp;
+		bend=tmp_bend;
+		if (last_word != first_word) {
+			curr=(uint64_t*)((uint8_t*)get_block(qf, last_word)->slots+
+											(8 *(qf->metadata->bits_per_slot + qf->metadata->fixed_counter_size )));
+			prev=(uint64_t*)((uint8_t*)get_block(qf, last_word-1)->slots+
+											(8 *(qf->metadata->bits_per_slot + qf->metadata->fixed_counter_size )));
+			curr[i] = shift_into_b(prev[i],curr[i],0, bend, distance);
+			bend = 64;
+			last_word--;
+			while (last_word != first_word) {
+				curr=(uint64_t*)((uint8_t*)get_block(qf, last_word)->slots+
+												(8 *(qf->metadata->bits_per_slot + qf->metadata->fixed_counter_size )));
+				prev=(uint64_t*)((uint8_t*)get_block(qf, last_word-1)->slots+
+												(8 *(qf->metadata->bits_per_slot + qf->metadata->fixed_counter_size )));
+				curr[i] = shift_into_b(prev[i],curr[i],0, bend, distance);
+				last_word--;
+			}
+		}
+		curr=(uint64_t*)((uint8_t*)get_block(qf, last_word)->slots+
+										(8 *(qf->metadata->bits_per_slot + qf->metadata->fixed_counter_size )));
+		curr[i] = shift_into_b(0,curr[i], bstart, bend, distance);
+	}
+
+}
 
 static inline void insert_replace_slots_and_shift_remainders_and_runends_and_offsets(QF		*qf,
 																																										 int		 operation,
@@ -947,6 +1034,9 @@ static inline void insert_replace_slots_and_shift_remainders_and_runends_and_off
 		shift_fixed_counters(qf, insert_index, empties[ninserts - 1] - 1, ninserts);
 
 
+		for (i = 0; i < ninserts - 1; i++)
+			shift_tags(qf, empties[i+1] + 1, empties[i] - 1, i + 1);
+		shift_tags(qf, insert_index, empties[ninserts - 1] - 1, ninserts);
 
 
 
@@ -1022,6 +1112,8 @@ static inline void remove_replace_slots_and_shift_remainders_and_runends_and_off
 	for (i = 0; i < total_remainders; i++){
 		set_slot(qf, overwrite_index + i, remainders[i]);
 		set_fixed_counter(qf, overwrite_index + i, fcounters[i]);
+		if(qf->metadata->tag_bits>0)
+			set_tag(qf, overwrite_index + i, 0);
 	}
 
 
@@ -1055,6 +1147,9 @@ static inline void remove_replace_slots_and_shift_remainders_and_runends_and_off
 		if (current_bucket <= current_slot) {
 			set_slot(qf, current_slot, get_slot(qf, current_slot + current_distance));
 			set_fixed_counter(qf, current_slot, get_fixed_counter(qf, current_slot + current_distance));
+			if(qf->metadata->tag_bits>0)
+				set_tag(qf, current_slot, get_tag(qf, current_slot + current_distance));
+
 			if (is_runend(qf, current_slot) !=
 					is_runend(qf, current_slot + current_distance))
 				METADATA_WORD(qf, runends, current_slot) ^= 1ULL << (current_slot % 64);
@@ -1065,6 +1160,8 @@ static inline void remove_replace_slots_and_shift_remainders_and_runends_and_off
 			for (i = current_slot; i < current_slot + current_distance; i++) {
 				set_slot(qf, i, 0);
 				set_fixed_counter(qf,i,0);
+				if(qf->metadata->tag_bits>0)
+					set_tag(qf,i,0);
 				METADATA_WORD(qf, runends, i) &= ~(1ULL << (i % 64));
 			}
 
@@ -1649,7 +1746,7 @@ static inline bool insert(QF *qf, __uint128_t hash, uint64_t count, bool lock,
  * Code that uses the above to implement key-value-counter operations. *
  ***********************************************************************/
 
-void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t value_bits,uint64_t fixed_counter_size,
+void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_counter_size,
 						 bool mem, const char * path, uint32_t seed)
 {
 	uint64_t num_slots, xnslots, nblocks;
@@ -1671,13 +1768,14 @@ void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t value_bits,uin
 		nslots >>= 1;
 	}
 
-	bits_per_slot = key_remainder_bits + value_bits;
+	bits_per_slot = key_remainder_bits + tag_bits;
 	//assert (BITS_PER_SLOT == 0 || BITS_PER_SLOT == qf->metadata->bits_per_slot);
 	//assert(bits_per_slot > 1);
 #if BITS_PER_SLOT == 8 || BITS_PER_SLOT == 16 || BITS_PER_SLOT == 32 || BITS_PER_SLOT == 64
 	size = nblocks * sizeof(qfblock) +  (64)*fixed_counter_size;
 #else
-	size = nblocks * (sizeof(qfblock) + SLOTS_PER_BLOCK * bits_per_slot / 8 + fixed_counter_size*8  );
+	size = nblocks * (sizeof(qfblock) + SLOTS_PER_BLOCK * bits_per_slot / 8 +
+	fixed_counter_size*8 +tag_bits*8 );
 #endif
 
 	qf->mem = (qfmem *)calloc(sizeof(qfmem), 1);
@@ -1691,7 +1789,7 @@ void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t value_bits,uin
 		qf->metadata->xnslots = qf->metadata->nslots +
 			10*sqrt((double)qf->metadata->nslots);
 		qf->metadata->key_bits = key_bits;
-		qf->metadata->value_bits = value_bits;
+		qf->metadata->tag_bits = tag_bits;
 		qf->metadata->fixed_counter_size = fixed_counter_size;
 		qf->metadata->key_remainder_bits = key_remainder_bits;
 		qf->metadata->bits_per_slot = bits_per_slot;
@@ -1736,14 +1834,13 @@ void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t value_bits,uin
 
 		qf->metadata = (qfmetadata *)mmap(NULL, size+sizeof(qfmetadata), PROT_READ |
 																			PROT_WRITE, MAP_SHARED, qf->mem->fd, 0);
-
+		qf->metadata->size = size;
 		qf->metadata->seed = seed;
-
 		qf->metadata->nslots = num_slots;
 		qf->metadata->xnslots = qf->metadata->nslots +
 														10*sqrt((double)qf->metadata->nslots);
 		qf->metadata->key_bits = key_bits;
-		qf->metadata->value_bits = value_bits;
+		qf->metadata->tag_bits = tag_bits;
 		qf->metadata->fixed_counter_size = fixed_counter_size;
 		qf->metadata->key_remainder_bits = key_remainder_bits;
 		qf->metadata->bits_per_slot = bits_per_slot;
@@ -1907,12 +2004,14 @@ void qf_deserialize(QF *qf, const char *filename)
 
 	fclose(fin);
 }
-uint64_t qf_set_fixed_counter(QF *qf, uint64_t key, uint64_t value)
+uint64_t qf_add_tag(QF *qf, uint64_t key, uint64_t tag)
 {
 	__uint128_t hash = key;
 	uint64_t hash_remainder   = hash & BITMASK(qf->metadata->bits_per_slot);
 	int64_t hash_bucket_index = hash >> qf->metadata->bits_per_slot;
-
+	if(hash_bucket_index > qf->metadata->xnslots){
+			throw std::out_of_range("qf_add_tag is called with hash index out of range");
+		}
 	if (!is_occupied(qf, hash_bucket_index))
 		return 0;
 
@@ -1930,7 +2029,7 @@ uint64_t qf_set_fixed_counter(QF *qf, uint64_t key, uint64_t value)
 		current_end = decode_counter(qf, runstart_index, &current_remainder,
 																 &current_count);
 		if (current_remainder == hash_remainder){
-			set_fixed_counter(qf,runstart_index,value);
+			set_tag(qf,runstart_index,tag);
 			return 1;
 		}
 		runstart_index = current_end + 1;
@@ -1939,12 +2038,14 @@ uint64_t qf_set_fixed_counter(QF *qf, uint64_t key, uint64_t value)
 	return 0;
 }
 
-uint64_t qf_get_fixed_counter(const QF *qf, uint64_t key)
+uint64_t qf_get_tag(const QF *qf, uint64_t key)
 {
 	__uint128_t hash = key;
 	uint64_t hash_remainder   = hash & BITMASK(qf->metadata->bits_per_slot);
 	int64_t hash_bucket_index = hash >> qf->metadata->bits_per_slot;
-
+	if(hash_bucket_index > qf->metadata->xnslots){
+			throw std::out_of_range("qf_get_tag is called with hash index out of range");
+		}
 	if (!is_occupied(qf, hash_bucket_index))
 		return 0;
 
@@ -1961,7 +2062,7 @@ uint64_t qf_get_fixed_counter(const QF *qf, uint64_t key)
 		current_end = decode_counter(qf, runstart_index, &current_remainder,
 																 &current_count);
 		if (current_remainder == hash_remainder){
-			return get_fixed_counter(qf,runstart_index);
+			return get_tag(qf,runstart_index);
 		}
 		runstart_index = current_end + 1;
 	} while (!is_runend(qf, current_end));
@@ -1977,7 +2078,7 @@ bool qf_insert(QF *qf, uint64_t key, uint64_t value, uint64_t count, bool
 	{
 		return true;
 	}
-	/*uint64_t hash = (key << qf->metadata->value_bits) | (value & BITMASK(qf->metadata->value_bits));*/
+	/*uint64_t hash = (key << qf->metadata->tag_bits) | (value & BITMASK(qf->metadata->tag_bits));*/
 	if (0 && count == 1)
 	 return insert(qf, key,count, lock, spin);
 	else

@@ -1,5 +1,5 @@
 TARGETS=main
-TESTFILES = tests/CountingTests.o tests/HighLevelFunctionsTests.o tests/IOTests.o
+TESTFILES = tests/CountingTests.o tests/HighLevelFunctionsTests.o tests/IOTests.o tests/tagTests.o
 
 ifdef D
 	DEBUG=-g

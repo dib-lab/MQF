@@ -12,7 +12,7 @@ TEST_CASE( "Writing and Reading to/from Disk") {
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 3,counter_size, true, "", 2038074761);
 
   uint64_t nvals = (1ULL<<qbits);
   //uint64_t nvals = 3;
@@ -24,9 +24,21 @@ TEST_CASE( "Writing and Reading to/from Disk") {
 
   for(uint64_t i=0;i<nvals;i++)
   {
-    vals[i]=rand();
-    vals[i]=(vals[i]<<32)|rand();
-    vals[i]=vals[i]%(qf.metadata->range);
+    uint64_t newvalue=0;
+    while(newvalue==0){
+      newvalue=rand();
+      newvalue=(newvalue<<32)|rand();
+      newvalue=newvalue%(qf.metadata->range);
+      for(uint64_t j=0;j<i;j++)
+      {
+        if(vals[j]==newvalue)
+        {
+          newvalue=0;
+          break;
+        }
+      }
+    }
+    vals[i]=newvalue;
 
     nRepetitions[i]=(rand()%257)+1;
   }
@@ -34,6 +46,7 @@ TEST_CASE( "Writing and Reading to/from Disk") {
   uint64_t insertedItems=0;
   while(insertedItems<nvals && loadFactor<0.9){
     qf_insert(&qf,vals[insertedItems],0,nRepetitions[insertedItems],false,false);
+    qf_add_tag(&qf,vals[insertedItems],insertedItems%8);
     count = qf_count_key_value(&qf, vals[insertedItems], 0);
     CHECK(count >= nRepetitions[insertedItems]);
     insertedItems++;
@@ -53,6 +66,7 @@ TEST_CASE( "Writing and Reading to/from Disk") {
       count = qf_count_key_value(&qf2, vals[i], 0);
       INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
       CHECK(count >= nRepetitions[i]);
+      CHECK(qf_get_tag(&qf2,vals[i])== i%8);
     }
 
     qf_destroy(&qf2,false);
@@ -66,6 +80,7 @@ TEST_CASE( "Writing and Reading to/from Disk") {
       count = qf_count_key_value(&qf, vals[i], 0);
       INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
       CHECK(count >= nRepetitions[i]);
+      CHECK(qf_get_tag(&qf,vals[i])== i%8);
     }
 
     qf_destroy(&qf,true);
@@ -82,7 +97,7 @@ TEST_CASE( "MMap test") {
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, false, "tmp.ser", 2038074761);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 3,counter_size, false, "tmp.ser", 2038074761);
 
   uint64_t nvals = (1ULL<<qbits);
   //uint64_t nvals = 3;
@@ -94,9 +109,21 @@ TEST_CASE( "MMap test") {
 
   for(uint64_t i=0;i<nvals;i++)
   {
-    vals[i]=rand();
-    vals[i]=(vals[i]<<32)|rand();
-    vals[i]=vals[i]%(qf.metadata->range);
+    uint64_t newvalue=0;
+    while(newvalue==0){
+      newvalue=rand();
+      newvalue=(newvalue<<32)|rand();
+      newvalue=newvalue%(qf.metadata->range);
+      for(uint64_t j=0;j<i;j++)
+      {
+        if(vals[j]==newvalue)
+        {
+          newvalue=0;
+          break;
+        }
+      }
+    }
+    vals[i]=newvalue;
 
     nRepetitions[i]=(rand()%257)+1;
   }
@@ -104,6 +131,7 @@ TEST_CASE( "MMap test") {
   uint64_t insertedItems=0;
   while(insertedItems<nvals && loadFactor<0.9){
     qf_insert(&qf,vals[insertedItems],0,nRepetitions[insertedItems],false,false);
+    qf_add_tag(&qf,vals[insertedItems],insertedItems%8);
     count = qf_count_key_value(&qf, vals[insertedItems], 0);
     CHECK(count >= nRepetitions[insertedItems]);
     insertedItems++;
@@ -117,6 +145,7 @@ TEST_CASE( "MMap test") {
     count = qf_count_key_value(&qf, vals[i], 0);
     INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
     CHECK(count >= nRepetitions[i]);
+    CHECK(qf_get_tag(&qf,vals[i])== i%8);
   }
 
   qf_destroy(&qf,false);

@@ -43,7 +43,7 @@ extern "C" {
 		uint64_t nslots;
 		uint64_t xnslots;
 		uint64_t key_bits;
-		uint64_t value_bits;
+		uint64_t tag_bits;
 		uint64_t fixed_counter_size;
 		uint64_t key_remainder_bits;
 		uint64_t bits_per_slot;
@@ -124,6 +124,10 @@ extern "C" {
 	/* Return the number of times key has been inserted, with the given
 		 value, into qf. */
 	uint64_t qf_count_key_value(const QF *qf, uint64_t key, uint64_t value);
+
+
+	uint64_t qf_add_tag(QF *qf, uint64_t key, uint64_t tag);
+	uint64_t qf_get_tag(const QF *qf, uint64_t key);
 
 	/* Initialize an iterator */
 	bool qf_iterator(QF *qf, QFi *qfi, uint64_t position);
