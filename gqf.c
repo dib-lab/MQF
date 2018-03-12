@@ -1474,7 +1474,7 @@ static inline bool insert(QF *qf, __uint128_t hash, uint64_t count, bool lock,
 	uint64_t hash_bucket_block_offset = hash_bucket_index % SLOTS_PER_BLOCK;
 	/*uint64_t hash_bucket_lock_offset  = hash_bucket_index % NUM_SLOTS_TO_LOCK;*/
 	//printf("index= %lu remainder= %lu count=%lu\n",hash_bucket_index,hash_remainder,count);
-	if(hash_bucket_index > qf->metadata->nslots){
+	if(hash_bucket_index > qf->metadata->xnslots){
 		throw std::out_of_range("Insert is called with hash index out of range");
 	}
 	if (lock) {
@@ -1596,7 +1596,7 @@ static inline bool insert(QF *qf, __uint128_t hash, uint64_t count, bool lock,
 	uint64_t new_values[67];
 	uint64_t new_fcounters[67];
 
-	if(hash_bucket_index > qf->metadata->nslots){
+	if(hash_bucket_index > qf->metadata->xnslots){
 		throw std::out_of_range("Remove function is called with hash index out of range");
 	}
 	/* Empty bucket */
@@ -2022,7 +2022,7 @@ uint64_t qf_count_key_value(const QF *qf, uint64_t key, uint64_t value)
  */
 bool qf_iterator(QF *qf, QFi *qfi, uint64_t position)
 {
-	if(position > qf->metadata->nslots){
+	if(position > qf->metadata->xnslots){
 		throw std::out_of_range("qf_iterator is called with position out of range");
 	}
 	if (!is_occupied(qf, position)) {
@@ -2058,7 +2058,7 @@ bool qf_iterator(QF *qf, QFi *qfi, uint64_t position)
 int qfi_get(QFi *qfi, uint64_t *key, uint64_t *value, uint64_t *count)
 {
 
-	if(qfi->current > qfi->qf->metadata->nslots){
+	if(qfi->current > qfi->qf->metadata->xnslots){
 		throw std::out_of_range("qfi_get is called with hash index out of range");
 	}
 	uint64_t current_remainder, current_count;
