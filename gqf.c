@@ -15,8 +15,9 @@
 #include <fcntl.h>
 #include <fstream>
 #include <algorithm>
-
+#include <stdexcept>
 #include "gqf.h"
+#include <iostream>
 
 /******************************************************************
  * Code for managing the metadata bits and slots w/o interpreting *
@@ -679,6 +680,7 @@ static inline uint64_t find_first_empty_slot(QF *qf, uint64_t from)
 	do {
 		int t = offset_lower_bound(qf, from);
 		assert(t>=0);
+
 		if (t == 0)
 			break;
 		from = from + t;
@@ -906,10 +908,15 @@ static inline void insert_replace_slots_and_shift_remainders_and_runends_and_off
 	uint64_t i;
 	int64_t ninserts = total_remainders - noverwrites;
 	uint64_t insert_index = overwrite_index + noverwrites;
+	if(qf->metadata->noccupied_slots+ninserts > qf->metadata->maximum_occupied_slots )
+	{
+		throw std::overflow_error("QF is 95% full, cannot insert more items.");
+	}
 	//printf("remainder =%lu ,overwrite_index = %lu , insert_index=%lu , operation=%d, noverwites=%lu total_remainders=%lu nnserts=%lu \n", remainders[0],overwrite_index,insert_index,operation,noverwrites,total_remainders,ninserts);
 	if (ninserts > 0) {
 		/* First, shift things to create n empty spaces where we need them. */
 		find_next_n_empty_slots(qf, insert_index, ninserts, empties);
+
 
 		// bool a=false;
 		//  for(i=0;i<ninserts;i++)
@@ -1467,6 +1474,9 @@ static inline bool insert(QF *qf, __uint128_t hash, uint64_t count, bool lock,
 	uint64_t hash_bucket_block_offset = hash_bucket_index % SLOTS_PER_BLOCK;
 	/*uint64_t hash_bucket_lock_offset  = hash_bucket_index % NUM_SLOTS_TO_LOCK;*/
 	//printf("index= %lu remainder= %lu count=%lu\n",hash_bucket_index,hash_remainder,count);
+	if(hash_bucket_index > qf->metadata->nslots){
+		throw std::out_of_range("Insert is called with hash index out of range");
+	}
 	if (lock) {
 		if (!qf_lock(qf, hash_bucket_index, spin, false))
 			return false;
@@ -1586,6 +1596,9 @@ static inline bool insert(QF *qf, __uint128_t hash, uint64_t count, bool lock,
 	uint64_t new_values[67];
 	uint64_t new_fcounters[67];
 
+	if(hash_bucket_index > qf->metadata->nslots){
+		throw std::out_of_range("Remove function is called with hash index out of range");
+	}
 	/* Empty bucket */
 	if (!is_occupied(qf, hash_bucket_index))
 		return;
@@ -1643,25 +1656,28 @@ void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t value_bits,uin
 	uint64_t key_remainder_bits, bits_per_slot;
 	uint64_t size;
 
-	assert(popcnt(nslots) == 1); /* nslots must be a power of 2 */
+	if(popcnt(nslots) != 1){
+		throw std::domain_error("nslots must be a power of 2");
+
+	}
 	num_slots = nslots;
-	assert(popcnt(nslots) == 1); /* nslots must be a power of 2 */
+
 	xnslots = nslots + 10*sqrt((double)nslots);
 	nblocks = (xnslots + SLOTS_PER_BLOCK - 1) / SLOTS_PER_BLOCK;
 	key_remainder_bits = key_bits;
 	while (nslots > 1) {
-		assert(key_remainder_bits > 0);
+		//assert(key_remainder_bits > 0);
 		key_remainder_bits--;
 		nslots >>= 1;
 	}
 
 	bits_per_slot = key_remainder_bits + value_bits;
-	assert (BITS_PER_SLOT == 0 || BITS_PER_SLOT == qf->metadata->bits_per_slot);
-	assert(bits_per_slot > 1);
+	//assert (BITS_PER_SLOT == 0 || BITS_PER_SLOT == qf->metadata->bits_per_slot);
+	//assert(bits_per_slot > 1);
 #if BITS_PER_SLOT == 8 || BITS_PER_SLOT == 16 || BITS_PER_SLOT == 32 || BITS_PER_SLOT == 64
 	size = nblocks * sizeof(qfblock) +  (64)*fixed_counter_size;
 #else
-	size = nblocks * (sizeof(qfblock) + SLOTS_PER_BLOCK * bits_per_slot / 8 + fixed_counter_size*8 );
+	size = nblocks * (sizeof(qfblock) + SLOTS_PER_BLOCK * bits_per_slot / 8 + fixed_counter_size*8  );
 #endif
 
 	qf->mem = (qfmem *)calloc(sizeof(qfmem), 1);
@@ -1687,6 +1703,7 @@ void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t value_bits,uin
 		qf->metadata->nelts = 0;
 		qf->metadata->ndistinct_elts = 0;
 		qf->metadata->noccupied_slots = 0;
+		qf->metadata->maximum_occupied_slots=(uint64_t)((double)qf->metadata->xnslots *0.95);
 		qf->metadata->num_locks = (qf->metadata->xnslots/NUM_SLOTS_TO_LOCK)+2;
 
 		qf->blocks = (qfblock *)calloc(size, 1);
@@ -1738,6 +1755,7 @@ void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t value_bits,uin
 		qf->metadata->nelts = 0;
 		qf->metadata->ndistinct_elts = 0;
 		qf->metadata->noccupied_slots = 0;
+		qf->metadata->maximum_occupied_slots=(uint64_t)((double)qf->metadata->xnslots *0.95);
 		qf->metadata->num_locks = (qf->metadata->xnslots/NUM_SLOTS_TO_LOCK)+2;
 
 		qf->blocks = (qfblock *)(qf->metadata + 1);
@@ -2004,7 +2022,9 @@ uint64_t qf_count_key_value(const QF *qf, uint64_t key, uint64_t value)
  */
 bool qf_iterator(QF *qf, QFi *qfi, uint64_t position)
 {
-	assert(position < qf->metadata->nslots);
+	if(position > qf->metadata->nslots){
+		throw std::out_of_range("qf_iterator is called with position out of range");
+	}
 	if (!is_occupied(qf, position)) {
 		uint64_t block_index = position;
 		uint64_t idx = bitselect(get_block(qf, block_index)->occupieds[0], 0);
@@ -2037,8 +2057,10 @@ bool qf_iterator(QF *qf, QFi *qfi, uint64_t position)
 
 int qfi_get(QFi *qfi, uint64_t *key, uint64_t *value, uint64_t *count)
 {
-	assert(qfi->current < qfi->qf->metadata->nslots);
 
+	if(qfi->current > qfi->qf->metadata->nslots){
+		throw std::out_of_range("qfi_get is called with hash index out of range");
+	}
 	uint64_t current_remainder, current_count;
 	decode_counter(qfi->qf, qfi->current, &current_remainder, &current_count);
 	*key = (qfi->run << qfi->qf->metadata->bits_per_slot) | current_remainder;

@@ -6,7 +6,7 @@ using namespace std;
 
  int main(int argc, char const *argv[]) {
   QF qf;
-  int counter_size=2;
+  int counter_size=1;
   srand (1);
   uint64_t qbits=16;
   uint64_t num_hash_bits=qbits+8;
@@ -29,11 +29,20 @@ using namespace std;
 
     nRepetitions[i]=(rand()%257)+1;
   }
+
   double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   uint64_t insertedItems=0;
-  while(insertedItems<nvals && loadFactor<0.9){
+  while(insertedItems<nvals){
 
+    try{
     qf_insert(&qf,vals[insertedItems],0,nRepetitions[insertedItems],false,false);
+    }
+    catch (std::exception& e)
+  {
+    std::cerr << "exception caught: " << e.what() << '\n';
+    std::cout<< loadFactor<<endl;
+    break;
+  }
     //qf_dump(&qf);
     count = qf_count_key_value(&qf, vals[insertedItems], 0);
     insertedItems++;
