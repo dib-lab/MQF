@@ -99,7 +99,7 @@ extern "C" {
 		bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
 	 */
 	bool qf_insert(QF *qf, uint64_t key, uint64_t count,
-								 bool lock, bool spin);
+								 bool lock=false, bool spin=false);
 
 
 	/* Remove all instances of this key/value pair. */
@@ -132,11 +132,12 @@ extern "C" {
 		bool lock: For Multithreading, Lock the slot used by the current thread so that other threads can't change the value
 		bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
 	 */
-	bool qf_remove(QF *qf, uint64_t hash, uint64_t count,  bool lock, bool spin);
+	bool qf_remove(QF *qf, uint64_t hash, uint64_t count,  bool lock=false, bool spin=false);
 
 
-	uint64_t qf_add_tag(QF *qf, uint64_t key, uint64_t tag);
+	uint64_t qf_add_tag(const QF *qf, uint64_t key, uint64_t tag, bool lock=false, bool spin=false);
 	uint64_t qf_get_tag(const QF *qf, uint64_t key);
+	uint64_t qf_remove_tag(const QF *qf, uint64_t key, bool lock=false, bool spin=false);
 
 	/* Initialize an iterator */
 	bool qf_iterator(QF *qf, QFi *qfi, uint64_t position);

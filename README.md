@@ -40,8 +40,19 @@ bool qf_remove(QF *qf, uint64_t hash, uint64_t count, bool lock, bool spin);
   * uint64_t count: Count to be removed
   * bool lock: For Multithreading, Lock the slot used by the current thread so that other threads can't change the value
   * bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
- 
+
 4. Add/Remove tag to elements
+```c++
+uint64_t qf_add_tag(const QF *qf, uint64_t key, uint64_t tag, bool lock, bool spin);
+uint64_t qf_get_tag(const QF *qf, uint64_t key);
+uint64_t qf_remove_tag(const QF *qf, uint64_t key, bool lock, bool spin);
+```
+* Qf* qf : pointer to the Filter
+* uint64_t key : hash of the item.
+* uint64_t tag: tag for the item.
+* bool lock: For Multithreading, Lock the slot used by the current thread so that other threads can't change the value
+* bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
+
 5. Resize
 6. Merge
 7. Intersect
