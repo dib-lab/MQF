@@ -19,27 +19,27 @@ TEST_CASE( "simple counting test" ) {
   qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
 
   for(uint64_t i=0;i<=10;i++){
-    qf_insert(&qf,100,0,1,false,false);
+    qf_insert(&qf,100,1,false,false);
     count = qf_count_key_value(&qf, 100, 0);
     //fixed_counter=qf_get_fixed_counter(&qf,100);
     INFO("Counter = "<<count<<" fixed counter = "<<fixed_counter)
     CHECK(count == (1+i));
   }
 
-  qf_insert(&qf,1500,0,50,false,false);
+  qf_insert(&qf,1500,50,false,false);
   count = qf_count_key_value(&qf, 1500, 0);
   //  fixed_counter=qf_get_fixed_counter(&qf,1500);
   INFO("Counter = "<<count<<" fixed counter = "<<fixed_counter)
   CHECK(count == (50));
 
-  qf_insert(&qf,1600,0,60,false,false);
+  qf_insert(&qf,1600,60,false,false);
   count = qf_count_key_value(&qf, 1600, 0);
   //  fixed_counter=qf_get_fixed_counter(&qf,1600);
   INFO("Counter = "<<count<<" fixed counter = "<<fixed_counter)
   CHECK(count == (60));
 
 
-  qf_insert(&qf,2000,0,4000,false,false);
+  qf_insert(&qf,2000,4000,false,false);
   count = qf_count_key_value(&qf, 2000, 0);
   //  fixed_counter=qf_get_fixed_counter(&qf,2000);
   INFO("Counter = "<<count<<" fixed counter = "<<fixed_counter)
@@ -69,10 +69,10 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
   double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   uint64_t insertedItems=0;
 
-    qf_insert(&qf,vals[0],0,1,false,false);
-    qf_insert(&qf,vals[0],0,1,false,false);
-    qf_insert(&qf,vals[0],0,1,false,false);
-    qf_insert(&qf,vals[0],0,1,false,false);
+    qf_insert(&qf,vals[0],1,false,false);
+    qf_insert(&qf,vals[0],1,false,false);
+    qf_insert(&qf,vals[0],1,false,false);
+    qf_insert(&qf,vals[0],1,false,false);
   // for(uint64_t i=0;i<32;i++)
   // {
   //   cout<<get_fixed_counter(&qf,i)<<"-";
@@ -80,7 +80,7 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
   //cout<<endl;
   while(loadFactor<0.9){
 
-    qf_insert(&qf,vals[insertedItems],0,1,false,false);
+    qf_insert(&qf,vals[insertedItems],1,false,false);
     // for(uint64_t i=0;i<32;i++)
     // {
     //   cout<<get_fixed_counter(&qf,i)<<"-";
@@ -143,7 +143,7 @@ TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )" ) {
   uint64_t insertedItems=0;
   while(loadFactor<0.9){
 
-    qf_insert(&qf,vals[insertedItems],0,50,false,false);
+    qf_insert(&qf,vals[insertedItems],50,false,false);
     insertedItems++;
     loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   }
@@ -198,7 +198,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )" ) 
   while(insertedItems<nvals && loadFactor<0.9){
   //  printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
     INFO("Inserting "<< vals[insertedItems] << " Repeated "<<nRepetitions[insertedItems]);
-    qf_insert(&qf,vals[insertedItems],0,nRepetitions[insertedItems],false,false);
+    qf_insert(&qf,vals[insertedItems],nRepetitions[insertedItems],false,false);
     //qf_dump(&qf);
     INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
     count = qf_count_key_value(&qf, vals[insertedItems], 0);
@@ -251,7 +251,7 @@ TEST_CASE( "Counting Big counters" ){
   while(insertedItems<nvals && loadFactor<0.9){
   //  printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
     INFO("Inserting "<< vals[insertedItems] << " Repeated "<<nRepetitions[insertedItems]);
-    qf_insert(&qf,vals[insertedItems],0,nRepetitions[insertedItems],false,false);
+    qf_insert(&qf,vals[insertedItems],nRepetitions[insertedItems],false,false);
     //qf_dump(&qf);
     INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
     count = qf_count_key_value(&qf, vals[insertedItems], 0);
@@ -307,7 +307,7 @@ TEST_CASE( "Removing items from cqf(90% load factor )") {
   uint64_t insertedItems=0;
   while(loadFactor<0.9){
 
-    qf_insert(&qf,vals[insertedItems],0,50,false,false);
+    qf_insert(&qf,vals[insertedItems],50,false,false);
     insertedItems++;
     loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   }

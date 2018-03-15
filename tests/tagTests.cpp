@@ -14,7 +14,7 @@ TEST_CASE( "Add tags to items") {
     INFO("Tag size = "<<tag_size<<" max count= "<<maximum_count);
     qf_init(&qf, (1ULL<<qbits), num_hash_bits, tag_size,3, true, "", 2038074761);
 
-    qf_insert(&qf,150,0,50,false,false);
+    qf_insert(&qf,150,50,false,false);
     CHECK( qf_count_key_value(&qf,150,0)==50);
     qf_add_tag(&qf,150,maximum_count);
     //qf_dump(&qf);
@@ -22,7 +22,7 @@ TEST_CASE( "Add tags to items") {
     CHECK(qf_count_key_value(&qf,150,0)==50);
     //
     for(uint64_t i=120;i<=149;i++){
-      qf_insert(&qf,i,0,2,false,false);
+      qf_insert(&qf,i,2,false,false);
       CHECK( qf_count_key_value(&qf,i,0)==2);
       qf_add_tag(&qf,i,1);
       REQUIRE( qf_get_tag(&qf,i)==1);
@@ -32,15 +32,15 @@ TEST_CASE( "Add tags to items") {
     CHECK( qf_get_tag(&qf,150)==maximum_count);
     CHECK( qf_count_key_value(&qf,150,0)==50);
 
-    qf_insert(&qf,1500,0,50,false,false);
+    qf_insert(&qf,1500,50,false,false);
     qf_add_tag(&qf,1500,maximum_count);
     CHECK( qf_get_tag(&qf,1500)==maximum_count);
 
-    qf_insert(&qf,3000,0,1,false,false);
+    qf_insert(&qf,3000,1,false,false);
     qf_add_tag(&qf,3000,maximum_count);
     CHECK( qf_get_tag(&qf,3000)==maximum_count);
 
-    qf_insert(&qf,1500000,0,1,false,false);
+    qf_insert(&qf,1500000,1,false,false);
     qf_add_tag(&qf,1500000,maximum_count);
     CHECK( qf_get_tag(&qf,1500000)==maximum_count);
 
@@ -76,7 +76,7 @@ TEST_CASE( "Inserting items( repeated 50 times)  and set tags in cqf(90% load fa
   uint64_t count;
   while(loadFactor<0.9){
 
-    qf_insert(&qf,vals[insertedItems],0,50,false,false);
+    qf_insert(&qf,vals[insertedItems],50,false,false);
     qf_add_tag(&qf,vals[insertedItems],vals[insertedItems]%(maximum_count+1));
 
     count = qf_get_tag(&qf,vals[insertedItems]);
@@ -150,7 +150,7 @@ TEST_CASE( "Removing items from cqf with tags(90% load factor )") {
   uint64_t insertedItems=0;
   while(loadFactor<0.9){
 
-    qf_insert(&qf,vals[insertedItems],0,50,false,false);
+    qf_insert(&qf,vals[insertedItems],50,false,false);
     qf_add_tag(&qf,vals[insertedItems],insertedItems%8);
     insertedItems++;
     loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;

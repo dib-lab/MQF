@@ -2071,7 +2071,7 @@ uint64_t qf_get_tag(const QF *qf, uint64_t key)
 }
 
 
-bool qf_insert(QF *qf, uint64_t key, uint64_t value, uint64_t count, bool
+bool qf_insert(QF *qf, uint64_t key, uint64_t count, bool
 							 lock, bool spin)
 {
 	if(count==0)
@@ -2271,12 +2271,12 @@ void qf_merge(QF *qfa, QF *qfb, QF *qfc)
 	qfi_get(&qfib, &keyb, &valueb, &countb);
 	do {
 		if (keya < keyb) {
-			qf_insert(qfc, keya, valuea, counta, true, true);
+			qf_insert(qfc, keya, counta, true, true);
 			qfi_next(&qfia);
 			qfi_get(&qfia, &keya, &valuea, &counta);
 		}
 		else {
-			qf_insert(qfc, keyb, valueb, countb, true, true);
+			qf_insert(qfc, keyb, countb, true, true);
 			qfi_next(&qfib);
 			qfi_get(&qfib, &keyb, &valueb, &countb);
 		}
@@ -2285,13 +2285,13 @@ void qf_merge(QF *qfa, QF *qfb, QF *qfc)
 	if (!qfi_end(&qfia)) {
 		do {
 			qfi_get(&qfia, &keya, &valuea, &counta);
-			qf_insert(qfc, keya, valuea, counta, true, true);
+			qf_insert(qfc, keya, counta, true, true);
 		} while(!qfi_next(&qfia));
 	}
 	if (!qfi_end(&qfib)) {
 		do {
 			qfi_get(&qfib, &keyb, &valueb, &countb);
-			qf_insert(qfc, keyb, valueb, countb, true, true);
+			qf_insert(qfc, keyb, countb, true, true);
 		} while(!qfi_next(&qfib));
 	}
 
@@ -2326,7 +2326,7 @@ void qf_multi_merge(QF *qf_arr[], int nqf, QF *qfr)
 					smallest_key = keys[i]; smallest_i = i;
 				}
 			}
-			qf_insert(qfr, keys[smallest_i], values[smallest_i], counts[smallest_i],
+			qf_insert(qfr, keys[smallest_i], counts[smallest_i],
 								true, true);
 			qfi_next(&qfi_arr[smallest_i]);
 			qfi_get(&qfi_arr[smallest_i], &keys[smallest_i], &values[smallest_i],
@@ -2345,7 +2345,7 @@ void qf_multi_merge(QF *qf_arr[], int nqf, QF *qfr)
 		do {
 			uint64_t key, value, count;
 			qfi_get(&qfi_arr[0], &key, &value, &count);
-			qf_insert(qfr, key, value, count, true, true);
+			qf_insert(qfr, key, count, true, true);
 		} while(!qfi_next(&qfi_arr[0]));
 	}
 
@@ -2401,7 +2401,7 @@ void qf_intersect(QF *qfa, QF *qfb, QF *qfr)
 		uint64_t key = 0, value = 0, count = 0;
 		qfi_get(&qfi, &key, &value, &count);
 		if (qf_count_key_value(qf_mem, key, 0) > 0)
-			qf_insert(qfr, key, value, count, false, false);
+			qf_insert(qfr, key, count, false, false);
 	} while (!qfi_next(&qfi));
 }
 

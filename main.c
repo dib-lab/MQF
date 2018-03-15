@@ -35,7 +35,7 @@ using namespace std;
   while(insertedItems<nvals){
 
     try{
-    qf_insert(&qf,vals[insertedItems],0,nRepetitions[insertedItems],false,false);
+    qf_insert(&qf,vals[insertedItems],nRepetitions[insertedItems],false,false);
     }
     catch (std::exception& e)
   {

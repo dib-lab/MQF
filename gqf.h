@@ -91,8 +91,14 @@ extern "C" {
 
 	void qf_copy(QF *dest, QF *src);
 
-	/* Increment the counter for this key/value pair by count. */
-	bool qf_insert(QF *qf, uint64_t key, uint64_t value, uint64_t count,
+	/* Increment the counter for this item by count.
+		Qf* qf : pointer to the Filter
+		uint64_t key : hash of the item to be insertedItems
+		uint64_t count: Count to be added
+		bool lock: For Multithreading, Lock the slot used by the current thread so that other threads can't change the value
+		bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
+	 */
+	bool qf_insert(QF *qf, uint64_t key, uint64_t count,
 								 bool lock, bool spin);
 
 	/* Remove count instances of this key/value combination. */

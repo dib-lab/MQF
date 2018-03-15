@@ -45,7 +45,7 @@ TEST_CASE( "Writing and Reading to/from Disk") {
   double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   uint64_t insertedItems=0;
   while(insertedItems<nvals && loadFactor<0.9){
-    qf_insert(&qf,vals[insertedItems],0,nRepetitions[insertedItems],false,false);
+    qf_insert(&qf,vals[insertedItems],nRepetitions[insertedItems],false,false);
     qf_add_tag(&qf,vals[insertedItems],insertedItems%8);
     count = qf_count_key_value(&qf, vals[insertedItems], 0);
     CHECK(count >= nRepetitions[insertedItems]);
@@ -130,7 +130,7 @@ TEST_CASE( "MMap test") {
   double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   uint64_t insertedItems=0;
   while(insertedItems<nvals && loadFactor<0.9){
-    qf_insert(&qf,vals[insertedItems],0,nRepetitions[insertedItems],false,false);
+    qf_insert(&qf,vals[insertedItems],nRepetitions[insertedItems],false,false);
     qf_add_tag(&qf,vals[insertedItems],insertedItems%8);
     count = qf_count_key_value(&qf, vals[insertedItems], 0);
     CHECK(count >= nRepetitions[insertedItems]);

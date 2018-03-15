@@ -41,10 +41,10 @@ TEST_CASE( "Merging Cqf") {
  for (uint64_t i = 0; i < (nvals*2)/3; i++) {
    vals[i]=vals[i]%cf1.metadata->range;
    if(i%2==1){
-     qf_insert(&cf2, vals[i], 0, 50,false,false);
+     qf_insert(&cf2, vals[i], 50,false,false);
    }
    else{
-     qf_insert(&cf1, vals[i], 0, 50,false,false);
+     qf_insert(&cf1, vals[i], 50,false,false);
    }
 
  }
@@ -52,7 +52,7 @@ TEST_CASE( "Merging Cqf") {
 
  for (uint64_t i = (nvals*2)/3; i <nvals; i++) {
    vals[i]=vals[i]%cf.metadata->range;
-   qf_insert(&cf, vals[i], 0, 50,false,false);
+   qf_insert(&cf, vals[i], 50,false,false);
    }
 
  for (uint64_t i = 0; i < nvals; i++) {
