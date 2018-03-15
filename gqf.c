@@ -2330,6 +2330,11 @@ inline int qfi_end(QFi *qfi)
 void qf_merge(QF *qfa, QF *qfb, QF *qfc)
 {
 	QFi qfia, qfib;
+	if(qfa->metadata->range != qfb->metadata->range ||
+	qfb->metadata->range != qfc->metadata->range )
+	{
+		throw std::logic_error("Merging non compatible filters");
+	}
 	qf_iterator(qfa, &qfia, 0);
 	qf_iterator(qfb, &qfib, 0);
 
@@ -2375,6 +2380,15 @@ void qf_multi_merge(QF *qf_arr[], int nqf, QF *qfr)
 	int flag = 0;
 	int smallest_i = 0;
 	uint64_t smallest_key = UINT64_MAX;
+
+	uint64_t range=qf_arr[0]->metadata->range;
+	for (i=1; i<nqf; i++) {
+		if(qf_arr[i]->metadata->range!=range)
+		{
+			throw std::logic_error("Merging non compatible filters");
+		}
+	}
+
 	for (i=0; i<nqf; i++) {
 		qf_iterator(qf_arr[i], &qfi_arr[i], 0);
 	}

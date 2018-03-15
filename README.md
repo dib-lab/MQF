@@ -5,8 +5,12 @@
 MQF, Mixed Quotient Filter, is approximate membership query data structure that supports many useful functions. MQF is a variant of [CQF](https://github.com/splatlab/cqf). MQF has lower bits per element than Bloom filter and Count-min sketches. MQF also has good data locality which makes it efficient when running on secondary storage. Moreover. It supports removing, iterating, merging ,and resizing.
 
 ## Documentation
-### Initialization
+### Building
 
+### Initialization
+1. qf_init
+2. qf_destroy
+3. estimate
 ### Functions Supported
 1. Insert :
 Increment the counter for this item by count.
@@ -54,7 +58,11 @@ uint64_t qf_remove_tag(const QF *qf, uint64_t key, bool lock, bool spin);
 * bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
 
 5. Resize
-6. Merge
+6. Merge: merge more than one filter into a final one.
+```c++
+void qf_merge(QF *qfa, QF *qfb, QF *qfc);
+void qf_multi_merge(QF *qf_arr[], int nqf, QF *qfr);
+```
 7. Intersect
 8. Compare
 9. Unique

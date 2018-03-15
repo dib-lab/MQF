@@ -70,3 +70,17 @@ TEST_CASE( "Merging Cqf") {
  } while(!qfi_next(&cfi));
 
 }
+
+TEST_CASE( "Merging Exception") {
+  QF cf,cf1,cf2;
+ QFi cfi;
+
+
+
+ qf_init(&cf, 256, 15, 0,1, true, "", 2038074761);
+ qf_init(&cf1, 256, 16, 0,1, true, "", 2038074761);
+ qf_init(&cf2, 512, 17, 0,1, true, "", 2038074761);
+ /* Generate random values */
+ REQUIRE_THROWS(qf_merge(&cf,&cf1,&cf2));
+
+}
