@@ -30,7 +30,17 @@ Increment the counter for this item by count.
  * Qf* qf : pointer to the Filter
  * uint64_t key : hash of the item to be counted.
  * returns the number of times the item is inserted.
-3. Remove
+3. Remove:
+Decrement the counter for this item by count.
+```c++
+bool qf_remove(QF *qf, uint64_t hash, uint64_t count, bool lock, bool spin);
+```
+  * Qf* qf : pointer to the Filter
+  * uint64_t key : hash of the item to be removed
+  * uint64_t count: Count to be removed
+  * bool lock: For Multithreading, Lock the slot used by the current thread so that other threads can't change the value
+  * bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
+ 
 4. Add/Remove tag to elements
 5. Resize
 6. Merge

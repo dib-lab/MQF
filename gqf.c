@@ -1685,7 +1685,7 @@ static inline bool insert(QF *qf, __uint128_t hash, uint64_t count, bool lock,
 	return true;
 }
 
- void _remove(QF *qf, __uint128_t hash, uint64_t count)
+ bool qf_remove(QF *qf, uint64_t hash, uint64_t count , bool lock, bool spin)
 {
 	uint64_t hash_remainder           = hash & BITMASK(qf->metadata->bits_per_slot);
 	uint64_t hash_bucket_index        = hash >> qf->metadata->bits_per_slot;
@@ -1696,9 +1696,15 @@ static inline bool insert(QF *qf, __uint128_t hash, uint64_t count, bool lock,
 	if(hash_bucket_index > qf->metadata->xnslots){
 		throw std::out_of_range("Remove function is called with hash index out of range");
 	}
+
+	if (lock) {
+		if (!qf_lock(qf, hash_bucket_index, spin, false))
+			return false;
+	}
+
 	/* Empty bucket */
 	if (!is_occupied(qf, hash_bucket_index))
-		return;
+		return true;
 
 	uint64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(qf, hash_bucket_index - 1) + 1;
 	uint64_t original_runstart_index = runstart_index;
@@ -1712,7 +1718,7 @@ static inline bool insert(QF *qf, __uint128_t hash, uint64_t count, bool lock,
 	}
 	/* remainder not found in the given run */
 	if (current_remainder != hash_remainder)
-		return;
+		return true;
 
 	if (original_runstart_index == runstart_index && is_runend(qf, current_end))
 		only_item_in_the_run = 1;
@@ -1737,6 +1743,12 @@ static inline bool insert(QF *qf, __uint128_t hash, uint64_t count, bool lock,
 																																		total_reminders,
 																																		current_end - runstart_index + 1);
 
+
+  if (lock) {
+  qf_unlock(qf, hash_bucket_index, true);
+  }
+
+	return true;
 	// update the nelements.
 	/*modify_metadata(qf, &qf->metadata->nelts, -count);*/
 	/*qf->metadata->nelts -= count;*/

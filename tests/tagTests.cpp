@@ -163,7 +163,7 @@ TEST_CASE( "Removing items from cqf with tags(90% load factor )") {
       if(count==100){
         printf("coubn ==100\n" );
       }
-    _remove(&qf,vals[i],50);
+    qf_remove(&qf,vals[i],50,false,false);
     count = qf_count_key(&qf, vals[i]);
     CHECK(count ==0);
     }

@@ -101,14 +101,12 @@ extern "C" {
 	bool qf_insert(QF *qf, uint64_t key, uint64_t count,
 								 bool lock, bool spin);
 
-	/* Remove count instances of this key/value combination. */
-	void qf_remove(QF *qf, uint64_t key, uint64_t value, uint64_t count);
 
 	/* Remove all instances of this key/value pair. */
-	void qf_delete_key_value(QF *qf, uint64_t key, uint64_t value);
+	//void qf_delete_key_value(QF *qf, uint64_t key, uint64_t value);
 
 	/* Remove all instances of this key. */
-	void qf_delete_key(QF *qf, uint64_t key);
+	//void qf_delete_key(QF *qf, uint64_t key);
 
 	/* Replace the association (key, oldvalue, count) with the association
 		 (key, newvalue, count). If there is already an association (key,
@@ -127,6 +125,14 @@ extern "C" {
 		 into qf. */
 	uint64_t qf_count_key(const QF *qf, uint64_t key);
 
+	/* Decrement the counter for this item by count.
+		Qf* qf : pointer to the Filter
+		uint64_t key : hash of the item to be removed
+		uint64_t count: Count to be removed
+		bool lock: For Multithreading, Lock the slot used by the current thread so that other threads can't change the value
+		bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
+	 */
+	bool qf_remove(QF *qf, uint64_t hash, uint64_t count,  bool lock, bool spin);
 
 
 	uint64_t qf_add_tag(QF *qf, uint64_t key, uint64_t tag);
@@ -171,7 +177,6 @@ extern "C" {
 	uint64_t qf_magnitude(QF *qf);
 
 
-	void _remove(QF *qf, __uint128_t hash, uint64_t count);
 
 
 #ifdef __cplusplus
