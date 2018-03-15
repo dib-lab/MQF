@@ -2496,9 +2496,9 @@ uint64_t qf_magnitude(QF *qf)
 
 int qf_space(QF *qf)
 {
-		return (int)((double)qf->metadata->noccupied_slots/
+		return (int)(((double)qf->metadata->noccupied_slots/
 								 (double)qf->metadata->xnslots
-							 )* 100.0;
+							 )* 100.0);
 }
 
 #ifdef TEST
