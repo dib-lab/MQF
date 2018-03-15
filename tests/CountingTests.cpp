@@ -20,27 +20,27 @@ TEST_CASE( "simple counting test" ) {
 
   for(uint64_t i=0;i<=10;i++){
     qf_insert(&qf,100,1,false,false);
-    count = qf_count_key_value(&qf, 100, 0);
+    count = qf_count_key(&qf, 100);
     //fixed_counter=qf_get_fixed_counter(&qf,100);
     INFO("Counter = "<<count<<" fixed counter = "<<fixed_counter)
     CHECK(count == (1+i));
   }
 
   qf_insert(&qf,1500,50,false,false);
-  count = qf_count_key_value(&qf, 1500, 0);
+  count = qf_count_key(&qf, 1500);
   //  fixed_counter=qf_get_fixed_counter(&qf,1500);
   INFO("Counter = "<<count<<" fixed counter = "<<fixed_counter)
   CHECK(count == (50));
 
   qf_insert(&qf,1600,60,false,false);
-  count = qf_count_key_value(&qf, 1600, 0);
+  count = qf_count_key(&qf, 1600);
   //  fixed_counter=qf_get_fixed_counter(&qf,1600);
   INFO("Counter = "<<count<<" fixed counter = "<<fixed_counter)
   CHECK(count == (60));
 
 
   qf_insert(&qf,2000,4000,false,false);
-  count = qf_count_key_value(&qf, 2000, 0);
+  count = qf_count_key(&qf, 2000);
   //  fixed_counter=qf_get_fixed_counter(&qf,2000);
   INFO("Counter = "<<count<<" fixed counter = "<<fixed_counter)
   CHECK(count == (4000));
@@ -93,12 +93,12 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
 
   uint64_t count;
   //INFO("Fixed counter = "<<qf_get_fixed_counter(&qf,vals[0]));
-  count = qf_count_key_value(&qf, vals[0], 0);
+  count = qf_count_key(&qf, vals[0]);
   CHECK(count >= 5);
 
   for(uint64_t i=1;i<insertedItems;i++)
   {
-    count = qf_count_key_value(&qf, vals[i], 0);
+    count = qf_count_key(&qf, vals[i]);
     CHECK(count >= 1);
   }
   QFi qfi;
@@ -106,7 +106,7 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
   do {
     uint64_t key, value, count;
     qfi_get(&qfi, &key, &value, &count);
-    count=qf_count_key_value(&qf, key, 0);
+    count=qf_count_key(&qf, key);
     if(key==vals[0]){
       CHECK(count >= 5);
     }
@@ -150,7 +150,7 @@ TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )" ) {
   uint64_t count;
   for(uint64_t i=0;i<insertedItems;i++)
   {
-    count = qf_count_key_value(&qf, vals[i], 0);
+    count = qf_count_key(&qf, vals[i]);
     CHECK(count >= 50);
   }
   QFi qfi;
@@ -158,7 +158,7 @@ TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )" ) {
   do {
     uint64_t key, value, count;
     qfi_get(&qfi, &key, &value, &count);
-    count=qf_count_key_value(&qf, key, 0);
+    count=qf_count_key(&qf, key);
     CHECK(count >= 50);
   } while(!qfi_next(&qfi));
 
@@ -201,7 +201,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )" ) 
     qf_insert(&qf,vals[insertedItems],nRepetitions[insertedItems],false,false);
     //qf_dump(&qf);
     INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
-    count = qf_count_key_value(&qf, vals[insertedItems], 0);
+    count = qf_count_key(&qf, vals[insertedItems]);
     CHECK(count >= nRepetitions[insertedItems]);
     insertedItems++;
     loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
@@ -211,7 +211,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )" ) 
 
   for(uint64_t i=0;i<insertedItems;i++)
   {
-    count = qf_count_key_value(&qf, vals[i], 0);
+    count = qf_count_key(&qf, vals[i]);
     INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
     CHECK(count >= nRepetitions[i]);
   }
@@ -254,7 +254,7 @@ TEST_CASE( "Counting Big counters" ){
     qf_insert(&qf,vals[insertedItems],nRepetitions[insertedItems],false,false);
     //qf_dump(&qf);
     INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
-    count = qf_count_key_value(&qf, vals[insertedItems], 0);
+    count = qf_count_key(&qf, vals[insertedItems]);
     CHECK(count >= nRepetitions[insertedItems]);
     insertedItems++;
     loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
@@ -264,7 +264,7 @@ TEST_CASE( "Counting Big counters" ){
 
   for(uint64_t i=0;i<insertedItems;i++)
   {
-    count = qf_count_key_value(&qf, vals[i], 0);
+    count = qf_count_key(&qf, vals[i]);
     INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
     CHECK(count >= nRepetitions[i]);
   }
@@ -315,18 +315,18 @@ TEST_CASE( "Removing items from cqf(90% load factor )") {
   for(uint64_t i=0;i<insertedItems;i++)
   {
     if(i%2==0){
-      count = qf_count_key_value(&qf, vals[i], 0);
+      count = qf_count_key(&qf, vals[i]);
       if(count==100){
         printf("coubn ==100\n" );
       }
     _remove(&qf,vals[i],50);
-    count = qf_count_key_value(&qf, vals[i], 0);
+    count = qf_count_key(&qf, vals[i]);
     CHECK(count ==0);
     }
   }
   for(uint64_t i=0;i<insertedItems;i++)
   {
-    count = qf_count_key_value(&qf, vals[i], 0);
+    count = qf_count_key(&qf, vals[i]);
     if(i%2==1){
     CHECK(count >= 50);
     }
@@ -344,7 +344,7 @@ TEST_CASE( "Removing items from cqf(90% load factor )") {
   do {
     uint64_t key, value, count;
     qfi_get(&qfi, &key, &value, &count);
-    count=qf_count_key_value(&qf, key, 0);
+    count=qf_count_key(&qf, key);
     CHECK(count >= 50);
   } while(!qfi_next(&qfi));
 

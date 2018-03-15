@@ -57,7 +57,7 @@ TEST_CASE( "Merging Cqf") {
 
  for (uint64_t i = 0; i < nvals; i++) {
 
-   uint64_t count = qf_count_key_value(&cf, vals[i]%cf.metadata->range, 0);
+   uint64_t count = qf_count_key(&cf, vals[i]%cf.metadata->range);
    CHECK(count>=50);
  }
 

@@ -2085,7 +2085,7 @@ bool qf_insert(QF *qf, uint64_t key, uint64_t count, bool
 	 return insert(qf, key, count, lock, spin);
 }
 
-uint64_t qf_count_key_value(const QF *qf, uint64_t key, uint64_t value)
+uint64_t qf_count_key(const QF *qf, uint64_t key)
 {
 	__uint128_t hash = key;
 	uint64_t hash_remainder   = hash & BITMASK(qf->metadata->bits_per_slot);
@@ -2373,7 +2373,7 @@ uint64_t qf_inner_product(QF *qfa, QF *qfb)
 		uint64_t key = 0, value = 0, count = 0;
 		uint64_t count_mem;
 		qfi_get(&qfi, &key, &value, &count);
-		if ((count_mem = qf_count_key_value(qf_mem, key, 0)) > 0) {
+		if ((count_mem = qf_count_key(qf_mem, key)) > 0) {
 			acc += count*count_mem;
 		}
 	} while (!qfi_next(&qfi));
@@ -2400,7 +2400,7 @@ void qf_intersect(QF *qfa, QF *qfb, QF *qfr)
 	do {
 		uint64_t key = 0, value = 0, count = 0;
 		qfi_get(&qfi, &key, &value, &count);
-		if (qf_count_key_value(qf_mem, key, 0) > 0)
+		if (qf_count_key(qf_mem, key) > 0)
 			qf_insert(qfr, key, count, false, false);
 	} while (!qfi_next(&qfi));
 }

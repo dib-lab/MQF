@@ -127,9 +127,6 @@ extern "C" {
 		 into qf. */
 	uint64_t qf_count_key(const QF *qf, uint64_t key);
 
-	/* Return the number of times key has been inserted, with the given
-		 value, into qf. */
-	uint64_t qf_count_key_value(const QF *qf, uint64_t key, uint64_t value);
 
 
 	uint64_t qf_add_tag(QF *qf, uint64_t key, uint64_t tag);

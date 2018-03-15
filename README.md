@@ -16,13 +16,20 @@ Increment the counter for this item by count.
   ```
 
   * Qf* qf : pointer to the Filter
-  * uint64_t key : hash of the item to be insertedItems
+  * uint64_t key : hash of the item to be inserted.
   * uint64_t count: Count to be added
   * bool lock: For Multithreading, Lock the * slot used by the current thread so that other threads can't change the value
   * bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
   * returns True if the insertion succeeded.
 
-2. Count
+2. Count:
+ Return the number of times key has been inserted, with any value, into qf.
+ ```c++
+ uint64_t qf_count_key(const QF *qf, uint64_t key);
+ ```
+ * Qf* qf : pointer to the Filter
+ * uint64_t key : hash of the item to be counted.
+ * returns the number of times the item is inserted.
 3. Remove
 4. Add/Remove tag to elements
 5. Resize

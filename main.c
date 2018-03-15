@@ -44,7 +44,7 @@ using namespace std;
     break;
   }
     //qf_dump(&qf);
-    count = qf_count_key_value(&qf, vals[insertedItems], 0);
+    count = qf_count_key(&qf, vals[insertedItems]);
     insertedItems++;
     loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
 
@@ -53,7 +53,7 @@ using namespace std;
 
   for(int i=0;i<insertedItems;i++)
   {
-    count = qf_count_key_value(&qf, vals[i], 0);
+    count = qf_count_key(&qf, vals[i]);
     if(count < nRepetitions[i] ){
       cout<<"Item  "<<vals[i]<<" is not counted correctly."<<endl;
       return -1;

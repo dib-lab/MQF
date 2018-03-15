@@ -15,22 +15,22 @@ TEST_CASE( "Add tags to items") {
     qf_init(&qf, (1ULL<<qbits), num_hash_bits, tag_size,3, true, "", 2038074761);
 
     qf_insert(&qf,150,50,false,false);
-    CHECK( qf_count_key_value(&qf,150,0)==50);
+    CHECK( qf_count_key(&qf,150)==50);
     qf_add_tag(&qf,150,maximum_count);
     //qf_dump(&qf);
     REQUIRE( qf_get_tag(&qf,150)==maximum_count);
-    CHECK(qf_count_key_value(&qf,150,0)==50);
+    CHECK(qf_count_key(&qf,150)==50);
     //
     for(uint64_t i=120;i<=149;i++){
       qf_insert(&qf,i,2,false,false);
-      CHECK( qf_count_key_value(&qf,i,0)==2);
+      CHECK( qf_count_key(&qf,i)==2);
       qf_add_tag(&qf,i,1);
       REQUIRE( qf_get_tag(&qf,i)==1);
-      CHECK( qf_count_key_value(&qf,i,0)==2);
+      CHECK( qf_count_key(&qf,i)==2);
     }
     //qf_dump(&qf);
     CHECK( qf_get_tag(&qf,150)==maximum_count);
-    CHECK( qf_count_key_value(&qf,150,0)==50);
+    CHECK( qf_count_key(&qf,150)==50);
 
     qf_insert(&qf,1500,50,false,false);
     qf_add_tag(&qf,1500,maximum_count);
@@ -85,7 +85,7 @@ TEST_CASE( "Inserting items( repeated 50 times)  and set tags in cqf(90% load fa
     loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
     for(uint64_t i=0;i<insertedItems;i++)
     {
-      count = qf_count_key_value(&qf, vals[i], 0);
+      count = qf_count_key(&qf, vals[i]);
       REQUIRE(count >= 50);
       count = qf_get_tag(&qf,vals[i]);
       INFO("bug in  "<<i<<" of "<<insertedItems<<" loadFactor "<<loadFactor);
@@ -96,7 +96,7 @@ TEST_CASE( "Inserting items( repeated 50 times)  and set tags in cqf(90% load fa
 
   for(uint64_t i=0;i<insertedItems;i++)
   {
-    count = qf_count_key_value(&qf, vals[i], 0);
+    count = qf_count_key(&qf, vals[i]);
     CHECK(count >= 50);
     count = qf_get_tag(&qf,vals[i]);
     CHECK(count == vals[i]%(maximum_count+1));
@@ -106,7 +106,7 @@ TEST_CASE( "Inserting items( repeated 50 times)  and set tags in cqf(90% load fa
   do {
     uint64_t key, value, count;
     qfi_get(&qfi, &key, &value, &count);
-    count=qf_count_key_value(&qf, key, 0);
+    count=qf_count_key(&qf, key);
     CHECK(count >= 50);
     count = qf_get_tag(&qf,key);
     CHECK(count == key%(maximum_count+1));
@@ -159,18 +159,18 @@ TEST_CASE( "Removing items from cqf with tags(90% load factor )") {
   for(uint64_t i=0;i<insertedItems;i++)
   {
     if(i%2==0){
-      count = qf_count_key_value(&qf, vals[i], 0);
+      count = qf_count_key(&qf, vals[i]);
       if(count==100){
         printf("coubn ==100\n" );
       }
     _remove(&qf,vals[i],50);
-    count = qf_count_key_value(&qf, vals[i], 0);
+    count = qf_count_key(&qf, vals[i]);
     CHECK(count ==0);
     }
   }
   for(uint64_t i=0;i<insertedItems;i++)
   {
-    count = qf_count_key_value(&qf, vals[i], 0);
+    count = qf_count_key(&qf, vals[i]);
 
     if(i%2==1){
     CHECK(qf_get_tag(&qf,vals[i])== i%8);
@@ -190,7 +190,7 @@ TEST_CASE( "Removing items from cqf with tags(90% load factor )") {
   do {
     uint64_t key, value, count;
     qfi_get(&qfi, &key, &value, &count);
-    count=qf_count_key_value(&qf, key, 0);
+    count=qf_count_key(&qf, key);
     CHECK(count >= 50);
   } while(!qfi_next(&qfi));
 

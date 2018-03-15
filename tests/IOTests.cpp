@@ -47,7 +47,7 @@ TEST_CASE( "Writing and Reading to/from Disk") {
   while(insertedItems<nvals && loadFactor<0.9){
     qf_insert(&qf,vals[insertedItems],nRepetitions[insertedItems],false,false);
     qf_add_tag(&qf,vals[insertedItems],insertedItems%8);
-    count = qf_count_key_value(&qf, vals[insertedItems], 0);
+    count = qf_count_key(&qf, vals[insertedItems]);
     CHECK(count >= nRepetitions[insertedItems]);
     insertedItems++;
     loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
@@ -63,7 +63,7 @@ TEST_CASE( "Writing and Reading to/from Disk") {
     INFO("nslots ="<<qf2.metadata->nslots);
     for(uint64_t i=0;i<insertedItems;i++)
     {
-      count = qf_count_key_value(&qf2, vals[i], 0);
+      count = qf_count_key(&qf2, vals[i]);
       INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
       CHECK(count >= nRepetitions[i]);
       CHECK(qf_get_tag(&qf2,vals[i])== i%8);
@@ -77,7 +77,7 @@ TEST_CASE( "Writing and Reading to/from Disk") {
 
     for(uint64_t i=0;i<insertedItems;i++)
     {
-      count = qf_count_key_value(&qf, vals[i], 0);
+      count = qf_count_key(&qf, vals[i]);
       INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
       CHECK(count >= nRepetitions[i]);
       CHECK(qf_get_tag(&qf,vals[i])== i%8);
@@ -132,7 +132,7 @@ TEST_CASE( "MMap test") {
   while(insertedItems<nvals && loadFactor<0.9){
     qf_insert(&qf,vals[insertedItems],nRepetitions[insertedItems],false,false);
     qf_add_tag(&qf,vals[insertedItems],insertedItems%8);
-    count = qf_count_key_value(&qf, vals[insertedItems], 0);
+    count = qf_count_key(&qf, vals[insertedItems]);
     CHECK(count >= nRepetitions[insertedItems]);
     insertedItems++;
     loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
@@ -142,7 +142,7 @@ TEST_CASE( "MMap test") {
   for(uint64_t i=0;i<insertedItems;i++)
   {
     INFO("Check = "<<vals[i]);
-    count = qf_count_key_value(&qf, vals[i], 0);
+    count = qf_count_key(&qf, vals[i]);
     INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
     CHECK(count >= nRepetitions[i]);
     CHECK(qf_get_tag(&qf,vals[i])== i%8);
