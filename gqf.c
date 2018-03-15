@@ -2233,7 +2233,7 @@ int qfi_get(QFi *qfi, uint64_t *key, uint64_t *value, uint64_t *count)
 	uint64_t current_remainder, current_count;
 	decode_counter(qfi->qf, qfi->current, &current_remainder, &current_count);
 	*key = (qfi->run << qfi->qf->metadata->bits_per_slot) | current_remainder;
-	*value = 0;   // for now we are not using value
+	*value = get_tag(qfi->qf,qfi->current);   // for now we are not using value
 	*count = current_count;
 
 	qfi->qf->metadata->ndistinct_elts++;
