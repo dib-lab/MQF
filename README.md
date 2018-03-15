@@ -66,6 +66,11 @@ void qf_multi_merge(QF *qf_arr[], int nqf, QF *qfr);
 7. Intersect
 8. Compare
 9. Unique
+10. Space:
+returns the space  percent occupied by the inserted items.
+```c++
+int qf_space(QF *qf);
+```
 
 ### Miscellaneous Functions
 1. Capacity

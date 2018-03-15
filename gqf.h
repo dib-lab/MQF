@@ -172,13 +172,20 @@ extern "C" {
 	/* merge multiple QFs into the final QF one. */
 	void qf_multi_merge(QF *qf_arr[], int nqf, QF *qfr);
 
+	/* resize the filter into a bigger or smaller one
+	Qf* qf : pointer to the Filter
+	uint64_t newQ: new number of slots(Q). the slot size will be recalculated to keep the range constant.
+	string originalFilename(optional): dump the current filter to the disk to free space for the new filter. Filename is provided as the content of the string.
+	string newFilename(optional): the new filter is created on disk. Filename is provided as the content of the string.
+	*/
+	QF* qf_resize(QF* qf, int newQ, const char * originalFilename="", const char * newFilename="");
 	/* find cosine similarity between two QFs. */
 	uint64_t qf_inner_product(QF *qfa, QF *qfb);
 
 	/* magnitude of a QF. */
 	uint64_t qf_magnitude(QF *qf);
 
-
+	int qf_capacity(QF *qf);
 
 
 #ifdef __cplusplus
