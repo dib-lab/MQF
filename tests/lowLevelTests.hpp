@@ -57,7 +57,7 @@ TEST_CASE( "get/set fixed counters" ) {
       REQUIRE( get_fixed_counter(&qf,special_slots[i]) == c );
     }
 
-    qf_destroy(&qf,true);
+    qf_destroy(&qf);
   }
 }
 
@@ -106,7 +106,7 @@ TEST_CASE( "shift fixed counters" ) {
     CHECK( get_fixed_counter(&qf,69) == maximum_count );
     CHECK( get_fixed_counter(&qf,70) == maximum_count );
 
-    qf_destroy(&qf,true);
+    qf_destroy(&qf);
   }
 }
 
@@ -167,6 +167,6 @@ TEST_CASE( "get/set Tags" ) {
       REQUIRE( get_tag(&qf,special_slots[i]) == c );
     }
 
-    qf_destroy(&qf,true);
+    qf_destroy(&qf);
   }
 }

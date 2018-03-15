@@ -46,7 +46,7 @@ TEST_CASE( "Add tags to items") {
 
 
 
-    qf_destroy(&qf,true);
+    qf_destroy(&qf);
   }
 }
 
@@ -112,7 +112,7 @@ TEST_CASE( "Inserting items( repeated 50 times)  and set tags in cqf(90% load fa
     CHECK(count == key%(maximum_count+1));
   } while(!qfi_next(&qfi));
 
-  qf_destroy(&qf,true);
+  qf_destroy(&qf);
 
 }
 
@@ -190,7 +190,7 @@ TEST_CASE( "Removing tags from items(90% load factor )") {
     CHECK(count >= 50);
   } while(!qfi_next(&qfi));
 
-  qf_destroy(&qf,true);
+  qf_destroy(&qf);
 
 }
 
@@ -271,6 +271,6 @@ TEST_CASE( "Removing items from cqf with tags(90% load factor )") {
     CHECK(count >= 50);
   } while(!qfi_next(&qfi));
 
-  qf_destroy(&qf,true);
+  qf_destroy(&qf);
 
 }

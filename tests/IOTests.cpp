@@ -55,7 +55,7 @@ TEST_CASE( "Writing and Reading to/from Disk") {
   INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
   INFO("nslots ="<<qf.metadata->nslots);
   qf_serialize(&qf,"tmp.ser");
-  qf_destroy(&qf,true);
+  qf_destroy(&qf);
 
   SECTION("Reading using qf_read(mmap)"){
     QF qf2;
@@ -69,7 +69,7 @@ TEST_CASE( "Writing and Reading to/from Disk") {
       CHECK(qf_get_tag(&qf2,vals[i])== i%8);
     }
 
-    qf_destroy(&qf2,false);
+    qf_destroy(&qf2);
   }
 
   SECTION("Reading using deserialize "){
@@ -83,7 +83,7 @@ TEST_CASE( "Writing and Reading to/from Disk") {
       CHECK(qf_get_tag(&qf,vals[i])== i%8);
     }
 
-    qf_destroy(&qf,true);
+    qf_destroy(&qf);
   }
 
 
@@ -148,6 +148,6 @@ TEST_CASE( "MMap test") {
     CHECK(qf_get_tag(&qf,vals[i])== i%8);
   }
 
-  qf_destroy(&qf,false);
+  qf_destroy(&qf);
 
 }

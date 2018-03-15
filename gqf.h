@@ -54,6 +54,7 @@ extern "C" {
 		uint64_t noccupied_slots;
 		uint64_t maximum_occupied_slots;
 		uint64_t num_locks;
+		bool mem;
 	} quotient_filter_metadata;
 
 	typedef quotient_filter_metadata qfmetadata;
@@ -87,7 +88,7 @@ extern "C" {
 
 	void qf_reset(QF *qf);
 
-	void qf_destroy(QF *qf, bool mem);
+	void qf_destroy(QF *qf);
 
 	void qf_copy(QF *dest, QF *src);
 

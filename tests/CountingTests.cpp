@@ -116,7 +116,7 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
 
   } while(!qfi_next(&qfi));
 
-  qf_destroy(&qf,true);
+  qf_destroy(&qf);
 
 }
 
@@ -162,7 +162,7 @@ TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )" ) {
     CHECK(count >= 50);
   } while(!qfi_next(&qfi));
 
-  qf_destroy(&qf,true);
+  qf_destroy(&qf);
 
 }
 
@@ -216,7 +216,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )" ) 
     CHECK(count >= nRepetitions[i]);
   }
 
-  qf_destroy(&qf,true);
+  qf_destroy(&qf);
 
 }
 
@@ -269,7 +269,7 @@ TEST_CASE( "Counting Big counters" ){
     CHECK(count >= nRepetitions[i]);
   }
 
-  qf_destroy(&qf,true);
+  qf_destroy(&qf);
 
 
 }
@@ -348,6 +348,6 @@ TEST_CASE( "Removing items from cqf(90% load factor )") {
     CHECK(count >= 50);
   } while(!qfi_next(&qfi));
 
-  qf_destroy(&qf,true);
+  qf_destroy(&qf);
 
 }

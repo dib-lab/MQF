@@ -1797,7 +1797,7 @@ void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint6
 
 	if (mem) {
 		qf->metadata = (qfmetadata *)calloc(sizeof(qfmetadata), 1);
-
+		qf->metadata->mem=mem;
 		qf->metadata->size = size;
 		qf->metadata->seed = seed;
 		qf->metadata->nslots = num_slots;
@@ -1849,6 +1849,7 @@ void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint6
 
 		qf->metadata = (qfmetadata *)mmap(NULL, size+sizeof(qfmetadata), PROT_READ |
 																			PROT_WRITE, MAP_SHARED, qf->mem->fd, 0);
+		qf->metadata->mem=mem;
 		qf->metadata->size = size;
 		qf->metadata->seed = seed;
 		qf->metadata->nslots = num_slots;
@@ -1899,10 +1900,10 @@ void qf_copy(QF *dest, QF *src)
  *
  * It does not delete the file on disk for on-disk QF.
  */
-void qf_destroy(QF *qf, bool mem)
+void qf_destroy(QF *qf)
 {
 	assert(qf->blocks != NULL);
-	if (mem) {
+	if (qf->metadata->mem) {
 		free(qf->mem);
 		free(qf->metadata);
 		free(qf->blocks);
@@ -1950,7 +1951,7 @@ void qf_read(QF *qf, const char *path)
 
 	qf->metadata = (qfmetadata *)mmap(NULL, sb.st_size, PROT_READ | PROT_WRITE, MAP_SHARED,
 																qf->mem->fd, 0);
-
+	qf->metadata->mem=false;
 	qf->blocks = (qfblock *)(qf->metadata + 1);
 	qf->metadata->num_locks = (qf->metadata->xnslots/NUM_SLOTS_TO_LOCK)+2;
 	qf->mem->metadata_lock = 0;
