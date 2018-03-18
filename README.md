@@ -86,6 +86,10 @@ calculate the the intersection between two filters.
 void qf_intersect(QF *qfa, QF *qfb, QF *qfc);
 ```
 9. Subtract
+subtract the second filter from the first.
+```c++
+void qf_subtract(QF *qfa, QF *qfb, QF *qfc);
+```
 10. Space:
 returns the space  percent occupied by the inserted items.
 ```c++

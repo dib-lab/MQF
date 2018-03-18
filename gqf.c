@@ -2396,6 +2396,8 @@ bool qf_equals(QF *qfa, QF *qfb)
 			}
 			qfi_next(&qfib);
 			qfi_next(&qfia);
+			qfi_get(&qfia, &keya, &valuea, &counta);
+			qfi_get(&qfib, &keyb, &valueb, &countb);
 		}
 	} while(!qfi_end(&qfia) && !qfi_end(&qfib));
 
@@ -2442,6 +2444,41 @@ void qf_intersect(QF *qfa, QF *qfb, QF *qfc)
 
 	return;
 }
+void qf_subtract(QF *qfa, QF *qfb, QF *qfc)
+{
+	QFi qfia, qfib;
+	if(qfa->metadata->range != qfb->metadata->range ||
+	qfb->metadata->range != qfc->metadata->range )
+	{
+		throw std::logic_error("Calculate subtracte for non compatible filters");
+	}
+	qf_iterator(qfa, &qfia, 0);
+	qf_iterator(qfb, &qfib, 0);
+
+	uint64_t keya, valuea, counta, keyb, valueb, countb;
+	qfi_get(&qfia, &keya, &valuea, &counta);
+	qfi_get(&qfib, &keyb, &valueb, &countb);
+	do {
+		if (keya < keyb) {
+			qfi_next(&qfia);
+			qfi_get(&qfia, &keya, &valuea, &counta);
+		}
+		else if(keyb < keya) {
+			qfi_next(&qfib);
+			qfi_get(&qfib, &keyb, &valueb, &countb);
+		}
+		else{
+				qf_insert(qfc, keya, counta>countb? counta-countb : 0, true, true);
+				qfi_next(&qfia);
+				qfi_next(&qfib);
+				qfi_get(&qfia, &keya, &valuea, &counta);
+				qfi_get(&qfib, &keyb, &valueb, &countb);
+		}
+	} while(!qfi_end(&qfia) && !qfi_end(&qfib));
+
+	return;
+}
+
 
 
 /*

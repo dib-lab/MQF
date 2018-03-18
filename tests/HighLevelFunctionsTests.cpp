@@ -298,3 +298,78 @@ TEST_CASE( "intersect") {
  REQUIRE(qf_equals(&cf2,&cf3)==true);
 
 }
+
+TEST_CASE( "subtract") {
+  QF cf,cf1,cf2,cf3;
+ QFi cfi;
+ uint64_t qbits = 18;
+ uint64_t small_qbits=qbits;
+ uint64_t nhashbits = qbits + 15;
+ uint64_t small_nhashbits=small_qbits+15;
+ uint64_t nslots = (1ULL << qbits);
+ uint64_t small_nslots=(1ULL << small_qbits);
+ uint64_t nvals = 250*nslots/1000;
+ uint64_t *vals;
+ uint64_t counter_size=3;
+ /* Initialise the CQF */
+
+ INFO("Initialize first cqf size ="<<nslots<<", hashbits="<<nhashbits);
+ qf_init(&cf, nslots, nhashbits, 0,counter_size, true, "", 2038074761);
+ INFO("Initialize second cqf size ="<<small_nslots<<", hashbits="<<small_nhashbits);
+
+ qf_init(&cf1, small_nslots, small_nhashbits, 0,counter_size, true, "", 2038074761);
+ INFO("Initialize third cqf size ="<<small_nslots<<", hashbits="<<small_nhashbits);
+ qf_init(&cf2, small_nslots, small_nhashbits, 0,counter_size, true, "", 2038074761);
+
+ qf_init(&cf3, nslots, nhashbits, 0,counter_size, true, "", 2038074761);
+ /* Generate random values */
+ vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
+
+ for(uint64_t i=0;i<nvals;i++)
+ {
+   uint64_t newvalue=0;
+   while(newvalue==0){
+     newvalue=rand();
+     newvalue=(newvalue<<32)|rand();
+     newvalue=newvalue%(cf1.metadata->range);
+     for(uint64_t j=0;j<i;j++)
+     {
+       if(vals[j]==newvalue)
+       {
+         newvalue=0;
+         break;
+       }
+     }
+   }
+   vals[i]=newvalue;
+ }
+
+
+ /* Insert vals in the CQF */
+ for (uint64_t i = 0; i < (nvals*2)/3; i++) {
+   vals[i]=vals[i]%cf1.metadata->range;
+   qf_insert(&cf, vals[i], 100,false,false);
+   qf_insert(&cf1, vals[i], 50,false,false);
+   qf_insert(&cf2, vals[i], 50,false,false);
+ }
+
+
+ qf_subtract(&cf,&cf1,&cf3);
+
+
+ // printf("CF\n" );
+ // qf_dump(&cf);
+ //
+ // printf("CF1\n" );
+ // qf_dump(&cf1);
+ //
+ // printf("CF2\n" );
+ // qf_dump(&cf2);
+ //
+ // printf("CF3\n" );
+ // qf_dump(&cf3);
+
+
+ REQUIRE(qf_equals(&cf2,&cf3)==true);
+
+}

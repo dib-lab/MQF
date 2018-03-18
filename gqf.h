@@ -171,6 +171,7 @@ extern "C" {
 
 	void qf_intersect(QF *qfa, QF *qfb, QF *qfc);
 
+	void qf_subtract(QF *qfa, QF *qfb, QF *qfc);
 	/* merge multiple QFs into the final QF one. */
 	void qf_multi_merge(QF *qf_arr[], int nqf, QF *qfr);
 
