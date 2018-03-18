@@ -1912,6 +1912,7 @@ void qf_destroy(QF *qf)
 	munmap(qf->metadata, qf->metadata->size + sizeof(qfmetadata));
 	close(qf->mem->fd);
 	}
+	qf->metadata->noccupied_slots=0;
 }
 
 void qf_close(QF *qf)
@@ -2432,6 +2433,46 @@ void qf_multi_merge(QF *qf_arr[], int nqf, QF *qfr)
 	}
 
 	return;
+}
+
+QF* qf_resize(QF* qf, int newQ, const char * originalFilename, const char * newFilename)
+{
+	if((int)qf->metadata->key_bits-newQ <2)
+	{
+		throw std::logic_error("Resize cannot be done. Slot size cannot be less than 2");
+	}
+
+	if(originalFilename)
+	{
+		qf_serialize(qf,originalFilename);
+		qf_destroy(qf);
+		qf_read(qf,originalFilename);
+	}
+	QF* newQF=(QF *)calloc(sizeof(QF), 1);
+	if(newFilename)
+	{
+		qf_init(newQF, (1ULL<<newQ),qf->metadata->key_bits, qf->metadata->tag_bits,qf->metadata->fixed_counter_size, false, newFilename, 2038074761);
+	}
+	else{
+		qf_init(newQF, (1ULL<<newQ),qf->metadata->key_bits, qf->metadata->tag_bits,qf->metadata->fixed_counter_size, true, "" , 2038074761);
+	}
+	QFi qfi;
+	qf_iterator(qf, &qfi, 0);
+
+
+	uint64_t keya, valuea, counta;
+	qfi_get(&qfi, &keya, &valuea, &counta);
+
+	do {
+			qf_insert(newQF, keya, counta);
+			qf_add_tag(newQF,keya,valuea);
+			qfi_next(&qfi);
+			qfi_get(&qfi, &keya, &valuea, &counta);
+	} while(!qfi_end(&qfi));
+	qf_destroy(qf);
+	return newQF;
+
+
 }
 
 /* find cosine similarity between two QFs. */

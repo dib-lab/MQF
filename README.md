@@ -11,6 +11,7 @@ MQF, Mixed Quotient Filter, is approximate membership query data structure that 
 1. qf_init
 2. qf_destroy
 3. estimate
+
 ### Functions Supported
 1. Insert :
 Increment the counter for this item by count.
@@ -51,13 +52,23 @@ uint64_t qf_add_tag(const QF *qf, uint64_t key, uint64_t tag, bool lock, bool sp
 uint64_t qf_get_tag(const QF *qf, uint64_t key);
 uint64_t qf_remove_tag(const QF *qf, uint64_t key, bool lock, bool spin);
 ```
-* Qf* qf : pointer to the Filter
-* uint64_t key : hash of the item.
-* uint64_t tag: tag for the item.
-* bool lock: For Multithreading, Lock the slot used by the current thread so that other threads can't change the value
-* bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
+  * Qf* qf : pointer to the Filter
+  * uint64_t key : hash of the item.
+  * uint64_t tag: tag for the item.
+  * bool lock: For Multithreading, Lock the slot used by the current thread so that other threads can't change the value
+  * bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
 
-5. Resize
+5. Resize:
+ resize the filter into a bigger or smaller one
+ ```c++
+ QF* qf_resize(QF* qf, int newQ, const char * originalFilename=NULL, const char * newFilename=NULL);
+ ```
+ * Qf* qf : pointer to the Filter
+ * uint64_t newQ: new number of slots(Q). the slot size will be recalculated to keep the range constant.
+ * string originalFilename(optional): dump the current filter to the disk to free space for the new filter. Filename is provided as the content of the string.
+ * string newFilename(optional): the new filter is created on disk. Filename is provided as the content of the string.
+ * returns a pointer to the new filter
+
 6. Merge: merge more than one filter into a final one.
 ```c++
 void qf_merge(QF *qfa, QF *qfb, QF *qfc);

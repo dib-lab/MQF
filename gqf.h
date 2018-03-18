@@ -178,14 +178,14 @@ extern "C" {
 	string originalFilename(optional): dump the current filter to the disk to free space for the new filter. Filename is provided as the content of the string.
 	string newFilename(optional): the new filter is created on disk. Filename is provided as the content of the string.
 	*/
-	QF* qf_resize(QF* qf, int newQ, const char * originalFilename="", const char * newFilename="");
+	QF* qf_resize(QF* qf, int newQ, const char * originalFilename=NULL, const char * newFilename=NULL);
 	/* find cosine similarity between two QFs. */
 	uint64_t qf_inner_product(QF *qfa, QF *qfb);
 
 	/* magnitude of a QF. */
 	uint64_t qf_magnitude(QF *qf);
-
-	int qf_capacity(QF *qf);
+	/* return the filled space(percent) */
+	int qf_space(QF *qf);
 
 
 #ifdef __cplusplus

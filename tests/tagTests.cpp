@@ -198,7 +198,7 @@ TEST_CASE( "Removing items from cqf with tags(90% load factor )") {
   QF qf;
   int counter_size=2;
   uint64_t qbits=16;
-  uint64_t num_hash_bits=qbits+8;
+  uint64_t num_hash_bits=qbits+10;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   qf_init(&qf, (1ULL<<qbits), num_hash_bits, 3,counter_size, true, "", 2038074761);
 
@@ -240,9 +240,9 @@ TEST_CASE( "Removing items from cqf with tags(90% load factor )") {
       if(count==100){
         printf("coubn ==100\n" );
       }
-    qf_remove(&qf,vals[i],50,false,false);
-    count = qf_count_key(&qf, vals[i]);
-    CHECK(count ==0);
+      qf_remove(&qf,vals[i],50,false,false);
+      count = qf_count_key(&qf, vals[i]);
+      CHECK(count ==0);
     }
   }
   for(uint64_t i=0;i<insertedItems;i++)
@@ -256,7 +256,7 @@ TEST_CASE( "Removing items from cqf with tags(90% load factor )") {
     else{
       if(count!=0){
         INFO("ERROR "<<vals[i]<<" Not deleted index= "<<i)
-        //printf("%lu not delete at index %lu\n", vals[i],i);
+        printf("%lu not delete at index %lu\n", vals[i],i);
       }
       CHECK(count ==0);
 
