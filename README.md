@@ -6,7 +6,13 @@ MQF, Mixed Quotient Filter, is approximate membership query data structure that 
 
 ## Documentation
 ### Building
-
+MQF onlye requires make and g++ to be installed.
+```bash
+apt-get install make g++
+make NH=1
+make test NH=1
+./mqf_test
+```
 ### Initialization
 1. qf_init
 2. qf_destroy
