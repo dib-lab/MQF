@@ -2406,6 +2406,43 @@ bool qf_equals(QF *qfa, QF *qfb)
 	return true;
 }
 
+void qf_intersect(QF *qfa, QF *qfb, QF *qfc)
+{
+	QFi qfia, qfib;
+	if(qfa->metadata->range != qfb->metadata->range ||
+	qfb->metadata->range != qfc->metadata->range )
+	{
+		throw std::logic_error("Calculate intersect for non compatible filters");
+	}
+	qf_iterator(qfa, &qfia, 0);
+	qf_iterator(qfb, &qfib, 0);
+
+	uint64_t keya, valuea, counta, keyb, valueb, countb;
+	qfi_get(&qfia, &keya, &valuea, &counta);
+	qfi_get(&qfib, &keyb, &valueb, &countb);
+	do {
+		if (keya < keyb) {
+			qfi_next(&qfia);
+			qfi_get(&qfia, &keya, &valuea, &counta);
+		}
+		else if(keyb < keya) {
+			qfi_next(&qfib);
+			qfi_get(&qfib, &keyb, &valueb, &countb);
+		}
+		else{
+				qf_insert(qfc, keya, std::min(counta,countb), true, true);
+				qfi_next(&qfia);
+				qfi_next(&qfib);
+				qfi_get(&qfia, &keya, &valuea, &counta);
+				qfi_get(&qfib, &keyb, &valueb, &countb);
+		}
+	} while(!qfi_end(&qfia) && !qfi_end(&qfib));
+
+
+
+	return;
+}
+
 
 /*
  * Merge an array of qfs into the resultant QF
@@ -2540,28 +2577,28 @@ uint64_t qf_inner_product(QF *qfa, QF *qfb)
 }
 
 /* find cosine similarity between two QFs. */
-void qf_intersect(QF *qfa, QF *qfb, QF *qfr)
-{
-	QFi qfi;
-	QF *qf_mem, *qf_disk;
-
-	// create the iterator on the larger QF.
-	if (qfa->metadata->size > qfb->metadata->size) {
-		qf_mem = qfb;
-		qf_disk = qfa;
-	} else {
-		qf_mem = qfa;
-		qf_disk = qfb;
-	}
-
-	qf_iterator(qf_disk, &qfi, 0);
-	do {
-		uint64_t key = 0, value = 0, count = 0;
-		qfi_get(&qfi, &key, &value, &count);
-		if (qf_count_key(qf_mem, key) > 0)
-			qf_insert(qfr, key, count, false, false);
-	} while (!qfi_next(&qfi));
-}
+// void qf_intersect(QF *qfa, QF *qfb, QF *qfr)
+// {
+// 	QFi qfi;
+// 	QF *qf_mem, *qf_disk;
+//
+// 	// create the iterator on the larger QF.
+// 	if (qfa->metadata->size > qfb->metadata->size) {
+// 		qf_mem = qfb;
+// 		qf_disk = qfa;
+// 	} else {
+// 		qf_mem = qfa;
+// 		qf_disk = qfb;
+// 	}
+//
+// 	qf_iterator(qf_disk, &qfi, 0);
+// 	do {
+// 		uint64_t key = 0, value = 0, count = 0;
+// 		qfi_get(&qfi, &key, &value, &count);
+// 		if (qf_count_key(qf_mem, key) > 0)
+// 			qf_insert(qfr, key, count, false, false);
+// 	} while (!qfi_next(&qfi));
+// }
 
 /* magnitude of a QF. */
 uint64_t qf_magnitude(QF *qf)

@@ -74,9 +74,18 @@ uint64_t qf_remove_tag(const QF *qf, uint64_t key, bool lock, bool spin);
 void qf_merge(QF *qfa, QF *qfb, QF *qfc);
 void qf_multi_merge(QF *qf_arr[], int nqf, QF *qfr);
 ```
-7. Intersect
-8. Compare
-9. Unique
+
+7. Compare:
+check if two filters have the same items, counts and tags.
+```c++
+bool qf_equals(QF *qfa, QF *qfb);
+```
+8. Intersect
+calculate the the intersection between two filters.
+```c++
+void qf_intersect(QF *qfa, QF *qfb, QF *qfc);
+```
+9. Subtract
 10. Space:
 returns the space  percent occupied by the inserted items.
 ```c++
