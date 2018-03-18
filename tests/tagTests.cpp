@@ -198,7 +198,7 @@ TEST_CASE( "Removing items from cqf with tags(90% load factor )") {
   QF qf;
   int counter_size=2;
   uint64_t qbits=16;
-  uint64_t num_hash_bits=qbits+10;
+  uint64_t num_hash_bits=qbits+11;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   qf_init(&qf, (1ULL<<qbits), num_hash_bits, 3,counter_size, true, "", 2038074761);
 

@@ -187,6 +187,8 @@ extern "C" {
 	/* return the filled space(percent) */
 	int qf_space(QF *qf);
 
+	bool qf_equals(QF *qfa, QF *qfb);
+
 
 #ifdef __cplusplus
 }

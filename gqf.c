@@ -1912,7 +1912,7 @@ void qf_destroy(QF *qf)
 	munmap(qf->metadata, qf->metadata->size + sizeof(qfmetadata));
 	close(qf->mem->fd);
 	}
-	qf->metadata->noccupied_slots=0;
+	//qf->metadata->noccupied_slots=0;
 }
 
 void qf_close(QF *qf)
@@ -2371,6 +2371,41 @@ void qf_merge(QF *qfa, QF *qfb, QF *qfc)
 
 	return;
 }
+
+bool qf_equals(QF *qfa, QF *qfb)
+{
+	QFi qfia, qfib;
+	if(qfa->metadata->range != qfb->metadata->range  )
+	{
+		throw std::logic_error("comparing non compatible filters");
+	}
+	qf_iterator(qfa, &qfia, 0);
+	qf_iterator(qfb, &qfib, 0);
+
+	uint64_t keya, valuea, counta, keyb, valueb, countb;
+	qfi_get(&qfia, &keya, &valuea, &counta);
+	qfi_get(&qfib, &keyb, &valueb, &countb);
+	do {
+		if (keya != keyb) {
+			return false;
+		}
+		else {
+			if(counta!=countb || valuea != valueb)
+			{
+				return false;
+			}
+			qfi_next(&qfib);
+			qfi_next(&qfia);
+		}
+	} while(!qfi_end(&qfia) && !qfi_end(&qfib));
+
+	if (!qfi_end(&qfia) || !qfi_end(&qfib)) {
+		return false;
+	}
+
+	return true;
+}
+
 
 /*
  * Merge an array of qfs into the resultant QF
