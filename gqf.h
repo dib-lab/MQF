@@ -92,12 +92,16 @@ extern "C" {
 
 	void qf_copy(QF *dest, QF *src);
 
-	/* Increment the counter for this item by count.
-		Qf* qf : pointer to the Filter
-		uint64_t key : hash of the item to be insertedItems
-		uint64_t count: Count to be added
-		bool lock: For Multithreading, Lock the slot used by the current thread so that other threads can't change the value
-		bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
+	/*!
+	 	@breif Increment the counter for this item by count.
+
+		@param Qf* qf : pointer to the Filter
+		@param uint64_t key : hash of the item to be insertedItems
+		@param uint64_t count: Count to be added
+		@param bool lock: For Multithreading, Lock the slot used by the current thread so that other threads can't change the value
+		@param bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
+
+		@return bool: True if the item is inserted correctly.
 	 */
 	bool qf_insert(QF *qf, uint64_t key, uint64_t count,
 								 bool lock=false, bool spin=false);
@@ -122,22 +126,60 @@ extern "C" {
 		 in the QF.  If you want to see others, use an iterator. */
 	uint64_t qf_query(const QF *qf, uint64_t key, uint64_t *value);
 
-	/* Return the number of times key has been inserted, with any value,
-		 into qf. */
+	/*!
+	@breif Return the number of times key has been inserted, with any value,
+		 into qf.
+
+	@param Qf* qf : pointer to the Filter.
+	@param uint64_t key : hash of the item.
+
+	@return uint64_t the count associated with the input key.
+		  */
 	uint64_t qf_count_key(const QF *qf, uint64_t key);
 
-	/* Decrement the counter for this item by count.
-		Qf* qf : pointer to the Filter
-		uint64_t key : hash of the item to be removed
-		uint64_t count: Count to be removed
-		bool lock: For Multithreading, Lock the slot used by the current thread so that other threads can't change the value
-		bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
+	/*!
+	@breif Decrement the counter for this item by count.
+
+	@param	Qf* qf : pointer to the Filter
+	@param	uint64_t key : hash of the item to be removed
+	@param	uint64_t count: Count to be removed
+	@param	bool lock: For Multithreading, Lock the slot used by the current thread so that other threads can't change the value
+	@param	bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
+
+	@return bool: Returns true if the item is removed successfully.
 	 */
 	bool qf_remove(QF *qf, uint64_t hash, uint64_t count,  bool lock=false, bool spin=false);
 
 
+	/*!
+		@breif Add Tag to item.
+
+		@param Qf* qf : pointer to the Filter
+		@param uint64_t key : hash of the item to be insertedItems
+		@param uint64_t tag: tag to be added
+		@param bool lock: For Multithreading, Lock the slot used by the current thread so that other threads can't change the value
+		@param bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
+
+		@return bool: True if the item is inserted correctly.
+	 */
 	uint64_t qf_add_tag(const QF *qf, uint64_t key, uint64_t tag, bool lock=false, bool spin=false);
+	/*!
+	@breif Return the tag associated with a given item.
+
+	@param Qf* qf : pointer to the Filter.
+	@param uint64_t key : hash of the item.
+
+	@return uint64_t the tag associated with the input key.
+			*/
 	uint64_t qf_get_tag(const QF *qf, uint64_t key);
+	/*!
+	@breif delete the tag associated with a given item.
+
+	@param Qf* qf : pointer to the Filter.
+	@param uint64_t key : hash of the item.
+
+	@return bool: Returns true if the item is removed successfully.
+			*/
 	uint64_t qf_remove_tag(const QF *qf, uint64_t key, bool lock=false, bool spin=false);
 
 	/* Initialize an iterator */
@@ -157,7 +199,7 @@ extern "C" {
 	/* For debugging */
 	void qf_dump(const QF *);
 
-	/* write data structure of to the disk */
+	/*! write data structure of to the disk */
 	void qf_serialize(const QF *qf, const char *filename);
 
 	/* read data structure off the disk */
@@ -175,11 +217,14 @@ extern "C" {
 	/* merge multiple QFs into the final QF one. */
 	void qf_multi_merge(QF *qf_arr[], int nqf, QF *qfr);
 
-	/* resize the filter into a bigger or smaller one
-	Qf* qf : pointer to the Filter
-	uint64_t newQ: new number of slots(Q). the slot size will be recalculated to keep the range constant.
-	string originalFilename(optional): dump the current filter to the disk to free space for the new filter. Filename is provided as the content of the string.
-	string newFilename(optional): the new filter is created on disk. Filename is provided as the content of the string.
+	/*! @breif Resize the filter into a bigger or smaller one
+
+	@param Qf* qf : pointer to the Filter
+	@param uint64_t newQ: new number of slots(Q). the slot size will be recalculated to keep the range constant.
+	@param string originalFilename(optional): dump the current filter to the disk to free space for the new filter. Filename is provided as the content of the string.
+	@param string newFilename(optional): the new filter is created on disk. Filename is provided as the content of the string.
+
+	@return QF: New Quotient Filter.
 	*/
 	QF* qf_resize(QF* qf, int newQ, const char * originalFilename=NULL, const char * newFilename=NULL);
 	/* find cosine similarity between two QFs. */
