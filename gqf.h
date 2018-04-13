@@ -84,6 +84,8 @@ extern "C" {
 
 	typedef quotient_filter_iterator QFi;
 
+
+
 	void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t value_bits,uint64_t fixed_counter_size, bool mem, const char *path, uint32_t seed);
 
 	void qf_reset(QF *qf);
@@ -191,6 +193,16 @@ extern "C" {
 	int qf_space(QF *qf);
 
 	bool qf_equals(QF *qfa, QF *qfb);
+
+
+	typedef struct qf_index{
+		QF* main_qf;
+		QF* index_qf;
+	};
+	void qf_index_init(qf_index* qf,const char *path,uint64_t index_slot_size,uint64_t index_tag_size);
+	void may_exists(qf_index* qf,uint64_t key);
+	void approx_count_range(qf_index* qf, uint64_t key, uint64_t* min_approx_count, uint64_t* max_approx_count);
+
 
 
 #ifdef __cplusplus

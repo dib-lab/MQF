@@ -1783,7 +1783,7 @@ void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint6
 		nslots >>= 1;
 	}
 
-	bits_per_slot = key_remainder_bits + tag_bits;
+	bits_per_slot = key_remainder_bits;
 	//assert (BITS_PER_SLOT == 0 || BITS_PER_SLOT == qf->metadata->bits_per_slot);
 	//assert(bits_per_slot > 1);
 #if BITS_PER_SLOT == 8 || BITS_PER_SLOT == 16 || BITS_PER_SLOT == 32 || BITS_PER_SLOT == 64
@@ -1893,6 +1893,45 @@ void qf_copy(QF *dest, QF *src)
 	memcpy(dest->mem, src->mem, sizeof(qfmem));
 	memcpy(dest->metadata, src->metadata, sizeof(qfmetadata));
 	memcpy(dest->blocks, src->blocks, src->metadata->size);
+}
+void qf_copy2(QF *dest, QF *src)
+{
+	uint64_t tag_shift=0;
+	uint64_t slots_shift=0;
+	if(dest->metadata->tag_bits < src->metadata->tag_bits)
+	{
+		tag_shift=src->metadata->tag_bits - dest->metadata->tag_bits;
+	}
+	if(dest->metadata->bits_per_slot < src->metadata->bits_per_slot)
+	{
+		slots_shift=src->metadata->bits_per_slot - dest->metadata->bits_per_slot;
+	}
+	for(int i=0;i<src->metadata->xnslots;i++)
+	{
+		if(dest->metadata->tag_bits!=0){
+			uint64_t tag=get_tag(src,i);
+			tag>>=tag_shift;
+			set_tag(dest,i,tag);
+		}
+		if(dest->metadata->bits_per_slot!=0){
+			uint64_t slot=get_slot(src,i);
+			slot>>=slots_shift;
+			set_slot(dest,i,slot);
+		}
+
+		uint64_t fcounter=get_fixed_counter(src,i);
+		set_fixed_counter(dest,i,fcounter);
+
+		get_block(dest, i /SLOTS_PER_BLOCK)->runends[0]=
+				get_block(src, i /SLOTS_PER_BLOCK)->runends[0];
+
+		get_block(dest, i /SLOTS_PER_BLOCK)->offset=
+				get_block(src, i /SLOTS_PER_BLOCK)->offset;
+
+		get_block(dest, i /SLOTS_PER_BLOCK)->occupieds[0]=
+				get_block(src, i /SLOTS_PER_BLOCK)->occupieds[0];
+
+	}
 }
 
 /* free up the memory if the QF is in memory.
@@ -2650,6 +2689,98 @@ int qf_space(QF *qf)
 								 (double)qf->metadata->xnslots
 							 )* 100.0);
 }
+
+
+void qf_index_init(qf_index* qf,const char *path,uint64_t index_slot_size,uint64_t index_tag_size){
+
+  qf_read(qf->main_qf,path);
+	printf("main bits per slot %llu\n",qf->main_qf->metadata->bits_per_slot );
+  if(index_slot_size> qf->main_qf->metadata->bits_per_slot){
+    throw std::logic_error("Index filter's slot size cannot be bigger than\
+    main filter slot's slot size ");
+  }
+  if(index_tag_size> qf->main_qf->metadata->tag_bits){
+    throw std::logic_error("Index filter's tag size cannot be bigger than\
+    main filter tag's slot size ");
+  }
+	uint64_t index_keybits=qf->main_qf->metadata->key_bits
+												-qf->main_qf->metadata->bits_per_slot
+												+index_slot_size;
+  qf_init(qf->index_qf, qf->main_qf->metadata->nslots,
+     index_keybits,
+      index_tag_size,qf->main_qf->metadata->fixed_counter_size, true, "", 2038074761);
+  qf_copy2(qf->index_qf,qf->main_qf);
+}
+
+void approx_count_range(qf_index* qf, uint64_t key, uint64_t* min_approx_count,
+	uint64_t* max_approx_count){
+	*max_approx_count=0;
+	*min_approx_count=(0ULL-1);
+	printf("main bits per slot %llu\n",qf->main_qf->metadata->bits_per_slot );
+	printf("index bits per slot %llu\n",qf->index_qf->metadata->bits_per_slot );
+	uint64_t slot_shift=qf->main_qf->metadata->bits_per_slot -
+	qf->index_qf->metadata->bits_per_slot;
+	printf("key %llu\n slot shift %llu",key,slot_shift);
+	key>>=slot_shift;
+	printf("key %llu\n slot shift %llu",key,slot_shift);
+	__uint128_t hash = key;
+	uint64_t hash_remainder   = hash & BITMASK(qf->index_qf->metadata->bits_per_slot);
+	int64_t hash_bucket_index = hash >> qf->index_qf->metadata->bits_per_slot;
+
+	if (!is_occupied(qf->index_qf, hash_bucket_index)){
+		min_approx_count=0;
+		return ;
+	}
+
+	int64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(qf->index_qf,
+		hash_bucket_index-1)
+		+ 1;
+		if (runstart_index < hash_bucket_index)
+		runstart_index = hash_bucket_index;
+
+		/* printf("MC RUNSTART: %02lx RUNEND: %02lx\n", runstart_index, runend_index); */
+		printf("Before for loop\n" );
+		uint64_t current_remainder, current_count, current_end;
+		do {
+				uint64_t min_count=0,max_count=0;
+				uint64_t tmp;
+				current_remainder = get_slot(qf->index_qf, runstart_index);
+				printf("current reminder %llu\n",current_remainder);
+				uint64_t fcount=get_fixed_counter(qf->index_qf,runstart_index);
+				uint64_t tmp_count= fcount+1;
+				current_count=0;
+				const uint64_t fixed_count_max=(1ULL << qf->index_qf->metadata->fixed_counter_size)-1;
+				if(fcount == fixed_count_max){
+					uint64_t no_digits=0;
+					do{
+						runstart_index++;
+						no_digits++;
+						min_count <<= qf->index_qf->metadata->bits_per_slot;
+						max_count <<= qf->index_qf->metadata->bits_per_slot;
+						fcount= get_fixed_counter(qf->index_qf,runstart_index);
+						tmp=get_slot(qf->index_qf, runstart_index);
+						min_count += tmp;
+						max_count += (tmp+((1ULL << slot_shift)-1));
+					}while(fcount == fixed_count_max);
+					min_count += fcount<<(no_digits*qf->index_qf->metadata->bits_per_slot +
+						 qf->index_qf->metadata->fixed_counter_size);
+					max_count += fcount<<(no_digits*qf->index_qf->metadata->bits_per_slot +
+	 						 qf->index_qf->metadata->fixed_counter_size);
+				}
+				min_count += tmp_count;
+				max_count += tmp_count;
+
+				if (current_remainder == hash_remainder){
+					*min_approx_count= std::min(*min_approx_count,min_count);
+					*max_approx_count= std::max(*max_approx_count,max_count);
+				}
+				current_end=runstart_index;
+				runstart_index = current_end + 1;
+			} while (!is_runend(qf->index_qf, current_end));
+			if(*min_approx_count==(0ULL-1))
+				*min_approx_count=0;
+		}
+
 
 #ifdef TEST
 	#include "tests/lowLevelTests.hpp"

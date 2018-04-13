@@ -170,3 +170,73 @@ TEST_CASE( "get/set Tags" ) {
     qf_destroy(&qf);
   }
 }
+
+TEST_CASE("testing copy2") {
+  QF qf;
+  int counter_size=2;
+  srand (1);
+  uint64_t qbits=15;
+  uint64_t num_hash_bits=qbits+9;
+  uint64_t tag_size=5;
+  uint64_t maximum_count=(1ULL<<counter_size)-1;
+  uint64_t maximum_tag=(1ULL<<tag_size)-1;
+
+  INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, tag_size,counter_size, true, "", 2038074761);
+
+  uint64_t nvals = (1ULL<<qbits);
+  //uint64_t nvals = 3;
+  uint64_t *vals;
+  uint64_t *nRepetitions;
+  vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
+  nRepetitions= (uint64_t*)malloc(nvals*sizeof(nRepetitions[0]));
+  uint64_t count;
+
+  for(uint64_t i=0;i<nvals;i++)
+  {
+    vals[i]=rand();
+    vals[i]=(vals[i]<<32)|rand();
+    vals[i]=vals[i]%(qf.metadata->range);
+
+    nRepetitions[i]=(rand()%257)+1;
+  }
+  double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
+  uint64_t insertedItems=0;
+  while(insertedItems<nvals && loadFactor<0.9){
+  //  printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
+    INFO("Inserting "<< vals[insertedItems] << " Repeated "<<nRepetitions[insertedItems]);
+    qf_insert(&qf,vals[insertedItems],nRepetitions[insertedItems],false,false);
+    qf_add_tag(&qf,vals[insertedItems],vals[insertedItems]%(maximum_tag+1));
+
+    //qf_dump(&qf);
+    INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
+    count = qf_count_key(&qf, vals[insertedItems]);
+    CHECK(count >= nRepetitions[insertedItems]);
+    insertedItems++;
+    loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
+
+  }
+  INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
+
+  QF* qf2=(QF*)calloc(sizeof(QF),1);
+  qf_init(qf2, (1ULL<<qbits), num_hash_bits, tag_size-3,counter_size, true, "", 2038074761);
+
+  qf_copy2(qf2,&qf);
+
+  qf_destroy(&qf);
+  for(uint64_t i=0;i<insertedItems;i++)
+  {
+    count = qf_count_key(qf2, vals[i]);
+    INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
+    CHECK(count >= nRepetitions[i]);
+
+    count = qf_get_tag(qf2,vals[i]);
+    uint64_t newcount=vals[i]%(maximum_tag+1);
+    newcount>>=3;
+
+    CHECK(count == newcount);
+  }
+
+  qf_destroy(qf2);
+
+}
