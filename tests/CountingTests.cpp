@@ -18,6 +18,8 @@ TEST_CASE( "simple counting test" ) {
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
   qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
 
+
+
   for(uint64_t i=0;i<=10;i++){
     qf_insert(&qf,100,1,false,false);
     count = qf_count_key(&qf, 100);
@@ -26,7 +28,9 @@ TEST_CASE( "simple counting test" ) {
     CHECK(count == (1+i));
   }
 
+
   qf_insert(&qf,1500,50,false,false);
+
   count = qf_count_key(&qf, 1500);
   //  fixed_counter=qf_get_fixed_counter(&qf,1500);
   INFO("Counter = "<<count<<" fixed counter = "<<fixed_counter)
@@ -50,7 +54,7 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
   //except first item is inserted 5 times to full test _insert1
   QF qf;
   int counter_size=2;
-  uint64_t qbits=16;
+  uint64_t qbits=15;
   uint64_t num_hash_bits=qbits+9;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
@@ -123,8 +127,8 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
 
 TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )" ) {
   QF qf;
-  int counter_size=2;
-  uint64_t qbits=16;
+  int counter_size=4;
+  uint64_t qbits=15;
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
@@ -141,13 +145,14 @@ TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )" ) {
   }
   double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   uint64_t insertedItems=0;
+  uint64_t count;
   while(loadFactor<0.9){
-
     qf_insert(&qf,vals[insertedItems],50,false,false);
+
     insertedItems++;
     loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   }
-  uint64_t count;
+
   for(uint64_t i=0;i<insertedItems;i++)
   {
     count = qf_count_key(&qf, vals[i]);
@@ -169,10 +174,10 @@ TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )" ) {
 
 TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )" ) {
   QF qf;
-  int counter_size=2;
+  int counter_size=4;
   srand (1);
   uint64_t qbits=16;
-  uint64_t num_hash_bits=qbits+9;
+  uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
   qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
