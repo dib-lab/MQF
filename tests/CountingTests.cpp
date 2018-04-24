@@ -7,6 +7,8 @@ using namespace std;
 
 
 
+
+
 TEST_CASE( "simple counting test" ) {
   //except first item is inserted 5 times to full test _insert1
   QF qf;
@@ -48,6 +50,23 @@ TEST_CASE( "simple counting test" ) {
   //  fixed_counter=qf_get_fixed_counter(&qf,2000);
   INFO("Counter = "<<count<<" fixed counter = "<<fixed_counter)
   CHECK(count == (4000));
+
+}
+
+
+TEST_CASE( "Big count" ) {
+  QF qf;
+  int counter_size=4;
+  srand (1);
+  uint64_t qbits=5;
+  uint64_t num_hash_bits=qbits+8;
+  uint64_t maximum_count=(1ULL<<counter_size)-1;
+  INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
+  qf_insert(&qf,100,100000,false,false);
+  uint64_t count = qf_count_key(&qf, 100);
+
+  CHECK(count==100000);
 
 }
 TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
@@ -192,11 +211,24 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )" ) 
 
   for(uint64_t i=0;i<nvals;i++)
   {
-    vals[i]=rand();
-    vals[i]=(vals[i]<<32)|rand();
-    vals[i]=vals[i]%(qf.metadata->range);
+    uint64_t newvalue=0;
+    while(newvalue==0){
+      newvalue=rand();
+      newvalue=(newvalue<<32)|rand();
+      newvalue=newvalue%(qf.metadata->range);
+      for(uint64_t j=0;j<i;j++)
+      {
+        if(vals[j]==newvalue)
+        {
+          newvalue=0;
+          break;
+        }
+      }
+    }
+    vals[i]=newvalue;
 
-    nRepetitions[i]=(rand()%257)+1;
+
+    nRepetitions[i]=(rand()%1000)+1;
   }
   double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   uint64_t insertedItems=0;
@@ -207,7 +239,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )" ) 
     //qf_dump(&qf);
     INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
     count = qf_count_key(&qf, vals[insertedItems]);
-    CHECK(count >= nRepetitions[insertedItems]);
+    CHECK(count == nRepetitions[insertedItems]);
     insertedItems++;
     loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
 
@@ -218,7 +250,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )" ) 
   {
     count = qf_count_key(&qf, vals[i]);
     INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
-    CHECK(count >= nRepetitions[i]);
+    CHECK(count == nRepetitions[i]);
   }
 
   qf_destroy(&qf);

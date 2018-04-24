@@ -1328,12 +1328,13 @@ static inline uint64_t decode_counter(const QF *qf, uint64_t index, uint64_t
 				index++;
 				no_digits++;
 				*count <<= qf->metadata->key_remainder_bits;
+				
 				fcount= get_fixed_counter(qf,index);
 		//		printf("quer slot =%lu  fixed count= %lu\n", get_slot(qf, index),fcount);
 				*count += get_slot(qf, index);
 
 		}while(fcount == fixed_count_max);
-		*count += fcount<<(no_digits*qf->metadata->key_remainder_bits + qf->metadata->fixed_counter_size);
+		*count += fcount<<(no_digits*qf->metadata->key_remainder_bits);
 		//printf("fixed vcount= %lu\n", fcount<<(no_digits*qf->metadata->bits_per_slot + qf->metadata->fixed_counter_size));
 	}
 	*count += tmp_count;
