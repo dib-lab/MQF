@@ -2360,6 +2360,61 @@ inline int qfi_end(QFi *qfi)
 		return 0;
 }
 
+
+void unionFn(uint64_t  key_a, uint64_t  tag_a,uint64_t  count_a,
+					   uint64_t  key_b, uint64_t  tag_b,uint64_t  count_b,
+					   uint64_t *key_c, uint64_t *tag_c,uint64_t *count_c)
+{
+		if(count_a==0){
+			*key_c=key_b;
+			*tag_c=tag_a;
+			*count_c=count_b;
+		}
+		else if(count_b==0){
+			*key_c=key_a;
+			*tag_c=tag_a;
+			*count_c=count_a;
+		}
+		else{
+			*key_c=key_a;
+			*tag_c=tag_a;
+			*count_c=count_a+count_b;
+		}
+
+}
+void intersectFn(uint64_t  key_a, uint64_t  tag_a,uint64_t  count_a,
+					   uint64_t  key_b, uint64_t  tag_b,uint64_t  count_b,
+					   uint64_t *key_c, uint64_t *tag_c,uint64_t *count_c)
+{
+	*key_c=0;
+	*tag_c=0;
+	*count_c=0;
+	if(count_a!=0 && count_b!=0){
+			*key_c=key_a;
+			*tag_c=tag_a;
+			*count_c=std::min(count_a,count_b);
+	}
+
+}
+
+void subtractFn(uint64_t  key_a, uint64_t  tag_a,uint64_t  count_a,
+					   uint64_t  key_b, uint64_t  tag_b,uint64_t  count_b,
+					   uint64_t *key_c, uint64_t *tag_c,uint64_t *count_c)
+{
+		if(count_b==0){
+			*key_c=key_a;
+			*tag_c=tag_a;
+			*count_c=count_a;
+		}
+		else{
+			*key_c=key_a;
+			*tag_c=tag_a;
+			*count_c=count_a<count_b ? 0:count_a-count_b;
+		}
+
+}
+
+
 /*
  * Merge qfa and qfb into qfc
  */
@@ -2371,7 +2426,11 @@ inline int qfi_end(QFi *qfi)
  * insert(min, ic)
  * increment either ia or ib, whichever is minimum.
  */
-void qf_merge(QF *qfa, QF *qfb, QF *qfc)
+void _qf_merge(QF *qfa, QF *qfb, QF *qfc,
+	void(*mergeFn)(uint64_t   keya, uint64_t  tag_a,uint64_t  count_a,
+						  	 uint64_t   keyb, uint64_t  tag_b,uint64_t  count_b,
+							   uint64_t*  keyc, uint64_t* tag_c,uint64_t* count_c
+							 ))
 {
 	QFi qfia, qfib;
 	if(qfa->metadata->range != qfb->metadata->range ||
@@ -2382,36 +2441,73 @@ void qf_merge(QF *qfa, QF *qfb, QF *qfc)
 	qf_iterator(qfa, &qfia, 0);
 	qf_iterator(qfb, &qfib, 0);
 
-	uint64_t keya, valuea, counta, keyb, valueb, countb;
-	qfi_get(&qfia, &keya, &valuea, &counta);
-	qfi_get(&qfib, &keyb, &valueb, &countb);
+	uint64_t keya, taga, counta, keyb, tagb, countb;
+	uint64_t keyc,tagc, countc;
+	qfi_get(&qfia, &keya, &taga, &counta);
+	qfi_get(&qfib, &keyb, &tagb, &countb);
+
 	do {
 		if (keya < keyb) {
-			qf_insert(qfc, keya, counta, true, true);
+			mergeFn(keya,taga,counta,0,0,0,&keyc,&tagc,&countc);
 			qfi_next(&qfia);
-			qfi_get(&qfia, &keya, &valuea, &counta);
+			qfi_get(&qfia, &keya, &taga, &counta);
 		}
-		else {
-			qf_insert(qfc, keyb, countb, true, true);
+		else if(keya > keyb) {
+			mergeFn(0,0,0,keyb,tagb,countb,&keyc,&tagc,&countc);
 			qfi_next(&qfib);
-			qfi_get(&qfib, &keyb, &valueb, &countb);
+			qfi_get(&qfib, &keyb, &tagb, &countb);
 		}
+		else{
+			mergeFn(keya,taga,counta,keyb,tagb,countb,&keyc,&tagc,&countc);
+			qfi_next(&qfia);
+			qfi_next(&qfib);
+			qfi_get(&qfia, &keya, &taga, &counta);
+			qfi_get(&qfib, &keyb, &tagb, &countb);
+		}
+		if(countc!=0){
+			qf_insert(qfc, keyc, countc, true, true);
+			qf_add_tag(qfc,keya,tagc);
+		}
+
 	} while(!qfi_end(&qfia) && !qfi_end(&qfib));
 
 	if (!qfi_end(&qfia)) {
+
 		do {
-			qfi_get(&qfia, &keya, &valuea, &counta);
-			qf_insert(qfc, keya, counta, true, true);
+			qfi_get(&qfia, &keya, &taga, &counta);
+			mergeFn(keya,taga,counta,0,0,0,&keyc,&tagc,&countc);
+			if(countc!=0){
+				qf_insert(qfc, keyc, countc, true, true);
+				qf_add_tag(qfc,keyc,tagc);
+			}
 		} while(!qfi_next(&qfia));
 	}
+
 	if (!qfi_end(&qfib)) {
 		do {
-			qfi_get(&qfib, &keyb, &valueb, &countb);
-			qf_insert(qfc, keyb, countb, true, true);
+			qfi_get(&qfib, &keyb, &tagb, &countb);
+			mergeFn(0,0,0,keyb,tagb,countb,&keyc,&tagc,&countc);
+			if(countc!=0){
+				qf_insert(qfc, keyc, countc, true, true);
+				qf_add_tag(qfc,keyc,tagc);
+			}
 		} while(!qfi_next(&qfib));
 	}
 
 	return;
+}
+void qf_merge(QF *qfa, QF *qfb, QF *qfc)
+{
+	_qf_merge(qfa,qfb,qfc,unionFn);
+}
+
+void qf_intersect(QF *qfa, QF *qfb, QF *qfc)
+{
+	_qf_merge(qfa,qfb,qfc,intersectFn);
+}
+void qf_subtract(QF *qfa, QF *qfb, QF *qfc)
+{
+	_qf_merge(qfa,qfb,qfc,subtractFn);
 }
 
 bool qf_equals(QF *qfa, QF *qfb)
@@ -2450,43 +2546,9 @@ bool qf_equals(QF *qfa, QF *qfb)
 	return true;
 }
 
-void qf_intersect(QF *qfa, QF *qfb, QF *qfc)
-{
-	QFi qfia, qfib;
-	if(qfa->metadata->range != qfb->metadata->range ||
-	qfb->metadata->range != qfc->metadata->range )
-	{
-		throw std::logic_error("Calculate intersect for non compatible filters");
-	}
-	qf_iterator(qfa, &qfia, 0);
-	qf_iterator(qfb, &qfib, 0);
-
-	uint64_t keya, valuea, counta, keyb, valueb, countb;
-	qfi_get(&qfia, &keya, &valuea, &counta);
-	qfi_get(&qfib, &keyb, &valueb, &countb);
-	do {
-		if (keya < keyb) {
-			qfi_next(&qfia);
-			qfi_get(&qfia, &keya, &valuea, &counta);
-		}
-		else if(keyb < keya) {
-			qfi_next(&qfib);
-			qfi_get(&qfib, &keyb, &valueb, &countb);
-		}
-		else{
-				qf_insert(qfc, keya, std::min(counta,countb), true, true);
-				qfi_next(&qfia);
-				qfi_next(&qfib);
-				qfi_get(&qfia, &keya, &valuea, &counta);
-				qfi_get(&qfib, &keyb, &valueb, &countb);
-		}
-	} while(!qfi_end(&qfia) && !qfi_end(&qfib));
 
 
-
-	return;
-}
-void qf_subtract(QF *qfa, QF *qfb, QF *qfc)
+void _qf_subtract(QF *qfa, QF *qfb, QF *qfc)
 {
 	QFi qfia, qfib;
 	if(qfa->metadata->range != qfb->metadata->range ||
