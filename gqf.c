@@ -2067,6 +2067,9 @@ void qf_deserialize(QF *qf, const char *filename)
 }
 uint64_t qf_add_tag(const QF *qf, uint64_t key, uint64_t tag, bool lock, bool spin)
 {
+	if(qf->metadata->tag_bits==0){
+		return 0;
+	}
 	__uint128_t hash = key;
 	uint64_t hash_remainder   = hash & BITMASK(qf->metadata->key_remainder_bits);
 	int64_t hash_bucket_index = hash >> qf->metadata->key_remainder_bits;
@@ -2112,6 +2115,11 @@ uint64_t qf_add_tag(const QF *qf, uint64_t key, uint64_t tag, bool lock, bool sp
 
 uint64_t qf_remove_tag(const QF *qf, uint64_t key ,bool lock, bool spin)
 {
+
+	if(qf->metadata->tag_bits==0){
+		return 0;
+	}
+
 	__uint128_t hash = key;
 	uint64_t hash_remainder   = hash & BITMASK(qf->metadata->key_remainder_bits);
 	int64_t hash_bucket_index = hash >> qf->metadata->key_remainder_bits;
@@ -2153,6 +2161,9 @@ uint64_t qf_remove_tag(const QF *qf, uint64_t key ,bool lock, bool spin)
 
 uint64_t qf_get_tag(const QF *qf, uint64_t key)
 {
+	if(qf->metadata->tag_bits==0){
+		return 0;
+	}
 	__uint128_t hash = key;
 	uint64_t hash_remainder   = hash & BITMASK(qf->metadata->key_remainder_bits);
 	int64_t hash_bucket_index = hash >> qf->metadata->key_remainder_bits;
@@ -2692,6 +2703,33 @@ void inverted_union_multi_Fn(uint64_t   key_arr[], uint64_t  tag_arr[],uint64_t 
 
 }
 
+void inverted_union_multi_no_count_Fn(uint64_t   key_arr[], uint64_t  tag_arr[],uint64_t  count_arr[],int nqf,
+							 uint64_t*  key_c, uint64_t* tag_c,uint64_t* count_c)
+{
+	std::string index_key="";
+	*count_c=0;
+	for(int i=0;i<nqf;i++)
+	{
+		//printf("key =%lu, count=%lu\n", key_arr[i],count_arr[i]);
+		if(count_arr[i]!=0)
+		{
+			*key_c=key_arr[i];
+			index_key+=std::to_string(i)+";";
+		}
+	}
+	index_key.pop_back();
+	auto it=inverted_index.find(index_key);
+	if(it==inverted_index.end())
+	{
+		inverted_index.insert(std::make_pair(index_key,last_index));
+		last_index++;
+		it=inverted_index.find(index_key);
+	}
+	*count_c=it->second;
+
+}
+
+
 void qf_invertable_merge(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t,std::string > *inverted_index_ptr)
 {
 
@@ -2710,6 +2748,26 @@ void qf_invertable_merge(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t,std::s
 	}
 
 }
+
+void qf_invertable_merge_no_count(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t,std::string > *inverted_index_ptr)
+{
+
+	inverted_index.clear();
+	for(int i=0;i<nqf;i++)
+	{
+		inverted_index.insert(std::make_pair(std::to_string(i),last_index));
+		last_index++;
+	}
+	_qf_multi_merge(qf_arr,nqf,qfr,inverted_union_multi_no_count_Fn);
+
+	auto it=inverted_index.begin();
+	while(it!=inverted_index.end()){
+		inverted_index_ptr->insert(std::make_pair(it->second,it->first));
+		it++;
+	}
+
+}
+
 QF* qf_resize(QF* qf, int newQ, const char * originalFilename, const char * newFilename)
 {
 	if((int)qf->metadata->key_bits-newQ <2)

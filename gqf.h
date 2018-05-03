@@ -232,6 +232,7 @@ extern "C" {
 
 
 	void qf_invertable_merge(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t, std::string> *inverted_index_ptr);
+	void qf_invertable_merge_no_count(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t, std::string> *inverted_index_ptr);
 
 
 	/*! @breif Resize the filter into a bigger or smaller one

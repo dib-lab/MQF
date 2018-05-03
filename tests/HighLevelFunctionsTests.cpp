@@ -461,93 +461,162 @@ vector<string> split(const string& str, int delimiter(int) = ::isspace){
 
 
 TEST_CASE( "invertable merge") {
- QF cf2,correctCF;
+  QF cf2,correctCF;
 
- QF **cf;
- int nqf=10;
- QFi cfi;
- uint64_t qbits = 18;
- uint64_t small_qbits=qbits;
- uint64_t nhashbits = qbits + 8;
- uint64_t small_nhashbits=small_qbits+8;
- uint64_t nslots = (1ULL << qbits);
- uint64_t small_nslots=(1ULL << small_qbits);
- uint64_t nvals = 250*nslots/1000;
- uint64_t *vals;
- uint64_t counter_size=3;
- /* Initialise the CQF */
-
-
- cf=new QF*[nqf];
- for(int i=0;i<nqf;i++)
- {
-   cf[i]=new QF();
-   qf_init(cf[i], small_nslots, small_nhashbits, 0,counter_size, true, "", 2038074761);
- }
-
- INFO("Initialize first cqf size ="<<nslots<<", hashbits="<<nhashbits);
- qf_init(&cf2, nslots, nhashbits, 8,counter_size, true, "", 2038074761);
- INFO("Initialize second cqf size ="<<small_nslots<<", hashbits="<<small_nhashbits);
-
- /* Generate random values */
- vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
-
- for(uint64_t i=0;i<nvals;i++)
- {
-   vals[i]=rand();
-   vals[i]=(vals[i]<<32)|rand();
- }
+  QF **cf;
+  int nqf=10;
+  QFi cfi;
+  uint64_t qbits = 18;
+  uint64_t small_qbits=qbits;
+  uint64_t nhashbits = qbits + 8;
+  uint64_t small_nhashbits=small_qbits+8;
+  uint64_t nslots = (1ULL << qbits);
+  uint64_t small_nslots=(1ULL << small_qbits);
+  uint64_t nvals = 250*nslots/1000;
+  uint64_t *vals;
+  uint64_t counter_size=3;
+  /* Initialise the CQF */
 
 
- /* Insert vals in the CQF */
- for (uint64_t i = 0; i < nvals; i++) {
-   vals[i]=vals[i]%cf[0]->metadata->range;
-   for(int j=0;j<nqf;j++){
-     if(vals[i]%(j+1)==0)
-     {
-       qf_insert(cf[j],vals[i],1,false,false);
-     }
-   }
- }
- std::map< uint64_t, std::string> I_inverted_index;
+  cf=new QF*[nqf];
+  for(int i=0;i<nqf;i++)
+  {
+    cf[i]=new QF();
+    qf_init(cf[i], small_nslots, small_nhashbits, 0,counter_size, true, "", 2038074761);
+  }
 
- qf_invertable_merge(cf,nqf,&cf2,&I_inverted_index);
+  INFO("Initialize first cqf size ="<<nslots<<", hashbits="<<nhashbits);
+  qf_init(&cf2, nslots, nhashbits, 8,counter_size, true, "", 2038074761);
+  INFO("Initialize second cqf size ="<<small_nslots<<", hashbits="<<small_nhashbits);
 
-uint64_t key, value, count;
- for(uint64_t i=1;i<nvals;i++)
- {
-   count = qf_count_key(&cf2, vals[i]);
-   value=qf_get_tag(&cf2,vals[i]);
-   auto iit=I_inverted_index.find(value);
-   std::vector<string> filters=split(iit->second);
-   for(auto f:filters)
-   {
-     int tmp=atoi(f.c_str());
-     CHECK(key%(tmp+1)==0);
-   }
+  /* Generate random values */
+  vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
 
- }
+  for(uint64_t i=0;i<nvals;i++)
+  {
+    vals[i]=rand();
+    vals[i]=(vals[i]<<32)|rand();
+  }
+
+  /* Insert vals in the CQF */
+  for (uint64_t i = 0; i < nvals; i++) {
+    vals[i]=vals[i]%cf[0]->metadata->range;
+    for(int j=0;j<nqf;j++){
+      if(vals[i]%(j+1)==0)
+      {
+        qf_insert(cf[j],vals[i],1,false,false);
+      }
+    }
+  }
+  std::map< uint64_t, std::string> I_inverted_index;
+
+  qf_invertable_merge(cf,nqf,&cf2,&I_inverted_index);
+
+  uint64_t key, value, count;
+  for(uint64_t i=1;i<nvals;i++)
+  {
+    count = qf_count_key(&cf2, vals[i]);
+    value=qf_get_tag(&cf2,vals[i]);
+    auto iit=I_inverted_index.find(value);
+    std::vector<string> filters=split(iit->second);
+    for(auto f:filters)
+    {
+      int tmp=atoi(f.c_str());
+      CHECK(key%(tmp+1)==0);
+    }
+
+  }
+  /* Initialize an iterator */
+  qf_iterator(&cf2, &cfi, 0);
+  do {
+
+    qfi_get(&cfi, &key, &value, &count);
+    auto iit=I_inverted_index.find(value);
+    std::vector<string> filters=split(iit->second);
+    for(auto f:filters)
+    {
+      int tmp=atoi(f.c_str());
+      CHECK(key%(tmp+1)==0);
+    }
+  } while(!qfi_next(&cfi));
+}
+
+TEST_CASE( "invertable merge no count") {
+  QF cf2,correctCF;
+
+  QF **cf;
+  int nqf=10;
+  QFi cfi;
+  uint64_t qbits = 18;
+  uint64_t small_qbits=qbits;
+  uint64_t nhashbits = qbits + 8;
+  uint64_t small_nhashbits=small_qbits+8;
+  uint64_t nslots = (1ULL << qbits);
+  uint64_t small_nslots=(1ULL << small_qbits);
+  uint64_t nvals = 250*nslots/1000;
+  uint64_t *vals;
+  uint64_t counter_size=3;
+  /* Initialise the CQF */
 
 
- /* Initialize an iterator */
- qf_iterator(&cf2, &cfi, 0);
- do {
+  cf=new QF*[nqf];
+  for(int i=0;i<nqf;i++)
+  {
+    cf[i]=new QF();
+    qf_init(cf[i], small_nslots, small_nhashbits, 0,counter_size, true, "", 2038074761);
+  }
 
-   qfi_get(&cfi, &key, &value, &count);
-   auto iit=I_inverted_index.find(value);
-   std::vector<string> filters=split(iit->second);
-   for(auto f:filters)
-   {
-     int tmp=atoi(f.c_str());
-     CHECK(key%(tmp+1)==0);
-   }
- } while(!qfi_next(&cfi));
+  INFO("Initialize first cqf size ="<<nslots<<", hashbits="<<nhashbits);
+  qf_init(&cf2, nslots, nhashbits, 0,counter_size, true, "", 2038074761);
+  INFO("Initialize second cqf size ="<<small_nslots<<", hashbits="<<small_nhashbits);
 
+  /* Generate random values */
+  vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
 
+  for(uint64_t i=0;i<nvals;i++)
+  {
+    vals[i]=rand();
+    vals[i]=(vals[i]<<32)|rand();
+  }
 
+  /* Insert vals in the CQF */
+  for (uint64_t i = 0; i < nvals; i++) {
+    vals[i]=vals[i]%cf[0]->metadata->range;
+    for(int j=0;j<nqf;j++){
+      if(vals[i]%(j+1)==0)
+      {
+        qf_insert(cf[j],vals[i],1,false,false);
+      }
+    }
+  }
+  std::map< uint64_t, std::string> I_inverted_index;
 
+  qf_invertable_merge_no_count(cf,nqf,&cf2,&I_inverted_index);
 
+  uint64_t key, value, count;
+  for(uint64_t i=1;i<nvals;i++)
+  {
+    count = qf_count_key(&cf2, vals[i]);
+    auto iit=I_inverted_index.find(count);
+    std::vector<string> filters=split(iit->second);
+    for(auto f:filters)
+    {
+      int tmp=atoi(f.c_str());
+      CHECK(key%(tmp+1)==0);
+    }
 
+  }
+  /* Initialize an iterator */
+  qf_iterator(&cf2, &cfi, 0);
+  do {
 
-
+    qfi_get(&cfi, &key, &value, &count);
+    auto iit=I_inverted_index.find(count);
+    std::vector<string> filters=split(iit->second);
+    for(auto f:filters)
+    {
+      int tmp=atoi(f.c_str());
+      CHECK(key%(tmp+1)==0);
+    }
+  } while(!qfi_next(&cfi));
 }
