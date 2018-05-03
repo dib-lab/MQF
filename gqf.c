@@ -2548,54 +2548,31 @@ bool qf_equals(QF *qfa, QF *qfb)
 
 
 
-void _qf_subtract(QF *qfa, QF *qfb, QF *qfc)
+void union_multi_Fn(uint64_t   key_arr[], uint64_t  tag_arr[],uint64_t  count_arr[],int nqf,
+							 uint64_t*  key_c, uint64_t* tag_c,uint64_t* count_c)
 {
-	QFi qfia, qfib;
-	if(qfa->metadata->range != qfb->metadata->range ||
-	qfb->metadata->range != qfc->metadata->range )
+
+	*count_c=0;
+	for(int i=0;i<nqf;i++)
 	{
-		throw std::logic_error("Calculate subtracte for non compatible filters");
+		//printf("key =%lu, count=%lu\n", key_arr[i],count_arr[i]);
+		if(count_arr[i]!=0)
+		{
+			*key_c=key_arr[i];
+			*tag_c=tag_arr[i];
+			*count_c+=count_arr[i];
+		}
 	}
-	qf_iterator(qfa, &qfia, 0);
-	qf_iterator(qfb, &qfib, 0);
 
-	uint64_t keya, valuea, counta, keyb, valueb, countb;
-	qfi_get(&qfia, &keya, &valuea, &counta);
-	qfi_get(&qfib, &keyb, &valueb, &countb);
-	do {
-		if (keya < keyb) {
-			qfi_next(&qfia);
-			qfi_get(&qfia, &keya, &valuea, &counta);
-		}
-		else if(keyb < keya) {
-			qfi_next(&qfib);
-			qfi_get(&qfib, &keyb, &valueb, &countb);
-		}
-		else{
-				qf_insert(qfc, keya, counta>countb? counta-countb : 0, true, true);
-				qfi_next(&qfia);
-				qfi_next(&qfib);
-				qfi_get(&qfia, &keya, &valuea, &counta);
-				qfi_get(&qfib, &keyb, &valueb, &countb);
-		}
-	} while(!qfi_end(&qfia) && !qfi_end(&qfib));
-
-	return;
 }
 
-
-
-/*
- * Merge an array of qfs into the resultant QF
- */
-void qf_multi_merge(QF *qf_arr[], int nqf, QF *qfr)
+void _qf_multi_merge(QF *qf_arr[],int nqf, QF *qfr,
+	void(*mergeFn)(uint64_t   key_arr[], uint64_t  tag_arr[],uint64_t  count_arr[],int nqf,
+							   uint64_t*  keyc, uint64_t* tag_c,uint64_t* count_c
+							 ))
 {
-	int i;
-	QFi qfi_arr[nqf];
-	int flag = 0;
-	int smallest_i = 0;
-	uint64_t smallest_key = UINT64_MAX;
 
+	int i;
 	uint64_t range=qf_arr[0]->metadata->range;
 	for (i=1; i<nqf; i++) {
 		if(qf_arr[i]->metadata->range!=range)
@@ -2604,50 +2581,84 @@ void qf_multi_merge(QF *qf_arr[], int nqf, QF *qfr)
 		}
 	}
 
+	QFi *qfi_arr[nqf];
+
+	uint64_t smallest_key=UINT64_MAX,second_smallest_key;
+	uint64_t keys[nqf];
+	uint64_t tags[nqf];
+	uint64_t counts[nqf];
+
 	for (i=0; i<nqf; i++) {
-		qf_iterator(qf_arr[i], &qfi_arr[i], 0);
+		qfi_arr[i]=new QFi();
+		qf_iterator(qf_arr[i], qfi_arr[i], 0);
+
+		qfi_get(qfi_arr[i], &keys[i], &tags[i], &counts[i]);
+		smallest_key=std::min(keys[i],smallest_key);
 	}
 
-	while (!flag) {
-		uint64_t keys[nqf];
-		uint64_t values[nqf];
-		uint64_t counts[nqf];
-		for (i=0; i<nqf; i++)
-			qfi_get(&qfi_arr[i], &keys[i], &values[i], &counts[i]);
 
-		do {
-			smallest_key = UINT64_MAX;
-			for (i=0; i<nqf; i++) {
-				if (keys[i] < smallest_key) {
-					smallest_key = keys[i]; smallest_i = i;
+
+
+	uint64_t keys_m[nqf];
+	uint64_t tags_m[nqf];
+	uint64_t counts_m[nqf];
+
+
+	bool finish=false;
+	while(!finish)
+	{
+		finish=true;
+		second_smallest_key=UINT64_MAX;
+		//printf("smallest_key = %llu\n",smallest_key );
+		for(i=0;i<nqf;i++)
+		{
+			keys_m[i]=0;
+			counts_m[i]=0;
+			tags_m[i]=0;
+
+			//printf(" key = %llu\n",keys[i]);
+			if(keys[i]==smallest_key){
+				keys_m[i]=keys[i];
+				counts_m[i]=counts[i];
+				tags_m[i]=tags[i];
+				qfi_next(qfi_arr[i]);
+				if(!qfi_end(qfi_arr[i]))
+				{
+					finish=false;
+					qfi_get(qfi_arr[i], &keys[i], &tags[i], &counts[i]);
+				}else{
+					keys[i]=UINT64_MAX;
 				}
 			}
-			qf_insert(qfr, keys[smallest_i], counts[smallest_i],
-								true, true);
-			qfi_next(&qfi_arr[smallest_i]);
-			qfi_get(&qfi_arr[smallest_i], &keys[smallest_i], &values[smallest_i],
-							&counts[smallest_i]);
-		} while(!qfi_end(&qfi_arr[smallest_i]));
-
-		/* remove the qf that is exhausted from the array */
-		if (smallest_i < nqf-1)
-			memmove(&qfi_arr[smallest_i], &qfi_arr[smallest_i+1],
-							(nqf-smallest_i-1)*sizeof(qfi_arr[0]));
-		nqf--;
-		if (nqf == 1)
-			flag = 1;
-	}
-	if (!qfi_end(&qfi_arr[0])) {
-		do {
-			uint64_t key, value, count;
-			qfi_get(&qfi_arr[0], &key, &value, &count);
-			qf_insert(qfr, key, count, true, true);
-		} while(!qfi_next(&qfi_arr[0]));
+			second_smallest_key=std::min(second_smallest_key,keys[i]);
+		}
+		for (i = 0; i < nqf; i++) {
+			if(keys[i]!=UINT64_MAX)
+			{
+				finish=false;
+				break;
+			}
+		}
+		//printf("second_smallest_key=%llu finish=%d\n",second_smallest_key,finish);
+		uint64_t keyc,tagc, countc;
+		mergeFn(keys_m,tags_m,counts_m,nqf,&keyc,&tagc,&countc);
+		if(countc!=0){
+			qf_insert(qfr, keyc, countc, true, true);
+			qf_add_tag(qfr,keyc,tagc);
+		}
+		smallest_key=second_smallest_key;
 	}
 
 	return;
 }
 
+/*
+ * Merge an array of qfs into the resultant QF
+ */
+void qf_multi_merge(QF *qf_arr[], int nqf, QF *qfr)
+{
+	_qf_multi_merge(qf_arr,nqf,qfr,union_multi_Fn);
+}
 QF* qf_resize(QF* qf, int newQ, const char * originalFilename, const char * newFilename)
 {
 	if((int)qf->metadata->key_bits-newQ <2)
