@@ -60,6 +60,6 @@ using namespace std;
     }
   }
   cout<<"All kmers are counted successfully"<<endl;
-  qf_destroy(&qf,true);
+  qf_destroy(&qf);
   return 0;
 }
