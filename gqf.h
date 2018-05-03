@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <pthread.h>
+#include <map>
 
 #ifdef __cplusplus
 extern "C" {
@@ -228,6 +229,10 @@ extern "C" {
 	void qf_subtract(QF *qfa, QF *qfb, QF *qfc);
 	/* merge multiple QFs into the final QF one. */
 	void qf_multi_merge(QF *qf_arr[], int nqf, QF *qfr);
+
+
+	void qf_invertable_merge(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t, std::string> *inverted_index_ptr);
+
 
 	/*! @breif Resize the filter into a bigger or smaller one
 

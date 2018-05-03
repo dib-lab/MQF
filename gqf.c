@@ -18,6 +18,8 @@
 #include <stdexcept>
 #include "gqf.h"
 #include <iostream>
+#include <map>
+
 
 /******************************************************************
  * Code for managing the metadata bits and slots w/o interpreting *
@@ -2658,6 +2660,55 @@ void _qf_multi_merge(QF *qf_arr[],int nqf, QF *qfr,
 void qf_multi_merge(QF *qf_arr[], int nqf, QF *qfr)
 {
 	_qf_multi_merge(qf_arr,nqf,qfr,union_multi_Fn);
+
+}
+
+std::map<std::string, uint64_t> inverted_index;
+uint64_t last_index=0;
+void inverted_union_multi_Fn(uint64_t   key_arr[], uint64_t  tag_arr[],uint64_t  count_arr[],int nqf,
+							 uint64_t*  key_c, uint64_t* tag_c,uint64_t* count_c)
+{
+	std::string index_key="";
+	*count_c=0;
+	for(int i=0;i<nqf;i++)
+	{
+		//printf("key =%lu, count=%lu\n", key_arr[i],count_arr[i]);
+		if(count_arr[i]!=0)
+		{
+			*key_c=key_arr[i];
+			*count_c+=count_arr[i];
+			index_key+=std::to_string(i)+";";
+		}
+	}
+	index_key.pop_back();
+	auto it=inverted_index.find(index_key);
+	if(it==inverted_index.end())
+	{
+		inverted_index.insert(std::make_pair(index_key,last_index));
+		last_index++;
+		it=inverted_index.find(index_key);
+	}
+	*tag_c=it->second;
+
+}
+
+void qf_invertable_merge(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t,std::string > *inverted_index_ptr)
+{
+
+	inverted_index.clear();
+	for(int i=0;i<nqf;i++)
+	{
+		inverted_index.insert(std::make_pair(std::to_string(i),last_index));
+		last_index++;
+	}
+	_qf_multi_merge(qf_arr,nqf,qfr,inverted_union_multi_Fn);
+
+	auto it=inverted_index.begin();
+	while(it!=inverted_index.end()){
+		inverted_index_ptr->insert(std::make_pair(it->second,it->first));
+		it++;
+	}
+
 }
 QF* qf_resize(QF* qf, int newQ, const char * originalFilename, const char * newFilename)
 {
