@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <pthread.h>
 #include <map>
+#include <vector>
 
 #ifdef __cplusplus
 extern "C" {
@@ -231,8 +232,15 @@ extern "C" {
 	void qf_multi_merge(QF *qf_arr[], int nqf, QF *qfr);
 
 
-	void qf_invertable_merge(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t, std::string> *inverted_index_ptr);
-	void qf_invertable_merge_no_count(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t, std::string> *inverted_index_ptr);
+	/*! @breif Invertiable merge function adds tag for each key and creates index structure. The index is map of an integer and vector of integers where the integer is the value of the tags and vector on integers is the ids of the source filters.
+
+	@param Qf* qf_arr : input array of filters
+	@param int nqf: number of filters
+	@param QF* qfr: pointer to the output filter.
+	@param std::map<uint64_t, std::vector<int> > *inverted_index_ptr: Pointer to the output index.
+	*/
+	void qf_invertable_merge(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t, std::vector<int> > *inverted_index_ptr);
+	void qf_invertable_merge_no_count(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t, std::vector<int> > *inverted_index_ptr);
 
 
 	/*! @breif Resize the filter into a bigger or smaller one

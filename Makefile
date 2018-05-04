@@ -41,8 +41,8 @@ main:                  main.o 								 gqf.o
 	$(LD) $^ $(LDFLAGS) -o $@
 # dependencies between .o files and .h files
 
-test:  $(TESTFILES) gqf.c test.o
-	$(LD) $(LDFLAGS) -DTEST -o mqf_test test.o $(TESTFILES) gqf.c
+test:  $(TESTFILES) gqf.c test.o utils.o
+	$(LD) $(LDFLAGS) -DTEST -o mqf_test test.o utils.o $(TESTFILES) gqf.c
 
 main.o: 								 									gqf.h
 
@@ -67,6 +67,8 @@ gqf.o: gqf.c gqf.h
 %.o: %.c
 	$(CC) $(CXXFLAGS) $(INCLUDE) $< -c -o $@
 
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDE) $< -c -o $@
 
 
 

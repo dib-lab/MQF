@@ -19,6 +19,7 @@
 #include "gqf.h"
 #include <iostream>
 #include <map>
+#include "utils.h"
 
 
 /******************************************************************
@@ -2688,13 +2689,15 @@ void inverted_union_multi_Fn(uint64_t   key_arr[], uint64_t  tag_arr[],uint64_t 
 		{
 			*key_c=key_arr[i];
 			*count_c+=count_arr[i];
-			index_key+=std::to_string(i)+";";
+			index_key+=(char)(i+48);
+			index_key+=';';
 		}
 	}
 	index_key.pop_back();
 	auto it=inverted_index.find(index_key);
 	if(it==inverted_index.end())
 	{
+
 		inverted_index.insert(std::make_pair(index_key,last_index));
 		last_index++;
 		it=inverted_index.find(index_key);
@@ -2730,7 +2733,7 @@ void inverted_union_multi_no_count_Fn(uint64_t   key_arr[], uint64_t  tag_arr[],
 }
 
 
-void qf_invertable_merge(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t,std::string > *inverted_index_ptr)
+void qf_invertable_merge(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t,std::vector<int> > *inverted_index_ptr)
 {
 
 	inverted_index.clear();
@@ -2743,13 +2746,14 @@ void qf_invertable_merge(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t,std::s
 
 	auto it=inverted_index.begin();
 	while(it!=inverted_index.end()){
-		inverted_index_ptr->insert(std::make_pair(it->second,it->first));
+		std::vector<int> tmp=key_to_vector_int(it->first);
+		inverted_index_ptr->insert(std::make_pair(it->second,tmp));
 		it++;
 	}
 
 }
 
-void qf_invertable_merge_no_count(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t,std::string > *inverted_index_ptr)
+void qf_invertable_merge_no_count(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t,std::vector<int> > *inverted_index_ptr)
 {
 
 	inverted_index.clear();
@@ -2762,7 +2766,8 @@ void qf_invertable_merge_no_count(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64
 
 	auto it=inverted_index.begin();
 	while(it!=inverted_index.end()){
-		inverted_index_ptr->insert(std::make_pair(it->second,it->first));
+		std::vector<int> tmp=key_to_vector_int(it->first);
+		inverted_index_ptr->insert(std::make_pair(it->second,tmp));
 		it++;
 	}
 

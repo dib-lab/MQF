@@ -1,10 +1,11 @@
 #include "../gqf.h"
 #include <stdio.h>      /* printf, scanf, puts, NULL */
 #include <stdlib.h>
-#include<iostream>
+#include <iostream>
 #include "../catch.hpp"
 #include <vector>
 #include <map>
+#include "../utils.h"
 using namespace std;
 
 
@@ -445,19 +446,6 @@ TEST_CASE( "Multi Merging mqf") {
 }
 
 
-vector<string> split(const string& str, int delimiter(int) = ::isspace){
-  vector<string> result;
-  auto e=str.end();
-  auto i=str.begin();
-  while(i!=e){
-    i=find_if_not(i,e, delimiter);
-    if(i==e) break;
-    auto j=find_if(i,e, delimiter);
-    result.push_back(string(i,j));
-    i=j;
-  }
-  return result;
-}
 
 
 TEST_CASE( "invertable merge") {
@@ -466,7 +454,7 @@ TEST_CASE( "invertable merge") {
   QF **cf;
   int nqf=10;
   QFi cfi;
-  uint64_t qbits = 18;
+  uint64_t qbits = 10;
   uint64_t small_qbits=qbits;
   uint64_t nhashbits = qbits + 8;
   uint64_t small_nhashbits=small_qbits+8;
@@ -508,9 +496,10 @@ TEST_CASE( "invertable merge") {
       }
     }
   }
-  std::map< uint64_t, std::string> I_inverted_index;
+  std::map< uint64_t, std::vector<int> > I_inverted_index;
 
   qf_invertable_merge(cf,nqf,&cf2,&I_inverted_index);
+  save_inverted_index(&I_inverted_index,"tmp");
 
   uint64_t key, value, count;
   for(uint64_t i=1;i<nvals;i++)
@@ -518,25 +507,20 @@ TEST_CASE( "invertable merge") {
     count = qf_count_key(&cf2, vals[i]);
     value=qf_get_tag(&cf2,vals[i]);
     auto iit=I_inverted_index.find(value);
-    std::vector<string> filters=split(iit->second);
-    for(auto f:filters)
-    {
-      int tmp=atoi(f.c_str());
-      CHECK(key%(tmp+1)==0);
-    }
 
+    for(auto f:iit->second)
+    {
+      CHECK(vals[i]%(f+1)==0);
+    }
   }
   /* Initialize an iterator */
   qf_iterator(&cf2, &cfi, 0);
   do {
-
     qfi_get(&cfi, &key, &value, &count);
     auto iit=I_inverted_index.find(value);
-    std::vector<string> filters=split(iit->second);
-    for(auto f:filters)
+    for(auto f:iit->second)
     {
-      int tmp=atoi(f.c_str());
-      CHECK(key%(tmp+1)==0);
+      CHECK(key%(f+1)==0);
     }
   } while(!qfi_next(&cfi));
 }
@@ -589,7 +573,7 @@ TEST_CASE( "invertable merge no count") {
       }
     }
   }
-  std::map< uint64_t, std::string> I_inverted_index;
+  std::map< uint64_t, std::vector<int> > I_inverted_index;
 
   qf_invertable_merge_no_count(cf,nqf,&cf2,&I_inverted_index);
 
@@ -598,11 +582,9 @@ TEST_CASE( "invertable merge no count") {
   {
     count = qf_count_key(&cf2, vals[i]);
     auto iit=I_inverted_index.find(count);
-    std::vector<string> filters=split(iit->second);
-    for(auto f:filters)
+    for(auto f:iit->second)
     {
-      int tmp=atoi(f.c_str());
-      CHECK(key%(tmp+1)==0);
+      CHECK(vals[i]%(f+1)==0);
     }
 
   }
@@ -612,11 +594,9 @@ TEST_CASE( "invertable merge no count") {
 
     qfi_get(&cfi, &key, &value, &count);
     auto iit=I_inverted_index.find(count);
-    std::vector<string> filters=split(iit->second);
-    for(auto f:filters)
+    for(auto f:iit->second)
     {
-      int tmp=atoi(f.c_str());
-      CHECK(key%(tmp+1)==0);
+      CHECK(key%(f+1)==0);
     }
   } while(!qfi_next(&cfi));
 }

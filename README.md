@@ -93,6 +93,18 @@ uint64_t qf_remove_tag(const QF *qf, uint64_t key, bool lock, bool spin);
 void qf_merge(QF *qfa, QF *qfb, QF *qfc);
 void qf_multi_merge(QF *qf_arr[], int nqf, QF *qfr);
 ```
+7. Invertable Merge: Invertable merge offers addiotinal functionality to normal merge. Original source filter can be queried for each key.
+Invertiable merge function adds tag for each key and creates index structure. The index is map of an integer and vector of integers where the integer is the value of the tags and vector on integers is the ids of the source filters.
+```c++
+void qf_invertable_merge(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t, std::vector<int> > *inverted_index_ptr);
+```
+  * Qf* qf_arr : input array of filters
+  * int nqf: number of filters
+  * QF* qfr: pointer to the output filter.
+  * map (uint64_t,vector(int) )    inverted_index_ptr: Pointer to the output index.
+
+
+
 
 7. Compare:
 check if two filters have the same items, counts and tags.
