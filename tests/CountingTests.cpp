@@ -53,6 +53,26 @@ TEST_CASE( "simple counting test" ) {
 
 }
 
+TEST_CASE( "Maximum count" ) {
+  QF qf;
+  int counter_size=4;
+  srand (1);
+  uint64_t qbits=5;
+  uint64_t num_hash_bits=qbits+8;
+  uint64_t maximum_count=(1ULL<<counter_size)-1;
+  INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
+  qf.metadata->maximum_count=10;
+  qf_insert(&qf,100,100000,false,false);
+  uint64_t count = qf_count_key(&qf, 100);
+  CHECK(count==10);
+
+  qf_insert(&qf,150,8,false,false);
+  qf_insert(&qf,150,8,false,false);
+  count = qf_count_key(&qf, 150);
+  CHECK(count==10);
+
+}
 
 TEST_CASE( "Big count" ) {
   QF qf;

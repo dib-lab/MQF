@@ -1605,6 +1605,9 @@ static inline uint64_t next_slot(QF *qf, uint64_t current)
 static inline bool insert(QF *qf, __uint128_t hash, uint64_t count, bool lock=false,
 													bool spin=false)
 {
+	if(qf->metadata->maximum_count!=0){
+		count=std::min(count,qf->metadata->maximum_count);
+	}
 	uint64_t hash_remainder           = hash & BITMASK(qf->metadata->key_remainder_bits);
 	uint64_t hash_bucket_index        = hash >> qf->metadata->key_remainder_bits;
 	uint64_t hash_bucket_block_offset = hash_bucket_index % SLOTS_PER_BLOCK;
@@ -1686,7 +1689,11 @@ static inline bool insert(QF *qf, __uint128_t hash, uint64_t count, bool lock=fa
 				modify_metadata(qf, &qf->metadata->ndistinct_elts, 1);
 				/* Found a counter for this remainder.  Add in the new count. */
 			} else if (current_remainder == hash_remainder) {
-				uint64_t *p = encode_counter(qf, hash_remainder, current_count + count, &new_values[67],&new_fcounters[67]);
+				uint64_t tmp= current_count + count;
+				if(qf->metadata->maximum_count!=0){
+					tmp=std::min(tmp,qf->metadata->maximum_count);
+				}
+				uint64_t *p = encode_counter(qf, hash_remainder, tmp, &new_values[67],&new_fcounters[67]);
 				total_remainders=&new_values[67] - p;
 				insert_replace_slots_and_shift_remainders_and_runends_and_offsets(qf,
 																																					is_runend(qf, current_end) ? 1 : 2,
@@ -1862,7 +1869,7 @@ qf->mem = (qfmem *)calloc(sizeof(qfmem), 1);
 		qf->metadata->noccupied_slots = 0;
 		qf->metadata->maximum_occupied_slots=(uint64_t)((double)qf->metadata->xnslots *0.95);
 		qf->metadata->num_locks = (qf->metadata->xnslots/NUM_SLOTS_TO_LOCK)+2;
-
+		qf->metadata->maximum_count = 0;
 		qf->blocks = (qfblock *)calloc(size, 1);
 
 
@@ -1915,7 +1922,7 @@ qf->mem = (qfmem *)calloc(sizeof(qfmem), 1);
 		qf->metadata->noccupied_slots = 0;
 		qf->metadata->maximum_occupied_slots=(uint64_t)((double)qf->metadata->xnslots *0.95);
 		qf->metadata->num_locks = (qf->metadata->xnslots/NUM_SLOTS_TO_LOCK)+2;
-
+		qf->metadata->maximum_count = 0;
 		qf->blocks = (qfblock *)(qf->metadata + 1);
 	}
 

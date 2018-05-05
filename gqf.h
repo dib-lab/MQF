@@ -56,6 +56,7 @@ extern "C" {
 		uint64_t noccupied_slots;
 		uint64_t maximum_occupied_slots;
 		uint64_t num_locks;
+		uint64_t maximum_count;
 		bool mem;
 	} quotient_filter_metadata;
 
