@@ -2,7 +2,28 @@
 [![Build Status](https://travis-ci.org/shokrof/MQF.svg?branch=mqfDevelopmenet)](https://travis-ci.org/shokrof/MQF)
 [![codecov](https://codecov.io/gh/shokrof/MQF/branch/mqfDevelopmenet/graph/badge.svg)](https://codecov.io/gh/shokrof/MQF)
 
-MQF, Mixed Quotient Filter, is approximate membership query data structure that supports many useful functions. MQF is a variant of [CQF](https://github.com/splatlab/cqf). MQF has lower bits per element than Bloom filter and Count-min sketches. MQF also has good data locality which makes it efficient when running on secondary storage. Moreover. It supports removing, iterating, merging ,and resizing.
+[Approximate membership query (AMQ)](http://www.cs.cmu.edu/~lblum/flac/Presentations/Szabo-Wexler_ApproximateSetMembership.pdf) data structures provide approximate representation for data using smaller amount of memory compared to the real data size. As the name suggests, AMQ answers if a particular element exists or not in a given dataset but with possible false positive errors.
+
+[CQF](https://github.com/splatlab/cqf) splits the hash-bits of an item into two components: quotient and remaining parts. Quotient Part is used to determine the target slot. The remaining is inserted into the target slot. The insertion algorithm uses a variant of linear probing to resolve collisions. CQF allows counting the number of instances inserted by using slots following the item's reminder as counter. CQF has relatively complex scheme to encode counters so that it can distinguish counters from item's reminder.
+
+![alt text](https://raw.githubusercontent.com/shokrof/MQF/mqfDevelopmenet/QuotientFilter_MQF.png)
+
+MQF, Mixed Quotient Filter, is a variant of CQF. MQF uses the same probing technique as CQF. MQF has more metadata called fixed size counters and different encoding for the counters. The improvement makes mqf more memory efficient for wider range of zipifan distribution.
+
+When item is inserted more than one time, MQF first use the fixed size counter to the number of insertions(count). After the fixed size counter is full, MQF store the count in the following slot and fixed-size counter. MQF uses the necessary number of slots to store the count.
+
+
+
+
+## Advantages:
+  - MQF supports counting and removing items. MQF uses variable size counters; therefore, It is memory efficient when count data that follows zipfian distribution where most the items occur once or twice but few items can happen in very high counts..
+  - MQF has lower bits per element than Bloom filter and Count-min sketches ([Ref](https://www3.cs.stonybrook.edu/~ppandey/files/p775-pandey.pdf)).
+  - MQF  has good data locality which makes it efficient when running on secondary storage.
+  - MQF supports add/remove tags for the item.
+  - MQF can be iterated to get the items and counts inserted in the filter.
+  - MQF supports merging function. Two or more filters can be merged into one filter.
+  - MQF can be resized to bigger/ smaller filter.
+
 
 ## Documentation
 ### Building
@@ -14,6 +35,17 @@ make test NH=1
 ./mqf_test
 ```
 ### Initialization
+MQF Initialization requires the estimation of some parameters: number of slots, Key bits, fixed counter size, and tag size.
+
+Fixed-size counter size is estimated from the shape of data distribution. If most of the items are singletons. The fixed-size counter should be limited to 1 bit. However, If a big portion of items is repeated more than one time, a bigger fixed-size counter will hold more counts and thus save slots.
+
+The number of slots is estimated from the number of items expected to be inserted into the filter. Slots are used for inserting the remaining part of the hash of the items and the count. After calculating the required number of slots, multiply the result by 1.05 because MQF can't be filled by more than 95% of its capacity. Then, round the result to the nearest bigger power of two.
+
+Key bits equal to log2(number of slots) + the remaining part bits. the remaining part bits is estimated from the desired accuracy using this formula $$ r=-log_2(\delta) $$.
+
+Tag size is straightforward to be estimated. it can be set to zero if tags are not necessary.
+
+
 1. qf_init
 Initialize mqf .
 ```c++
@@ -21,7 +53,7 @@ void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint6
 ```
 
   * Qf* qf : pointer to the Filter.
-  * uint64_t nslots : Number of slots in the filter. Maximum number of items to be inserted depends on this number.
+  * uint64_t nslots : Number of slots in the filter. Should be of power of two. Maximum number of items to be inserted depends on this number.
   * uint64_t key_bits: Number of bits in the hash values. This number should equal log2(nslots) +r. Accuracy depends on r.
   * uint64_t tag_bits: Number of bits in tag value.
   * uint64_t fixed_counter_size: Fixed counter size. must be > 0.
