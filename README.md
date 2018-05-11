@@ -41,7 +41,9 @@ Fixed-size counter size is estimated from the shape of data distribution. If mos
 
 The number of slots is estimated from the number of items expected to be inserted into the filter. Slots are used for inserting the remaining part of the hash of the items and the count. After calculating the required number of slots, multiply the result by 1.05 because MQF can't be filled by more than 95% of its capacity. Then, round the result to the nearest bigger power of two.
 
-Key bits equal to log2(number of slots) + the remaining part bits. the remaining part bits is estimated from the desired accuracy using this formula $$ r=-log_2(\delta) $$.
+Key bits equal to log2(number of slots) + the remaining part bits. the remaining part bits is estimated from the desired accuracy using the formula below.
+
+![eqn](https://raw.githubusercontent.com/shokrof/MQF/mqfDevelopmenet/r_eqn.gif)
 
 Tag size is straightforward to be estimated. it can be set to zero if tags are not necessary.
 
