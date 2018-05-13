@@ -68,7 +68,7 @@ TEST_CASE( "Writing and Reading to/from Disk") {
       CHECK(count >= nRepetitions[i]);
       CHECK(qf_get_tag(&qf2,vals[i])== i%8);
     }
-
+    
     qf_destroy(&qf2);
   }
 

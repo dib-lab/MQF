@@ -58,6 +58,7 @@ extern "C" {
 		uint64_t num_locks;
 		uint64_t maximum_count;
 		bool mem;
+		std::map<uint64_t, std::vector<int> > * tags_map;
 	} quotient_filter_metadata;
 
 	typedef quotient_filter_metadata qfmetadata;
@@ -240,8 +241,8 @@ extern "C" {
 	@param QF* qfr: pointer to the output filter.
 	@param std::map<uint64_t, std::vector<int> > *inverted_index_ptr: Pointer to the output index.
 	*/
-	void qf_invertable_merge(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t, std::vector<int> > *inverted_index_ptr);
-	void qf_invertable_merge_no_count(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t, std::vector<int> > *inverted_index_ptr);
+	void qf_invertable_merge(QF *qf_arr[], int nqf, QF *qfr);
+	void qf_invertable_merge_no_count(QF *qf_arr[], int nqf, QF *qfr);
 
 
 	/*! @breif Resize the filter into a bigger or smaller one

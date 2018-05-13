@@ -496,17 +496,15 @@ TEST_CASE( "invertable merge") {
       }
     }
   }
-  std::map< uint64_t, std::vector<int> > I_inverted_index;
 
-  qf_invertable_merge(cf,nqf,&cf2,&I_inverted_index);
-  save_inverted_index(&I_inverted_index,"tmp");
+  qf_invertable_merge(cf,nqf,&cf2);
 
   uint64_t key, value, count;
   for(uint64_t i=1;i<nvals;i++)
   {
     count = qf_count_key(&cf2, vals[i]);
     value=qf_get_tag(&cf2,vals[i]);
-    auto iit=I_inverted_index.find(value);
+    auto iit=cf2.metadata->tags_map->find(value);
 
     for(auto f:iit->second)
     {
@@ -517,7 +515,7 @@ TEST_CASE( "invertable merge") {
   qf_iterator(&cf2, &cfi, 0);
   do {
     qfi_get(&cfi, &key, &value, &count);
-    auto iit=I_inverted_index.find(value);
+    auto iit=cf2.metadata->tags_map->find(value);
     for(auto f:iit->second)
     {
       CHECK(key%(f+1)==0);
@@ -573,15 +571,16 @@ TEST_CASE( "invertable merge no count") {
       }
     }
   }
-  std::map< uint64_t, std::vector<int> > I_inverted_index;
 
-  qf_invertable_merge_no_count(cf,nqf,&cf2,&I_inverted_index);
+
+  qf_invertable_merge_no_count(cf,nqf,&cf2);
+  
 
   uint64_t key, value, count;
   for(uint64_t i=1;i<nvals;i++)
   {
     count = qf_count_key(&cf2, vals[i]);
-    auto iit=I_inverted_index.find(count);
+    auto iit=cf2.metadata->tags_map->find(count);
     for(auto f:iit->second)
     {
       CHECK(vals[i]%(f+1)==0);
@@ -593,7 +592,109 @@ TEST_CASE( "invertable merge no count") {
   do {
 
     qfi_get(&cfi, &key, &value, &count);
-    auto iit=I_inverted_index.find(count);
+    auto iit=cf2.metadata->tags_map->find(count);
+    for(auto f:iit->second)
+    {
+      CHECK(key%(f+1)==0);
+    }
+  } while(!qfi_next(&cfi));
+}
+
+
+
+TEST_CASE( "hierarchical merge") {
+  QF cf2,correctCF;
+
+  QF **cf;
+  int nqf=8;
+  QFi cfi;
+  uint64_t qbits = 10;
+  uint64_t small_qbits=qbits;
+  uint64_t nhashbits = qbits + 8;
+  uint64_t small_nhashbits=small_qbits+8;
+  uint64_t nslots = (1ULL << qbits);
+  uint64_t small_nslots=(1ULL << small_qbits);
+  uint64_t nvals = 250*nslots/1000;
+  uint64_t *vals;
+  uint64_t counter_size=3;
+  /* Initialise the CQF */
+
+
+  cf=new QF*[nqf];
+
+  for(int i=0;i<nqf;i++)
+  {
+    cf[i]=new QF();
+    qf_init(cf[i], nslots, nhashbits, 8,counter_size, true, "", 2038074761);
+  }
+
+  INFO("Initialize first cqf size ="<<nslots<<", hashbits="<<nhashbits);
+  qf_init(&cf2, nslots, nhashbits, 8,counter_size, true, "", 2038074761);
+  INFO("Initialize second cqf size ="<<small_nslots<<", hashbits="<<small_nhashbits);
+
+  /* Generate random values */
+  vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
+
+  for(uint64_t i=0;i<nvals;i++)
+  {
+    vals[i]=rand();
+    vals[i]=(vals[i]<<32)|rand();
+  }
+
+  /* Insert vals in the CQF */
+  for (uint64_t i = 0; i < nvals; i++) {
+    vals[i]=vals[i]%cf[0]->metadata->range;
+    for(int j=0;j<nqf;j++){
+      if(vals[i]%(j+1)==0)
+      {
+        qf_insert(cf[j],vals[i],1,false,false);
+      }
+    }
+  }
+  std::map< uint64_t, std::vector<int> > I_inverted_index;
+  int step=2;
+  int remaning_mqfs=nqf;
+  int tmp=1;
+  while(remaning_mqfs>1){
+  remaning_mqfs=0;
+  for(int i=0;i<(nqf*2)/step;i+=2){
+    qf_reset(&cf2);
+    I_inverted_index.clear();
+    qf_invertable_merge(cf+i,2,&cf2);
+    qf_copy(cf[i/2],&cf2);
+    remaning_mqfs+=1;
+  }
+  step*=2;
+  }
+
+
+  uint64_t key, value, count;
+  for(uint64_t i=1;i<nvals;i++)
+  {
+    count = qf_count_key(cf[0], vals[i]);
+    value=qf_get_tag(cf[0],vals[i]);
+    REQUIRE(count>0);
+    INFO("Key "<<vals[i]);
+    auto iit=cf[0]->metadata->tags_map->find(value);
+
+    string t="";
+    for(auto f:iit->second)
+    {
+      t+=(char)(f+49);
+      t+=';';
+    }
+    INFO("Tag "<<t);
+    for(auto f:iit->second)
+    {
+      CHECK(vals[i]%(f+1)==0);
+    }
+  }
+  /* Initialize an iterator */
+  qf_iterator(cf[0], &cfi, 0);
+  do {
+    qfi_get(&cfi, &key, &value, &count);
+    auto iit=cf[0]->metadata->tags_map->find(value);
+    INFO("Key "<<key);
     for(auto f:iit->second)
     {
       CHECK(key%(f+1)==0);

@@ -56,7 +56,7 @@ void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint6
 
   * Qf* qf : pointer to the Filter.
   * uint64_t nslots : Number of slots in the filter. Should be of power of two. Maximum number of items to be inserted depends on this number.
-  * uint64_t key_bits: Number of bits in the hash values. This number should equal log2(nslots) +r. Accuracy depends on r.
+  * uint64_t key_bits: Number of bits in the hash values.
   * uint64_t tag_bits: Number of bits in tag value.
   * uint64_t fixed_counter_size: Fixed counter size. must be > 0.
   * bool mem: Flag to create the filter on memeory. IF false, mmap is used.

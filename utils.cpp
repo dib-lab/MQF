@@ -26,7 +26,7 @@ vector<int> key_to_vector_int(const string& key){
   return res;
 }
 
-void save_inverted_index(std::map<uint64_t, std::vector<int> > * index,const char * fileName)
+void save_tags_map(std::map<uint64_t, std::vector<int> > * index,const char * fileName)
 {
   ofstream out(fileName);
   auto it=index->begin();
@@ -44,15 +44,15 @@ void save_inverted_index(std::map<uint64_t, std::vector<int> > * index,const cha
 }
 
 
-std::map<uint64_t, std::vector<int> > load_inverted_index(const char * fileName)
+std::map<uint64_t, std::vector<int> >* load_tags_map(const char * fileName)
 {
-  std::map<uint64_t, std::vector<int> > res;
+  std::map<uint64_t, std::vector<int> >* res=new std::map<uint64_t, std::vector<int> >();
   ifstream out(fileName);
   string key;
   uint64_t id;
-  while(cin>>id>>key){
+  while(out>>id>>key){
 
-    res.insert( make_pair(id,key_to_vector_int(key)) );
+    res->insert( make_pair(id,key_to_vector_int(key)) );
   }
   return res;
 }

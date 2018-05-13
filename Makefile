@@ -37,7 +37,7 @@ all: $(TARGETS)
 
 # dependencies between programs and .o files
 
-main:                  main.o 								 gqf.o
+main:	main.o	gqf.o	utils.o
 	$(LD) $^ $(LDFLAGS) -o $@
 # dependencies between .o files and .h files
 
