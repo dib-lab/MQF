@@ -12,6 +12,8 @@ MQF, Mixed Quotient Filter, is a variant of CQF. MQF uses the same probing techn
 
 When item is inserted more than one time, MQF first use the fixed size counter to the number of insertions(count). After the fixed size counter is full, MQF store the count in the following slot and fixed-size counter. MQF uses the necessary number of slots to store the count.
 
+In other words, Fixed-size counters is used in counting and marking the slots used for counting. Fixed-size counters for all slots related to the same item store the counter's maximum value except the last one should stores value strictly less than the maximum. When the maximum is reached in the last fixed counter, a new slot is added with empty fixed-size counter.
+
 
 
 
