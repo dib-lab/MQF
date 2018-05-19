@@ -2,17 +2,17 @@
 [![Build Status](https://travis-ci.org/shokrof/MQF.svg?branch=mqfDevelopmenet)](https://travis-ci.org/shokrof/MQF)
 [![codecov](https://codecov.io/gh/shokrof/MQF/branch/mqfDevelopmenet/graph/badge.svg)](https://codecov.io/gh/shokrof/MQF)
 
-[Approximate membership query (AMQ)](http://www.cs.cmu.edu/~lblum/flac/Presentations/Szabo-Wexler_ApproximateSetMembership.pdf) data structures provide approximate representation for data using smaller amount of memory compared to the real data size. As the name suggests, AMQ answers if a particular element exists or not in a given dataset but with possible false positive errors. AMQ has many examples such as [bloom filter](https://en.wikipedia.org/wiki/Bloom_filter), [count-min sketch](https://en.wikipedia.org/wiki/Count%E2%80%93min_sketch), [Quotient Filter](https://en.wikipedia.org/wiki/Quotient_filter), and Counting Quotient Filter([CQF](https://github.com/splatlab/cqf)). Here, we are proposing a new AMQ datastructure called Mixed Counting Quoteint Filter (MQF).
+[Approximate membership query (AMQ)](http://www.cs.cmu.edu/~lblum/flac/Presentations/Szabo-Wexler_ApproximateSetMembership.pdf) data structures provide approximate representation for data using a smaller amount of memory compared to the real data size. As the name suggests, AMQ answers if a particular element exists or not in a given dataset but with possible false positive errors. AMQ has many examples such as [bloom filter](https://en.wikipedia.org/wiki/Bloom_filter), [count-min sketch](https://en.wikipedia.org/wiki/Count%E2%80%93min_sketch), [Quotient Filter](https://en.wikipedia.org/wiki/Quotient_filter), and Counting Quotient Filter([CQF](https://github.com/splatlab/cqf)). Here, we are proposing a new AMQ data structure called Mixed Counting Quotient Filter (MQF).
 
-CQF splits the hash-bits of an item into two components: quotient and remaining parts. Quotient Part is used to determine the target slot. The remaining is inserted into the target slot. The insertion algorithm uses a variant of linear probing to resolve collisions. CQF allows counting the number of instances inserted by using slots following the item's reminder as counter. CQF has relatively complex scheme to encode counters so that it can distinguish counters from item's reminder.
+CQF splits the hash-bits of an item into two components: quotient and remaining parts. Quotient Part is used to determine the target slot. The remaining is inserted into the target slot. The insertion algorithm uses a variant of linear probing to resolve collisions. CQF allows counting the number of instances inserted by using slots following the item's reminder as a counter. CQF has relatively complex scheme to encode counters so that it can distinguish counters from item's reminder.
 
 ![alt text](https://raw.githubusercontent.com/shokrof/MQF/mqfDevelopmenet/QuotientFilter_MQF.png)
 
 MQF, Mixed Quotient Filter, is a variant of CQF. MQF uses the same probing technique as CQF. MQF has more metadata called fixed size counters and different encoding for the counters. The improvement makes mqf more memory efficient for wider range of zipifan distribution.
 
-When item is inserted more than one time, MQF first use the fixed size counter to the number of insertions(count). After the fixed size counter is full, MQF store the count in the following slot and fixed-size counter. MQF uses the necessary number of slots to store the count.
+When an item is inserted more than one time, MQF first use the fixed size counter to the number of insertions(count). After the fixed size counter is full, MQF store the count in the following slot and fixed-size counter. MQF uses the necessary number of slots to store the count.
 
-In other words, Fixed-size counters is used in counting and marking the slots used for counting. Fixed-size counters for all slots related to the same item store the counter's maximum value except the last one should stores value strictly less than the maximum. When the maximum is reached in the last fixed counter, a new slot is added with empty fixed-size counter.
+In other words, Fixed-size counters is used in counting and marking the slots used for counting. Fixed-size counters for all slots related to the same item store the counter's maximum value except the last one should store value strictly less than the maximum. When the maximum is reached in the last fixed counter, a new slot is added with empty fixed-size counter.
 
 
 
@@ -29,7 +29,7 @@ In other words, Fixed-size counters is used in counting and marking the slots us
 
 ## Documentation
 ### Building
-MQF onlye requires make and g++ to be installed.
+MQF only requires make and g++ to be installed.
 ```bash
 apt-get install make g++
 make NH=1
@@ -61,7 +61,7 @@ void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint6
   * uint64_t key_bits: Number of bits in the hash values.
   * uint64_t tag_bits: Number of bits in tag value.
   * uint64_t fixed_counter_size: Fixed counter size. must be > 0.
-  * bool mem: Flag to create the filter on memeory. IF false, mmap is used.
+  * bool mem: Flag to create the filter on memory. IF false, mmap is used.
   * const char * path: In case of mmap. Path of the file used to pack the filter.
   * uint32_t seed: useless value. To be removed
 2. qf_destroy
@@ -129,7 +129,7 @@ uint64_t qf_remove_tag(const QF *qf, uint64_t key, bool lock, bool spin);
 void qf_merge(QF *qfa, QF *qfb, QF *qfc);
 void qf_multi_merge(QF *qf_arr[], int nqf, QF *qfr);
 ```
-7. Invertable Merge: Invertable merge offers addiotinal functionality to normal merge. Original source filter can be queried for each key.
+7. Invertible Merge: Invertible merge offers addiotinal functionality to normal merge. Original source filter can be queried for each key.
 Invertiable merge function adds tag for each key and creates index structure. The index is map of an integer and vector of integers where the integer is the value of the tags and vector on integers is the ids of the source filters.
 ```c++
 void qf_invertable_merge(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t, std::vector<int> > *inverted_index_ptr);
@@ -148,7 +148,7 @@ check if two filters have the same items, counts and tags.
 bool qf_equals(QF *qfa, QF *qfb);
 ```
 8. Intersect
-calculate the the intersection between two filters.
+calculate the intersection between two filters.
 ```c++
 void qf_intersect(QF *qfa, QF *qfb, QF *qfc);
 ```
@@ -158,7 +158,7 @@ subtract the second filter from the first.
 void qf_subtract(QF *qfa, QF *qfb, QF *qfc);
 ```
 10. Space:
-returns the space  percent occupied by the inserted items.
+returns the space percent occupied by the inserted items.
 ```c++
 int qf_space(QF *qf);
 ```
