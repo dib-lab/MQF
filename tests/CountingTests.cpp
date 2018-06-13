@@ -332,7 +332,7 @@ TEST_CASE( "Migrate" ) {
 
   }
   INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
-  migrate(&qf2,&qf);
+  qf_migrate(&qf2,&qf);
   for(uint64_t i=0;i<insertedItems;i++)
   {
     count = qf_count_key(&qf, vals[i]);

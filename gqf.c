@@ -3018,7 +3018,7 @@ bool qf_general_lock(QF* qf, bool spin){
 void qf_general_unlock(QF* qf){
 	qf_spin_unlock(&qf->mem->general_lock);
 }
-void migrate(QF* source, QF* dest){
+void qf_migrate(QF* source, QF* dest){
 	QFi source_i;
 	if (qf_iterator(source, &source_i, 0)) {
 		do {
