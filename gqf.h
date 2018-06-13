@@ -32,6 +32,7 @@ extern "C" {
 
 	typedef struct quotient_filter_mem {
 		int fd;
+		volatile int general_lock;
 		volatile int metadata_lock;
 		volatile int *locks;
 		wait_time_data *wait_times;
@@ -265,6 +266,10 @@ extern "C" {
 
 	bool qf_equals(QF *qfa, QF *qfb);
 
+	bool qf_general_lock(QF* qf, bool spin);
+	void qf_general_unlock(QF* qf);
+
+	void migrate(QF* source, QF* destination);
 
 #ifdef __cplusplus
 }
