@@ -269,7 +269,7 @@ extern "C" {
 	bool qf_general_lock(QF* qf, bool spin);
 	void qf_general_unlock(QF* qf);
 
-	void migrate(QF* source, QF* destination);
+	void qf_migrate(QF* source, QF* destination);
 
 #ifdef __cplusplus
 }
