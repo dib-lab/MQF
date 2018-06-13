@@ -1617,6 +1617,8 @@ static inline bool insert(QF *qf, __uint128_t hash, uint64_t count, bool lock=fa
 		throw std::out_of_range("Insert is called with hash index out of range");
 	}
 	if (lock) {
+		if(qf->mem->general_lock)
+			return false;
 		if (!qf_lock(qf, hash_bucket_index, spin, false))
 			return false;
 	}
@@ -1779,6 +1781,8 @@ static inline bool insert(QF *qf, __uint128_t hash, uint64_t count, bool lock=fa
 	// 	p=&new_values[67];
 	// }
 	if (lock) {
+		if(qf->mem->general_lock)
+			return false;
 		if (!qf_lock(qf, hash_bucket_index, spin, false))
 		return false;
 	}
@@ -1930,6 +1934,7 @@ qf->mem = (qfmem *)calloc(sizeof(qfmem), 1);
 
 	/* initialize all the locks to 0 */
 	qf->mem->metadata_lock = 0;
+	qf->mem->general_lock = 0;
 	qf->mem->locks = (volatile int *)calloc(qf->metadata->num_locks,
 																					sizeof(volatile int));
 
@@ -2132,6 +2137,8 @@ uint64_t qf_add_tag(const QF *qf, uint64_t key, uint64_t tag, bool lock, bool sp
 																 &current_count);
 		if (current_remainder == hash_remainder){
 			if (lock) {
+				if(qf->mem->general_lock)
+					return false;
 				if (!qf_lock(qf, runstart_index, spin, false))
 				return 0;
 			}
@@ -2182,6 +2189,8 @@ uint64_t qf_remove_tag(const QF *qf, uint64_t key ,bool lock, bool spin)
 																 &current_count);
 		if (current_remainder == hash_remainder){
 			if (lock) {
+				if(qf->mem->general_lock)
+					return false;
 				if (!qf_lock(qf, runstart_index, spin, false))
 					return false;
 				}
@@ -2998,6 +3007,27 @@ int qf_space(QF *qf)
 		return (int)(((double)qf->metadata->noccupied_slots/
 								 (double)qf->metadata->xnslots
 							 )* 100.0);
+}
+
+
+bool qf_general_lock(QF* qf, bool spin){
+	if (!qf_spin_lock(&qf->mem->general_lock, spin))
+		return false;
+	return true;
+}
+void qf_general_unlock(QF* qf){
+	qf_spin_unlock(&qf->mem->general_lock);
+}
+void migrate(QF* source, QF* dest){
+	QFi source_i;
+	if (qf_iterator(source, &source_i, 0)) {
+		do {
+			uint64_t key = 0, value = 0, count = 0;
+			qfi_get(&source_i, &key, &value, &count);
+			qf_insert(dest, key, count, true, true);
+			qf_add_tag(dest,key,value);
+		} while (!qfi_next(&source_i));
+	}
 }
 
 #ifdef TEST
