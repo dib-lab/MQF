@@ -23,7 +23,7 @@ CXX = g++ -std=c++11
 CC = g++ -std=c++11
 LD= g++ -std=c++11
 
-CXXFLAGS = -Wall $(DEBUG) $(PROFILE) $(OPT) $(ARCH) -m64 -I. -Wno-unused-result -Wno-strict-aliasing -Wno-unused-function
+CXXFLAGS =  -fPIC -Wall $(DEBUG) $(PROFILE) $(OPT) $(ARCH) -m64 -I. -Wno-unused-result -Wno-strict-aliasing -Wno-unused-function
 
 LDFLAGS = $(DEBUG) $(PROFILE) $(OPT)
 
@@ -43,6 +43,9 @@ main:	main.o	gqf.o	utils.o hashutil.o
 
 load_test_mqf:	load_test_mqf.o gqf.o hashutil.o utils.o
 	$(LD) $^ $(LDFLAGS) -o $@
+libgqf.so: gqf.o utils.o
+	$(LD) $^ $(LDFLAGS) --shared -o $@
+
 test:  $(TESTFILES) gqf.c test.o utils.o
 	$(LD) $(LDFLAGS) -DTEST -o mqf_test test.o utils.o $(TESTFILES) gqf.c
 

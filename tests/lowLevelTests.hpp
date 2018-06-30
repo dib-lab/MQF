@@ -235,3 +235,22 @@ TEST_CASE( "get/set Tags" ) {
     qf_destroy(&qf);
   }
 }
+TEST_CASE("general lock")
+{
+  QF qf;
+  int counter_size=2;
+  uint64_t qbits=15;
+  uint64_t num_hash_bits=qbits+9;
+  uint64_t maximum_count=(1ULL<<counter_size)-1;
+  INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
+  bool added=qf_insert(&qf,100,1,true,false);
+  REQUIRE(added==true);
+  qf_general_lock(&qf,true);
+  added=qf_insert(&qf,100,1,true,false);
+  REQUIRE(added==false);
+  qf_general_unlock(&qf);
+  added=qf_insert(&qf,100,1,true,false);
+  REQUIRE(added==true);
+  
+}
