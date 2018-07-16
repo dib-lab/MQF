@@ -1,4 +1,4 @@
-TARGETS=main load_test_mqf
+TARGETS=main load_test_mqf insertionPerSecond
 TESTFILES = tests/CountingTests.o tests/HighLevelFunctionsTests.o tests/IOTests.o tests/tagTests.o
 
 ifdef D
@@ -16,6 +16,7 @@ else
 endif
 
 ifdef P
+	OPT=
 	PROFILE=-pg -no-pie # for bug in gprof.
 endif
 
@@ -42,6 +43,8 @@ main:	main.o	gqf.o	utils.o hashutil.o
 # dependencies between .o files and .h files
 
 load_test_mqf:	load_test_mqf.o gqf.o hashutil.o utils.o
+	$(LD) $^ $(LDFLAGS) -o $@
+insertionPerSecond:	insertionPerSecond.o gqf.o hashutil.o utils.o
 	$(LD) $^ $(LDFLAGS) -o $@
 libgqf.so: gqf.o utils.o
 	$(LD) $^ $(LDFLAGS) --shared -o $@
