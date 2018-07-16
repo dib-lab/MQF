@@ -1,4 +1,4 @@
-TARGETS=main
+TARGETS=main insertionPerSecond
 
 ifdef D
 	DEBUG=-g
@@ -15,15 +15,17 @@ else
 endif
 
 ifdef P
+	OPT=insertionPerSecond ikii
 	PROFILE=-pg -no-pie # for bug in gprof.
 endif
+
 
 CXX = g++ -std=c++11
 CC = g++ -std=c++11
 LD= g++ -std=c++11
 
-CXXFLAGS = -Wall $(DEBUG) $(PROFILE) $(OPT) $(ARCH) -m64 -I. -Wno-unused-result -Wno-strict-aliasing -Wno-unused-function
 
+CXXFLAGS = -Wall $(DEBUG) $(PROFILE) $(OPT) $(ARCH) -m64 -I. -Wno-unused-result -Wno-strict-aliasing -Wno-unused-function
 LDFLAGS = $(DEBUG) $(PROFILE) $(OPT)
 
 #
@@ -38,6 +40,9 @@ all: $(TARGETS)
 
 main:	main.o	gqf.o hashutil.o
 	$(LD) $^ $(LDFLAGS) -o $@
+
+insertionPerSecond:	insertionPerSecond.o	gqf.o hashutil.o
+		$(LD) $^ $(LDFLAGS) -o $@
 # dependencies between .o files and .h files
 
 

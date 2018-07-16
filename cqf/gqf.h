@@ -9,8 +9,8 @@
 extern "C" {
 #endif
 
-/* Can be 
-	0 (choose size at run-time), 
+/* Can be
+	0 (choose size at run-time),
 	8, 16, 32, or 64 (for optimized versions),
 	or other integer <= 56 (for compile-time-optimized bit-shifting-based versions)
 	*/
@@ -53,7 +53,7 @@ extern "C" {
 		uint64_t noccupied_slots;
 		uint64_t num_locks;
 	} quotient_filter_metadata;
-	
+
 	typedef quotient_filter_metadata qfmetadata;
 
 	typedef struct quotient_filter {
@@ -135,7 +135,7 @@ extern "C" {
 	int qfi_next(QFi *qfi);
 
 	/* Check to see if the if the end of the QF */
-	int qfi_end(QFi *qfi); 
+	int qfi_end(QFi *qfi);
 
 	/* For debugging */
 	void qf_dump(const QF *);
@@ -161,6 +161,9 @@ extern "C" {
 	/* magnitude of a QF. */
 	uint64_t qf_magnitude(QF *qf);
 
+	/* return the filled space(percent) */
+	int qf_space(QF *qf);
+	
 #ifdef __cplusplus
 }
 #endif
