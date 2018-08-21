@@ -13,15 +13,19 @@ int main(int argc, char const *argv[]) {
 
   ifstream dataset(argv[1]);
   uint64_t qbits=atoi(argv[2]);
+  string mqfPath=argv[3];
   QF qf;
   srand (1);
 
   uint64_t num_hash_bits=qbits+8;
-
-  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,1, true, "", 2038074761);
+  if(mqfPath=="mem")
+    qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,1, true, "", 2038074761);
+  else
+    qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,1, false, mqfPath.c_str(), 2038074761);
   string kmer;
   uint64_t count;
   uint64_t countedKmers=0;
+size_t query_index=0;
   vector<uint64_t> input;
   uint64_t hash;
   auto now = std::chrono::high_resolution_clock::now();
@@ -37,7 +41,7 @@ int main(int argc, char const *argv[]) {
   auto microseconds = (chrono::duration_cast<chrono::microseconds>(now-prev)).count();
   cout<<"Loading finished in "<<microseconds<<endl;
   vector<pair<double,double> > result;
-
+cout<<"Capacity\t1M insertions per second"<<endl;
   for(int i=0;i<input.size();i++)
   {
 
@@ -48,7 +52,21 @@ int main(int argc, char const *argv[]) {
       if(countedKmers!=0){
         double millionInsertionSecond=1000000.0/(microseconds);
         double capacity=qf_space(&qf);
-        result.push_back(make_pair(capacity,(double)microseconds));
+
+        cout<<capacity<<"\t"<<millionInsertionSecond<<endl;
+        now = std::chrono::high_resolution_clock::now();
+        for(int j=0;j<1000000;j++)
+        {
+          qf_count_key(&qf,input[query_index]);
+          query_index=(query_index+1)%input.size();
+        }
+        now = std::chrono::high_resolution_clock::now();
+        microseconds = (chrono::duration_cast<chrono::microseconds>(now-prev)).count();
+        double millionQuerysSecond=1000000.0/(microseconds);
+        result.push_back(make_pair(capacity,(double)millionQuerysSecond));
+        if(capacity>=95){
+          break;
+        }
       }
       countedKmers=0;
       now = std::chrono::high_resolution_clock::now();
@@ -56,7 +74,7 @@ int main(int argc, char const *argv[]) {
     qf_insert(&qf,input[i],1,false,false);
     countedKmers++;
   }
-  cout<<"Capacity\tInsertion time for 1M Kmer"<<endl;
+  cout<<"Capacity\t1M Query per second"<<endl;
   for(int i=0;i<result.size();i++)
   {
     cout<<result[i].first<<"\t"<<result[i].second<<endl;
