@@ -38,7 +38,8 @@ int main(int argc, char const *argv[]) {
   auto microseconds = (chrono::duration_cast<chrono::microseconds>(now-prev)).count();
   cout<<"Loading finished in "<<microseconds<<endl;
   vector<pair<double,double> > result;
-
+  size_t query_index=0;
+  cout<<"Capacity\t1M insertions per second"<<endl;
   for(int i=0;i<input.size();i++)
   {
 
@@ -50,7 +51,21 @@ int main(int argc, char const *argv[]) {
         double millionInsertionSecond=1000000.0/(microseconds);
         double capacity=qf_space(&qf);
         //double capacity=0;
-        result.push_back(make_pair(capacity,(double)microseconds));
+        //result.push_back(make_pair(capacity,(double)millionInsertionSecond));
+        cout<<capacity<<"\t"<<millionInsertionSecond<<endl;
+        now = std::chrono::high_resolution_clock::now();
+        for(int j=0;j<1000000;j++)
+        {
+          qf_count_key_value(&qf,input[query_index],0);
+          query_index=(query_index+1)%input.size();
+        }
+        now = std::chrono::high_resolution_clock::now();
+        microseconds = (chrono::duration_cast<chrono::microseconds>(now-prev)).count();
+        double millionQuerysSecond=1000000.0/(microseconds);
+        result.push_back(make_pair(capacity,(double)millionQuerysSecond));
+        if(capacity>=95){
+          break;
+        }
       }
       countedKmers=0;
       now = std::chrono::high_resolution_clock::now();
@@ -58,11 +73,15 @@ int main(int argc, char const *argv[]) {
     qf_insert(&qf,input[i],0,1,false,false);
     countedKmers++;
   }
-  cout<<"Capacity\tInsertion time for 1M Kmer"<<endl;
+
+  cout<<"Capacity\t1M Querys per second"<<endl;
   for(int i=0;i<result.size();i++)
   {
     cout<<result[i].first<<"\t"<<result[i].second<<endl;
   }
+
+
+
   qf_destroy(&qf,true);
   return 0;
 }
