@@ -21,13 +21,18 @@ ifdef P
 endif
 
 CXX = g++ -std=c++11
-CC = g++ -std=c++11
+CC = gcc -std=c++11
 LD= g++ -std=c++11
 
-CXXFLAGS =  -fPIC -Wall $(DEBUG) $(PROFILE) $(OPT) $(ARCH) -m64 -I. -Wno-unused-result -Wno-strict-aliasing -Wno-unused-function
+CXXFLAGS =  -fPIC -Wall $(DEBUG) $(PROFILE) $(OPT) $(ARCH) -m64 -I. -Wno-unused-result -Wno-strict-aliasing -Wno-unused-function -fpermissive
 
+CXXFLAGS += -I khmer/include/ -I khmer/third-party/smhasher \
+	   -I khmer/third-party/cqf \
+	   -I khmer/third-party/seqan/core/include/ \
+	   -I khmer/third-party/rollinghash
 LDFLAGS = $(DEBUG) $(PROFILE) $(OPT)
 
+madoka = madoka/lib/sketch.o madoka/lib/approx.o  madoka/lib/file.o
 #
 # declaration of dependencies
 #
@@ -44,12 +49,12 @@ main:	main.o	gqf.o	utils.o hashutil.o
 
 load_test_mqf:	load_test_mqf.o gqf.o hashutil.o utils.o
 	$(LD) $^ $(LDFLAGS) -o $@
-insertionPerSecond:	insertionPerSecond.o gqf.o hashutil.o utils.o
-	$(LD) $^ $(LDFLAGS) -o $@
+insertionPerSecond:	insertionPerSecond.o gqf.o hashutil.o utils.o cqf/gqf.o khmer/liboxli.a countmin/countmin.o countmin/massdal.o countmin/prng.o
+	$(LD) $^ $(madoka)  $(LDFLAGS) -o $@
 libgqf.so: gqf.o utils.o
 	$(LD) $^ $(LDFLAGS) --shared -o $@
 
-test:  $(TESTFILES) gqf.c test.o utils.o
+test:  $(TESTFILES) gqf.cpp test.o utils.o
 	$(LD) $(LDFLAGS) -DTEST -o mqf_test test.o utils.o $(TESTFILES) gqf.c
 
 main.o: hashutil.o gqf.h
@@ -57,7 +62,7 @@ main.o: hashutil.o gqf.h
 # dependencies between .o files and .cc (or .c) files
 
 
-gqf.o: gqf.c gqf.h
+gqf.o: gqf.cpp gqf.h
 
 #
 # generic build rules

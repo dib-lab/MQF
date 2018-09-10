@@ -1,14 +1,12 @@
-#ifndef QF_H
-#define QF_H
+#ifndef CQF_H
+#define CQF_H
 
 #include <inttypes.h>
 #include <stdbool.h>
 #include <pthread.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
+namespace cqf{
 /* Can be
 	0 (choose size at run-time),
 	8, 16, 32, or 64 (for optimized versions),
@@ -163,9 +161,6 @@ extern "C" {
 
 	/* return the filled space(percent) */
 	int qf_space(QF *qf);
-	
-#ifdef __cplusplus
 }
-#endif
 
-#endif /* QF_H */
+#endif /* CQF_H */

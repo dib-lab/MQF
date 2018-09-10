@@ -270,6 +270,7 @@ extern "C" {
 	void qf_general_unlock(QF* qf);
 
 	void qf_migrate(QF* source, QF* destination);
+	double slotsUsedInCounting(QF* qf);
 
 #ifdef __cplusplus
 }

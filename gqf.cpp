@@ -2403,6 +2403,23 @@ int qfi_next(QFi *qfi)
 	}
 }
 
+double slotsUsedInCounting(QF* qf){
+	QFi *qfi=new QFi();
+	qf_iterator(qf,qfi,0);
+	//qfi_next(qfi);
+	uint64_t current_remainder,current_count;
+	uint64_t res=0;
+	uint64_t distictItems=0;
+	while(!qfi_end(qfi)){
+		uint64_t end=decode_counter(qfi->qf, qfi->current, &current_remainder, &current_count);
+		uint64_t usedSlots=end-qfi->current;
+		res+=usedSlots+1;
+		distictItems+=1;
+		qfi_next(qfi);
+	}
+	return ((double)res/(double)qf->metadata->xnslots)*100.0;
+}
+
 inline int qfi_end(QFi *qfi)
 {
 	if (qfi->current >= qfi->qf->metadata->xnslots /*&& is_runend(qfi->qf, qfi->current)*/)

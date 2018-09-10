@@ -21,6 +21,7 @@
  * Code for managing the metadata bits and slots w/o interpreting *
  * the content of the slots.
  ******************************************************************/
+namespace cqf{
 
 /* Must be >= 6.  6 seems fastest. */
 #define BLOCK_OFFSET_BITS (6)
@@ -2154,4 +2155,6 @@ int qf_space(QF *qf)
 		return (int)(((double)qf->metadata->noccupied_slots/
 								 (double)qf->metadata->xnslots
 							 )* 100.0);
+}
+
 }
