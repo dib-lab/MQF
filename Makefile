@@ -1,6 +1,6 @@
 TARGETS=main load_test_mqf insertionPerSecond
 TESTFILES = tests/CountingTests.o tests/HighLevelFunctionsTests.o tests/IOTests.o tests/tagTests.o
-OBJS= gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
+OBJS= gqf.o ;LayeredMQF.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
 ifdef D
 	DEBUG=-g
 	OPT=
@@ -21,7 +21,7 @@ ifdef P
 endif
 
 CXX = g++ -std=c++11
-CC = gcc -std=c++11
+CC = g++ -std=c++11
 LD= g++ -std=c++11
 
 CXXFLAGS =  -fPIC -Wall $(DEBUG) $(PROFILE) $(OPT) $(ARCH) -m64 -I. -Wno-unused-result -Wno-strict-aliasing -Wno-unused-function -fpermissive
@@ -39,6 +39,7 @@ madoka = madoka/lib/sketch.o madoka/lib/approx.o  madoka/lib/file.o
 
 all: $(TARGETS)
 
+OBJS= gqf.o	utils.o LayeredMQF.o
 
 
 # dependencies between programs and .o files
@@ -49,7 +50,7 @@ main:	main.o	gqf.o	utils.o hashutil.o
 
 load_test_mqf:	load_test_mqf.o gqf.o hashutil.o utils.o
 	$(LD) $^ $(LDFLAGS) -o $@
-insertionPerSecond:	insertionPerSecond.o gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
+insertionPerSecond:	insertionPerSecond.o  LayeredMQF.o gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
 	$(LD) $^ $(madoka)  $(LDFLAGS) -o $@
 libgqf.so: gqf.o utils.o
 	$(LD) $^ $(LDFLAGS) --shared -o $@
@@ -64,6 +65,8 @@ main.o: hashutil.o gqf.h
 
 gqf.o: gqf.cpp gqf.h
 
+
+LayeredMQF.o: LayeredMQF.cpp LayeredMQF.h
 #
 # generic build rules
 #
