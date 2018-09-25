@@ -29,6 +29,7 @@ int main(int argc, char const *argv[]) {
 
 
   uint64_t qbits=20;
+  uint64_t singleQbits=21;
   uint64_t slot_size=8;
   uint64_t fixedCounterSize=2;
   uint64_t num_elements=0;
@@ -43,11 +44,15 @@ int main(int argc, char const *argv[]) {
   "Frequency of items in the uinform distribution. Default =5")
   ->group("Uniform Distribution Options");
   app.add_option("-s,--datastructure",dataStrucureInput,
-  "Datastructure to be benchmarked. Options are mqf,cqf, and countmin. Default is mqf");
+  "Datastructure to be benchmarked. Options are mqf, lmqf, cqf, and countmin. Default is mqf");
 
   app.add_option("-q,--qbits",qbits
   ,"Qbits used by quotient fiter. No slots equals to 2^qbits. default is 20")
   ->group("CQF/MQF options");
+
+  app.add_option("-l,--qbits-singleton",singleQbits
+  ,"first layer Qbits used by quotient fiter. No slots equals to 2^qbits. default is 21")
+  ->group("Layered MQF options");
 
   app.add_option("-r,--slot-size",slot_size
   ,"Slot size used by quotient fiter. default is 8")
@@ -77,6 +82,10 @@ int main(int argc, char const *argv[]) {
     {
       dataStructure=new countmin((1ULL<<(qbits-3)),8);
       //return -1;
+    }
+    else if(dataStrucureInput=="lmqf")
+    {
+      dataStructure=new LMQF(singleQbits,qbits,slot_size,fixedCounterSize);
     }
     else{
       cout<<"Unknown datastructure"<<endl;
@@ -109,6 +118,7 @@ int main(int argc, char const *argv[]) {
 
 
 
+  vector<pair<int,int> > lmqfSpace;
   vector<pair<double,double> > result;
   vector<pair<double,double> > results_slotsUsed;
   cout<<"Capacity\t1M insertions per second"<<endl;
@@ -155,7 +165,17 @@ int main(int argc, char const *argv[]) {
     querytime+=microseconds;
     {
       double millionInsertionSecond=(double)countedKmers/(double)insertiontime;
-      cout<<capacity<<"\t"<<g->get_generated_elements()<<"\t"<<millionInsertionSecond<<endl;
+      cout<<capacity<<"\t"<<g->get_generated_elements()<<"\t"<<millionInsertionSecond;
+      if (dataStrucureInput=="lmqf"){
+        pair<int, int> tmp;
+        layeredMQF* lmqf=((LMQF*)dataStructure)->get_MQF();
+        tmp.first=qf_space(lmqf->firstLayer_singletons);
+        tmp.second=qf_space(lmqf->secondLayer);
+        int64_t tmp2=(int64_t)slotsUsedInCounting(lmqf->firstLayer_singletons);
+        tmp2-=(int64_t)lmqf->firstLayer_singletons->metadata->noccupied_slots;
+        cout<<"\t"<<tmp.first<<"\t"<<tmp.second<<"\t"<<tmp2;
+      }
+      cout<<endl;
       old_capacity=capacity;
 
       capacity=dataStructure->space();
@@ -171,6 +191,7 @@ int main(int argc, char const *argv[]) {
       slots_used-=((MQF*)dataStructure)->get_MQF()->metadata->noccupied_slots;
       results_slotsUsed.push_back(make_pair(capacity,slots_used));
     }
+
 
   }
   cout<<"Capacity\t1M Query per second"<<endl;
