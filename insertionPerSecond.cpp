@@ -62,7 +62,7 @@ int main(int argc, char const *argv[]) {
 
 
 
-  CLI11_PARSE(app, argc, argv);
+  CLI11_PARSE(app, argc, (char**)argv);
 
   uint64_t BufferSize=grainSize;
     countingStructure* dataStructure;
@@ -168,6 +168,7 @@ int main(int argc, char const *argv[]) {
     if(dataStrucureInput=="mqf")
     {
       double slots_used=((MQF*)dataStructure)->calculate_slotsUsedInCounting();
+      slots_used-=((MQF*)dataStructure)->get_MQF()->metadata->noccupied_slots;
       results_slotsUsed.push_back(make_pair(capacity,slots_used));
     }
 

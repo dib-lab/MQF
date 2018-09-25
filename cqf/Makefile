@@ -1,4 +1,4 @@
-TARGETS=main insertionPerSecond
+TARGETS=main 
 
 ifdef D
 	DEBUG=-g

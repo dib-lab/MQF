@@ -6,7 +6,7 @@
 #include "hashutil.h"
 #include "kmer.h"
 using namespace std;
-
+using namespace cqf;
 int main(int argc, char const *argv[]) {
 
   uint64_t qbits=atoi(argv[1]);
@@ -28,7 +28,7 @@ int main(int argc, char const *argv[]) {
     qf_insert(&qf,hash,0,1,false,false);
 
   }
-  
+
   uint64_t count;
   while(test_dataset>>kmer>>count)
   {

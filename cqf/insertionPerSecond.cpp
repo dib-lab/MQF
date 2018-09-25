@@ -13,12 +13,12 @@ int main(int argc, char const *argv[]) {
 
   ifstream dataset(argv[1]);
   uint64_t qbits=atoi(argv[2]);
-  QF qf;
+  cqf_qf_ cqf_qf_;
   srand (1);
 
   uint64_t num_hash_bits=qbits+8;
 
-  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0, true, "", 2038074761);
+  cqf_qf__init(&cqf_qf_, (1ULL<<qbits), num_hash_bits, 0, true, "", 2038074761);
 
   string kmer;
   uint64_t count;
@@ -26,21 +26,19 @@ int main(int argc, char const *argv[]) {
   vector<uint64_t> input;
   uint64_t hash;
   auto now = std::chrono::high_resolution_clock::now();
-  while(dataset>>kmer)
+  while(dataset>>hash)
   {
-    uint64_t item=kmercounting::str_to_int(kmer);
-    hash=kmercounting::HashUtil::MurmurHash64A(((void*)&item), sizeof(item),qf.metadata->seed);
-    hash=hash%qf.metadata->range;
-    input.push_back(hash);
+
+    hash=hash%cqf_qf_.metadata->range;
   }
   auto prev=now;
   now = std::chrono::high_resolution_clock::now();
   auto microseconds = (chrono::duration_cast<chrono::microseconds>(now-prev)).count();
-  cout<<"Loading finished in "<<microseconds<<endl;
+  //cout<<"Loading finished in "<<microseconds<<endl;
   vector<pair<double,double> > result;
   size_t query_index=0;
   cout<<"Capacity\t1M insertions per second"<<endl;
-  for(int i=0;i<input.size();i++)
+  while(dataset>>hash)
   {
 
     if(countedKmers %1000000==0){
@@ -49,14 +47,14 @@ int main(int argc, char const *argv[]) {
       auto microseconds = (chrono::duration_cast<chrono::microseconds>(now-prev)).count();
       if(countedKmers!=0){
         double millionInsertionSecond=1000000.0/(microseconds);
-        double capacity=qf_space(&qf);
+        double capacity=cqf_qf__space(&cqf_qf_);
         //double capacity=0;
         //result.push_back(make_pair(capacity,(double)millionInsertionSecond));
         cout<<capacity<<"\t"<<millionInsertionSecond<<endl;
         now = std::chrono::high_resolution_clock::now();
         for(int j=0;j<1000000;j++)
         {
-          qf_count_key_value(&qf,input[query_index],0);
+          cqf_qf__count_key_value(&cqf_qf_,input[query_index],0);
           query_index=(query_index+1)%input.size();
         }
         now = std::chrono::high_resolution_clock::now();
@@ -70,7 +68,8 @@ int main(int argc, char const *argv[]) {
       countedKmers=0;
       now = std::chrono::high_resolution_clock::now();
     }
-    qf_insert(&qf,input[i],0,1,false,false);
+    hash=hash%cqf_qf_.metadata->range;
+    cqf_qf__insert(&cqf_qf_,hash,0,1,false,false);
     countedKmers++;
   }
 
@@ -82,6 +81,6 @@ int main(int argc, char const *argv[]) {
 
 
 
-  qf_destroy(&qf,true);
+  cqf_qf_destroy(&cqf_qf_,true);
   return 0;
 }

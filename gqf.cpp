@@ -2417,7 +2417,7 @@ double slotsUsedInCounting(QF* qf){
 		distictItems+=1;
 		qfi_next(qfi);
 	}
-	return ((double)res/(double)qf->metadata->xnslots)*100.0;
+	return (double)res;
 }
 
 inline int qfi_end(QFi *qfi)

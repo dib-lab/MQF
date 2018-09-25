@@ -34,10 +34,10 @@ private:
 public:
   MQF(uint64_t qbits,uint64_t slot_size,uint64_t fixedCounterSize)
   {
-    qf_init(&mqf, (1ULL<<qbits), qbits+slot_size, 0,fixedCounterSize, true, "", 2038074761);
+    qf_init(&mqf, (1ULL<<qbits), 50, 0,fixedCounterSize, true, "", 2038074761);
   }
   bool insert(uint64_t item,uint64_t count)override{
-    return qf_insert(&mqf,item,count,false,false);
+    return qf_insert(&mqf,item,count,true,true);
     ;}
   uint64_t query(uint64_t item)override{
     return qf_count_key(&mqf,item);
@@ -51,6 +51,10 @@ public:
   uint64_t calculate_slotsUsedInCounting(){
     return slotsUsedInCounting(&mqf);
   }
+  QF* get_MQF()
+  {
+    return &mqf;
+  }
 
 };
 
@@ -63,7 +67,7 @@ public:
     cqf::qf_init(&ccqf, (1ULL<<qbits), qbits+slot_size, 0, true, "", 2038074761);
   }
   bool insert(uint64_t item,uint64_t count)override{
-    return cqf::qf_insert(&ccqf,item,0,count,false,false);
+    return cqf::qf_insert(&ccqf,item,0,count,true,true);
     ;}
   uint64_t query(uint64_t item)override{
     return cqf::qf_count_key_value(&ccqf,item,0);
