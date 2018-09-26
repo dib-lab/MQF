@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 
+
 	typedef class bufferedMQF {
 	public:
 		QF* memoryBuffer;

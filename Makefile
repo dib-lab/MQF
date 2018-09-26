@@ -34,12 +34,12 @@ LDFLAGS = $(DEBUG) $(PROFILE) $(OPT)
 
 all: $(TARGETS)
 
-OBJS= gqf.o	utils.o LayeredMQF.o bufferedMQF.o
+OBJS= gqf.o	utils.o LayeredMQF.o bufferedMQF.o  onDiskMQF.o
 
 
 # dependencies between programs and .o files
 
-main:	main.o	$(OBJS)
+main:	main.o $(OBJS)
 	$(LD) $^ $(LDFLAGS) -o $@
 # dependencies between .o files and .h files
 
@@ -49,7 +49,7 @@ libgqf.so: $(OBJS)
 test:  $(TESTFILES) gqf.c test.o utils.o
 	$(LD) $(LDFLAGS) -DTEST -o mqf_test test.o LayeredMQF.o bufferedMQF.o utils.o $(TESTFILES) gqf.c
 
-main.o: 								 									gqf.h
+main.o: gqf.h
 
 # dependencies between .o files and .cc (or .c) files
 
@@ -57,12 +57,7 @@ main.o: 								 									gqf.h
 gqf.o: gqf.c gqf.h
 
 
-LayeredMQF.o: LayeredMQF.cpp LayeredMQF.h
-#
-# generic build rules
-#
 
-bufferedMQF.o: bufferedMQF.cpp bufferedMQF.h
 
 
 
