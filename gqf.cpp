@@ -1958,6 +1958,8 @@ void qf_copy(QF *dest, QF *src)
 void qf_destroy(QF *qf)
 {
 	assert(qf->blocks != NULL);
+	
+	qf->metadata->noccupied_slots=0;
 	if(qf->metadata->tags_map!=NULL){
 		delete qf->metadata->tags_map;
 		qf->metadata->tags_map=NULL;
@@ -1972,7 +1974,6 @@ void qf_destroy(QF *qf)
 	close(qf->mem->fd);
 	}
 
-	qf->metadata->noccupied_slots=0;
 }
 
 void qf_close(QF *qf)

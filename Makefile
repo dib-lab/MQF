@@ -39,7 +39,7 @@ madoka = madoka/lib/sketch.o madoka/lib/approx.o  madoka/lib/file.o
 
 all: $(TARGETS)
 
-OBJS= gqf.o	utils.o LayeredMQF.o
+OBJS= gqf.o	utils.o LayeredMQF.o bufferedMQF.o
 
 
 # dependencies between programs and .o files
@@ -71,6 +71,7 @@ LayeredMQF.o: LayeredMQF.cpp LayeredMQF.h
 # generic build rules
 #
 
+bufferedMQF.o: bufferedMQF.cpp bufferedMQF.h
 
 
 
