@@ -87,6 +87,11 @@ int main(int argc, char const *argv[]) {
     {
       dataStructure=new LMQF(singleQbits,qbits,slot_size,fixedCounterSize);
     }
+    else if(dataStrucureInput=="bmqf")
+    {
+      cout<<"Here"<<endl;
+      dataStructure=new BMQF(singleQbits,qbits,slot_size,fixedCounterSize);
+    }
     else{
       cout<<"Unknown datastructure"<<endl;
       return -1;

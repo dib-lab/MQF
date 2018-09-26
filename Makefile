@@ -1,6 +1,6 @@
 TARGETS=main load_test_mqf insertionPerSecond
 TESTFILES = tests/CountingTests.o tests/HighLevelFunctionsTests.o tests/IOTests.o tests/tagTests.o
-OBJS= gqf.o ;LayeredMQF.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
+OBJS= gqf.o LayeredMQF.o bufferedMQF.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
 ifdef D
 	DEBUG=-g
 	OPT=
@@ -50,7 +50,7 @@ main:	main.o	gqf.o	utils.o hashutil.o
 
 load_test_mqf:	load_test_mqf.o gqf.o hashutil.o utils.o
 	$(LD) $^ $(LDFLAGS) -o $@
-insertionPerSecond:	insertionPerSecond.o  LayeredMQF.o gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
+insertionPerSecond:	insertionPerSecond.o  LayeredMQF.o bufferedMQF.o gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
 	$(LD) $^ $(madoka)  $(LDFLAGS) -o $@
 libgqf.so: gqf.o utils.o
 	$(LD) $^ $(LDFLAGS) --shared -o $@

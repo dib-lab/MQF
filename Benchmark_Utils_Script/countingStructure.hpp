@@ -9,6 +9,7 @@
 #include <algorithm>
 #include "../gqf.h"
 #include "../LayeredMQF.h"
+#include "../bufferedMQF.h"
 #include "../cqf/gqf.h"
 #include "../countmin/countmin.h"
 #include <limits>
@@ -84,6 +85,37 @@ public:
     //return slotsUsedInCounting(&mqf);
   }
   layeredMQF* get_MQF()
+  {
+    return &mqf;
+  }
+
+};
+
+class BMQF: public countingStructure{
+private:
+  bufferedMQF mqf;
+public:
+  BMQF(uint64_t diskqbits, uint64_t qbits,uint64_t slot_size,uint64_t fixedCounterSize)
+  {
+    bufferedMQF_init(&mqf, (1ULL<<diskqbits),(1ULL<<qbits), 50, 0,fixedCounterSize, "tmp.ser");
+  }
+  bool insert(uint64_t item,uint64_t count)override{
+    return bufferedMQF_insert(&mqf,item,count,false,false);
+    ;}
+  uint64_t query(uint64_t item)override{
+    return bufferedMQF_count_key(&mqf,item);
+    }
+  uint64_t space()override{
+    return bufferedMQF_space(&mqf);
+  }
+  uint64_t range()override{
+    return mqf.disk->metadata->range;
+  }
+  uint64_t calculate_slotsUsedInCounting(){
+    return 0;
+    //return slotsUsedInCounting(&mqf);
+  }
+  bufferedMQF* get_MQF()
   {
     return &mqf;
   }

@@ -15,7 +15,7 @@ void bufferedMQF_init(bufferedMQF *qf, uint64_t nslots_buffer ,uint64_t nslots
 		}
 
 		qf_init(qf->memoryBuffer,nslots_buffer,key_bits,value_bits,fixed_counter_size,true,"",2038074761);
-		qf_init(qf->disk,nslots,key_bits,value_bits,fixed_counter_size,true,path,2038074761);
+		qf_init(qf->disk,nslots,key_bits,value_bits,fixed_counter_size,false,path,2038074761);
 }
 
 void bufferedMQF_reset(bufferedMQF *qf){
