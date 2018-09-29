@@ -7,7 +7,7 @@
 
 using namespace std;
 void bufferedMQF_init(bufferedMQF *qf, uint64_t nslots_buffer ,uint64_t nslots
-	, uint64_t key_bits, uint64_t value_bits,uint64_t fixed_counter_size, const char *path){
+	, uint64_t key_bits, uint64_t value_bits,uint64_t fixed_counter_size,uint64_t memSize, const char *path){
 
 		if(qf==NULL)
 		{
@@ -15,22 +15,22 @@ void bufferedMQF_init(bufferedMQF *qf, uint64_t nslots_buffer ,uint64_t nslots
 		}
 
 		qf_init(qf->memoryBuffer,nslots_buffer,key_bits,value_bits,fixed_counter_size,true,"",2038074761);
-		qf_init(qf->disk,nslots,key_bits,value_bits,fixed_counter_size,false,path,2038074761);
+		onDiskMQF_init(qf->disk,nslots,key_bits,value_bits,fixed_counter_size,memSize,path);
 }
 
 void bufferedMQF_reset(bufferedMQF *qf){
 	qf_reset(qf->memoryBuffer);
-	qf_reset(qf->disk);
+	onDiskMQF_reset(qf->disk);
 }
 
 void bufferedMQF_destroy(bufferedMQF *qf){
 	qf_destroy(qf->memoryBuffer);
-	qf_destroy(qf->disk);
+	onDiskMQF_destroy(qf->disk);
 }
 
 void bufferedMQF_copy(bufferedMQF *dest, bufferedMQF *src){
 	qf_copy(dest->memoryBuffer,src->memoryBuffer);
-	qf_copy(dest->disk,src->disk);
+	onDiskMQF_copy(dest->disk,src->disk);
 }
 
 /* Increment the counter for this key/value pair by count. */
@@ -53,7 +53,7 @@ bool bufferedMQF_insert(bufferedMQF *qf, uint64_t key, uint64_t count,
 bool bufferedMQF_remove(bufferedMQF *qf, uint64_t hash, uint64_t count,  bool lock, bool spin){
 	bool res=false;
 	res|=qf_remove(qf->memoryBuffer,hash,count,lock,spin);
-	res|=qf_remove(qf->disk,hash,count,lock,spin);
+	res|=onDiskMQF_remove(qf->disk,hash,count,lock,spin);
 	return res;
 }
 
@@ -63,7 +63,7 @@ bool bufferedMQF_remove(bufferedMQF *qf, uint64_t hash, uint64_t count,  bool lo
 /* Return the number of times key has been inserted, with any value,
 	 into qf. */
 uint64_t bufferedMQF_count_key(const bufferedMQF *qf, uint64_t key){
-	return qf_count_key(qf->disk,key)+qf_count_key(qf->memoryBuffer,key);
+	return onDiskMQF_count_key(qf->disk,key)+qf_count_key(qf->memoryBuffer,key);
 }
 
 int bufferedMQF_space(bufferedMQF *qf){
@@ -74,7 +74,7 @@ int bufferedMQF_space(bufferedMQF *qf){
 
 }
 void bufferedMQF_syncBuffer(bufferedMQF *qf){
-	qf_migrate(qf->memoryBuffer,qf->disk);
+	onDiskMQF_migrate(qf->memoryBuffer,qf->disk);
 	qf_reset(qf->memoryBuffer);
 }
 //

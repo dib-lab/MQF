@@ -1,5 +1,5 @@
 TARGETS=main load_test_mqf insertionPerSecond
-TESTFILES = tests/CountingTests.o tests/HighLevelFunctionsTests.o tests/IOTests.o tests/tagTests.o
+TESTFILES = tests/CountingTests.o tests/HighLevelFunctionsTests.o tests/IOTests.o tests/tagTests.o tests/LayeredCountingTests.o tests/bufferedCountingTests.o tests/onDiskCountingTests.o
 OBJS= gqf.o LayeredMQF.o bufferedMQF.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
 ifdef D
 	DEBUG=-g
@@ -24,13 +24,14 @@ CXX = g++ -std=c++11
 CC = g++ -std=c++11
 LD= g++ -std=c++11
 
-CXXFLAGS =  -fPIC -Wall $(DEBUG) $(PROFILE) $(OPT) $(ARCH) -m64 -I. -Wno-unused-result -Wno-strict-aliasing -Wno-unused-function -fpermissive
+INCLUDE= -I ThirdParty/stxxl/include/ -I ThirdParty/stxxl/build/include/
 
-CXXFLAGS += -I khmer/include/ -I khmer/third-party/smhasher \
-	   -I khmer/third-party/cqf \
-	   -I khmer/third-party/seqan/core/include/ \
-	   -I khmer/third-party/rollinghash
-LDFLAGS = $(DEBUG) $(PROFILE) $(OPT)
+CXXFLAGS =  -fPIC -Wall $(DEBUG) $(PROFILE) $(OPT) $(ARCH) $(INCLUDE) -fopenmp -m64 -I. -Wno-unused-result -Wno-strict-aliasing -Wno-unused-function
+
+#STXXL= -L ThirdParty/stxxl/build/lib/ -llibstxxl
+STXXL= ThirdParty/stxxl/build/lib/libstxxl.a
+
+LDFLAGS = -fopenmp $(DEBUG) $(PROFILE) $(OPT)
 
 madoka = madoka/lib/sketch.o madoka/lib/approx.o  madoka/lib/file.o
 #
@@ -39,13 +40,13 @@ madoka = madoka/lib/sketch.o madoka/lib/approx.o  madoka/lib/file.o
 
 all: $(TARGETS)
 
-OBJS= gqf.o	utils.o LayeredMQF.o bufferedMQF.o
+OBJS= gqf.o	utils.o LayeredMQF.o bufferedMQF.o  onDiskMQF.o
 
 
 # dependencies between programs and .o files
 
-main:	main.o	gqf.o	utils.o hashutil.o
-	$(LD) $^ $(LDFLAGS) -o $@
+main:	main.o $(OBJS)
+	$(LD) $^ $(LDFLAGS) -o $@ $(STXXL)
 # dependencies between .o files and .h files
 
 load_test_mqf:	load_test_mqf.o gqf.o hashutil.o utils.o
@@ -55,8 +56,8 @@ insertionPerSecond:	insertionPerSecond.o  LayeredMQF.o bufferedMQF.o gqf.o hashu
 libgqf.so: gqf.o utils.o
 	$(LD) $^ $(LDFLAGS) --shared -o $@
 
-test:  $(TESTFILES) gqf.cpp test.o utils.o
-	$(LD) $(LDFLAGS) -DTEST -o mqf_test test.o utils.o $(TESTFILES) gqf.c
+test:  $(TESTFILES) gqf.c test.o utils.o
+	$(LD) $(LDFLAGS) -DTEST -o mqf_test test.o LayeredMQF.o bufferedMQF.o onDiskMQF.o utils.o $(TESTFILES) gqf.c $(STXXL)
 
 main.o: hashutil.o gqf.h
 
@@ -66,12 +67,7 @@ main.o: hashutil.o gqf.h
 gqf.o: gqf.cpp gqf.h
 
 
-LayeredMQF.o: LayeredMQF.cpp LayeredMQF.h
-#
-# generic build rules
-#
 
-bufferedMQF.o: bufferedMQF.cpp bufferedMQF.h
 
 
 
@@ -82,10 +78,10 @@ bufferedMQF.o: bufferedMQF.cpp bufferedMQF.h
 %.o: %.cc
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $< -c -o $@
 
-%.o: %.c
+%.o: %.c %.h
 	$(CC) $(CXXFLAGS) $(INCLUDE) $< -c -o $@
 
-%.o: %.cpp
+%.o: %.cpp  %.hpp
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $< -c -o $@
 
 
