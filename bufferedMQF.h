@@ -5,18 +5,20 @@
 #include <stdbool.h>
 #include <pthread.h>
 #include "gqf.h"
+#include "onDiskMQF.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
+
 	typedef class bufferedMQF {
 	public:
 		QF* memoryBuffer;
-		QF* disk;
+		onDiskMQF_Namespace::onDiskMQF* disk;
 		bufferedMQF(){
 			memoryBuffer=new QF();
-			disk=new QF();
+			disk=new onDiskMQF_Namespace::onDiskMQF();
 		}
 		~bufferedMQF()
 		{
@@ -30,7 +32,7 @@ extern "C" {
 
 
 
-	void bufferedMQF_init(bufferedMQF *qf, uint64_t nslots_buffer ,uint64_t nslots, uint64_t key_bits, uint64_t value_bits,uint64_t fixed_counter_size, const char *path);
+	void bufferedMQF_init(bufferedMQF *qf, uint64_t nslots_buffer ,uint64_t nslots, uint64_t key_bits, uint64_t value_bits,uint64_t fixed_counter_size, uint64_t memSize ,const char *path);
 
 	void bufferedMQF_reset(bufferedMQF *qf);
 

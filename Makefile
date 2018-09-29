@@ -1,5 +1,5 @@
 TARGETS=main
-TESTFILES = tests/CountingTests.o tests/HighLevelFunctionsTests.o tests/IOTests.o tests/tagTests.o tests/LayeredCountingTests.o tests/bufferedCountingTests.o
+TESTFILES = tests/CountingTests.o tests/HighLevelFunctionsTests.o tests/IOTests.o tests/tagTests.o tests/LayeredCountingTests.o tests/bufferedCountingTests.o tests/onDiskCountingTests.o
 
 ifdef D
 	DEBUG=-g
@@ -23,10 +23,14 @@ CXX = g++ -std=c++11
 CC = g++ -std=c++11
 LD= g++ -std=c++11
 
+INCLUDE= -I ThirdParty/stxxl/include/ -I ThirdParty/stxxl/build/include/
 
-CXXFLAGS =  -fPIC -Wall $(DEBUG) $(PROFILE) $(OPT) $(ARCH) -m64 -I. -Wno-unused-result -Wno-strict-aliasing -Wno-unused-function
+CXXFLAGS =  -fPIC -Wall $(DEBUG) $(PROFILE) $(OPT) $(ARCH) $(INCLUDE) -fopenmp -m64 -I. -Wno-unused-result -Wno-strict-aliasing -Wno-unused-function
 
-LDFLAGS = $(DEBUG) $(PROFILE) $(OPT)
+#STXXL= -L ThirdParty/stxxl/build/lib/ -llibstxxl
+STXXL= ThirdParty/stxxl/build/lib/libstxxl.a
+
+LDFLAGS = -fopenmp $(DEBUG) $(PROFILE) $(OPT)
 
 #
 # declaration of dependencies
@@ -34,22 +38,22 @@ LDFLAGS = $(DEBUG) $(PROFILE) $(OPT)
 
 all: $(TARGETS)
 
-OBJS= gqf.o	utils.o LayeredMQF.o bufferedMQF.o
+OBJS= gqf.o	utils.o LayeredMQF.o bufferedMQF.o  onDiskMQF.o
 
 
 # dependencies between programs and .o files
 
-main:	main.o	$(OBJS)
-	$(LD) $^ $(LDFLAGS) -o $@
+main:	main.o $(OBJS)
+	$(LD) $^ $(LDFLAGS) -o $@ $(STXXL)
 # dependencies between .o files and .h files
 
 libgqf.so: $(OBJS)
 	$(LD) $^ $(LDFLAGS) --shared -o $@
 
 test:  $(TESTFILES) gqf.c test.o utils.o
-	$(LD) $(LDFLAGS) -DTEST -o mqf_test test.o LayeredMQF.o bufferedMQF.o utils.o $(TESTFILES) gqf.c
+	$(LD) $(LDFLAGS) -DTEST -o mqf_test test.o LayeredMQF.o bufferedMQF.o onDiskMQF.o utils.o $(TESTFILES) gqf.c $(STXXL)
 
-main.o: 								 									gqf.h
+main.o: gqf.h
 
 # dependencies between .o files and .cc (or .c) files
 
@@ -57,12 +61,7 @@ main.o: 								 									gqf.h
 gqf.o: gqf.c gqf.h
 
 
-LayeredMQF.o: LayeredMQF.cpp LayeredMQF.h
-#
-# generic build rules
-#
 
-bufferedMQF.o: bufferedMQF.cpp bufferedMQF.h
 
 
 
@@ -71,14 +70,14 @@ bufferedMQF.o: bufferedMQF.cpp bufferedMQF.h
 %.o: %.cc
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $< -c -o $@
 
-%.o: %.c
+%.o: %.c %.h
 	$(CC) $(CXXFLAGS) $(INCLUDE) $< -c -o $@
 
-%.o: %.cpp
+%.o: %.cpp  %.hpp
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $< -c -o $@
 
 
 
 
 clean:
-	rm -f *.o $(TARGETS) $(TESTS) $(TESTFILES)
+	rm -f $(OBJS) $(TARGETS) $(TESTS) $(TESTFILES)

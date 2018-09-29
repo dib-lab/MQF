@@ -8,7 +8,7 @@ using namespace std;
 
 
 
-
+const uint64_t MemSize=50;
 
 TEST_CASE( "simple counting test(buffered)","[buffered]" ) {
   //except first item is inserted 5 times to full test _insert1
@@ -20,7 +20,7 @@ TEST_CASE( "simple counting test(buffered)","[buffered]" ) {
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   uint64_t count,fixed_counter;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-  bufferedMQF_init(&qf,(1ULL<<diskQbits) ,(1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser");
+  bufferedMQF_init(&qf,(1ULL<<diskQbits) ,(1ULL<<qbits), num_hash_bits, 0,counter_size,MemSize, "tmp.ser");
 
 
 
@@ -64,7 +64,7 @@ TEST_CASE( "Maximum count(buffered)","[buffered]" ) {
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-  bufferedMQF_init(&qf,(1ULL<<diskQbits), (1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser");
+  bufferedMQF_init(&qf,(1ULL<<diskQbits), (1ULL<<qbits), num_hash_bits, 0,counter_size,MemSize, "tmp.ser");
   qf.memoryBuffer->metadata->maximum_count=10;
   qf.disk->metadata->maximum_count=10;
   bufferedMQF_insert(&qf,100,100000,false,false);
@@ -87,7 +87,7 @@ TEST_CASE( "Big count(buffered)","[buffered]" ) {
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-  bufferedMQF_init(&qf,(1ULL<<diskQbits), (1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser");
+  bufferedMQF_init(&qf,(1ULL<<diskQbits), (1ULL<<qbits), num_hash_bits, 0,counter_size,MemSize, "tmp.ser");
   bufferedMQF_insert(&qf,100,100000,false,false);
   uint64_t count = bufferedMQF_count_key(&qf, 100);
 
@@ -100,13 +100,13 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )(buffered)
   bufferedMQF qf;
   int counter_size=2;
   uint64_t qbits=15;
-  uint64_t diskQbits=16;
+  uint64_t diskQbits=17;
   uint64_t num_hash_bits=qbits+9;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-  bufferedMQF_init(&qf, (1ULL<<diskQbits) ,(1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser");
+  bufferedMQF_init(&qf ,(1ULL<<qbits),(1ULL<<diskQbits), num_hash_bits, 0,counter_size,MemSize, "tmp.ser");
 
-  uint64_t nvals = (1ULL<<qbits)*2;
+  uint64_t nvals = (1ULL<<diskQbits)*2;
   uint64_t *vals;
   vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
   for(uint64_t i=0;i<nvals;i++)
@@ -138,6 +138,7 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )(buffered)
     // cout<<endl;
     insertedItems++;
     loadFactor=bufferedMQF_space(&qf);
+
   }
   INFO("Inserted Items = "<<insertedItems);
 
@@ -227,7 +228,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(buf
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-  bufferedMQF_init(&qf,(1ULL<<diskQbits) ,(1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser");
+  bufferedMQF_init(&qf ,(1ULL<<qbits),(1ULL<<diskQbits), num_hash_bits, 0,counter_size,MemSize, "tmp.ser");
 
   uint64_t nvals = (1ULL<<diskQbits);
   //uint64_t nvals = 3;
