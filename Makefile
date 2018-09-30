@@ -1,4 +1,4 @@
-TARGETS=main load_test_mqf insertionPerSecond
+TARGETS= load_test_mqf insertionPerSecond
 TESTFILES = tests/CountingTests.o tests/HighLevelFunctionsTests.o tests/IOTests.o tests/tagTests.o tests/LayeredCountingTests.o tests/bufferedCountingTests.o tests/onDiskCountingTests.o
 OBJS= gqf.o LayeredMQF.o bufferedMQF.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
 ifdef D
@@ -26,7 +26,7 @@ LD= g++ -std=c++11
 
 INCLUDE= -I ThirdParty/stxxl/include/ -I ThirdParty/stxxl/build/include/
 
-CXXFLAGS =  -fPIC -Wall $(DEBUG) $(PROFILE) $(OPT) $(ARCH) $(INCLUDE) -fopenmp -m64 -I. -Wno-unused-result -Wno-strict-aliasing -Wno-unused-function
+CXXFLAGS =  -fPIC -Wall $(DEBUG) $(PROFILE) $(OPT) $(ARCH) $(INCLUDE) -fopenmp -m64 -I. -Wno-unused-result -Wno-strict-aliasing -Wno-unused-function -fpermissive
 
 #STXXL= -L ThirdParty/stxxl/build/lib/ -llibstxxl
 STXXL= ThirdParty/stxxl/build/lib/libstxxl.a
@@ -45,21 +45,21 @@ OBJS= gqf.o	utils.o LayeredMQF.o bufferedMQF.o  onDiskMQF.o
 
 # dependencies between programs and .o files
 
-main:	main.o $(OBJS)
-	$(LD) $^ $(LDFLAGS) -o $@ $(STXXL)
+# main:	main.o $(OBJS)
+# 	$(LD) $^ $(LDFLAGS) -o $@ $(STXXL)
 # dependencies between .o files and .h files
 
 load_test_mqf:	load_test_mqf.o gqf.o hashutil.o utils.o
 	$(LD) $^ $(LDFLAGS) -o $@
-insertionPerSecond:	insertionPerSecond.o  LayeredMQF.o bufferedMQF.o gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
-	$(LD) $^ $(madoka)  $(LDFLAGS) -o $@
+insertionPerSecond:	insertionPerSecond.o  LayeredMQF.o onDiskMQF.o bufferedMQF.o  gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
+	$(LD) $^ $(madoka)  $(LDFLAGS) -o $@ $(STXXL)
 libgqf.so: gqf.o utils.o
 	$(LD) $^ $(LDFLAGS) --shared -o $@
 
-test:  $(TESTFILES) gqf.c test.o utils.o
-	$(LD) $(LDFLAGS) -DTEST -o mqf_test test.o LayeredMQF.o bufferedMQF.o onDiskMQF.o utils.o $(TESTFILES) gqf.c $(STXXL)
+test:  $(TESTFILES) gqf.cpp test.o utils.o
+	$(LD) $(LDFLAGS) -DTEST -o mqf_test test.o LayeredMQF.o bufferedMQF.o onDiskMQF.o utils.o $(TESTFILES) gqf.cpp $(STXXL)
 
-main.o: hashutil.o gqf.h
+# main.o: hashutil.o gqf.h
 
 # dependencies between .o files and .cc (or .c) files
 

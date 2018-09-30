@@ -1,1 +1,2 @@
 disk=/mnt/bf35b56b-a919-4d0c-a3c0-f0247ea921a3/stxxl/tmp,2G,syscall unlink
+disk=/tmp/stxxl,1G,syscall unlink

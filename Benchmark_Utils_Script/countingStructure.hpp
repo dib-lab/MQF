@@ -97,7 +97,7 @@ private:
 public:
   BMQF(uint64_t diskqbits, uint64_t qbits,uint64_t slot_size,uint64_t fixedCounterSize)
   {
-    bufferedMQF_init(&mqf, (1ULL<<diskqbits),(1ULL<<qbits), 50, 0,fixedCounterSize, "tmp.ser");
+    bufferedMQF_init(&mqf, (1ULL<<diskqbits),(1ULL<<qbits), 50, 0,fixedCounterSize,50, "tmp.ser");
   }
   bool insert(uint64_t item,uint64_t count)override{
     return bufferedMQF_insert(&mqf,item,count,false,false);
