@@ -74,9 +74,25 @@ int bufferedMQF_space(bufferedMQF *qf){
 
 }
 void bufferedMQF_syncBuffer(bufferedMQF *qf){
+	cout<<"sync"<<endl;
 	onDiskMQF_migrate(qf->memoryBuffer,qf->disk);
 	qf_reset(qf->memoryBuffer);
 }
+
+void bufferedMQF_batchQuery( bufferedMQF* qf,QF* input,QF* output){
+	QFi source_i;
+	if (qf_iterator(input, &source_i, 0)) {
+		do {
+			uint64_t key = 0, value = 0, count = 0;
+			qfi_get(&source_i, &key, &value, &count);
+			uint64_t diskCount=onDiskMQF_count_key(qf->disk,key);
+			uint64_t memCount=qf_count_key(qf->memoryBuffer,key);
+			qf_insert(output,key,diskCount+memCount);
+		} while (!qfi_next(&source_i));
+	}
+}
+
+
 //
 // /* Initialize an iterator */
 // bool bufferedMQF_iterator(bufferedMQF *qf, bufferedMQFIterator* qfi, uint64_t position){

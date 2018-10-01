@@ -105,6 +105,18 @@ public:
   uint64_t query(uint64_t item)override{
     return bufferedMQF_count_key(&mqf,item);
     }
+  QF* batchQuery(vector<uint64_t> buffer)
+  {
+    QF *inputBuffer,*outputBuffer;
+    inputBuffer=new QF();
+    outputBuffer=new QF();
+    uint64_t qbits=(uint64_t)log2((uint64_t)buffer.size());
+    cout<<qbits<<endl;
+    qf_init(inputBuffer, (1ULL<<qbits), 50, 0,2, true, "", 2038074761);
+    qf_init(outputBuffer, (1ULL<<qbits), 50, 0,2, true, "", 2038074761);
+    bufferedMQF_batchQuery(&mqf,inputBuffer,outputBuffer);
+    return outputBuffer;
+  }
   uint64_t space()override{
     return bufferedMQF_space(&mqf);
   }

@@ -3072,6 +3072,8 @@ void onDiskMQF_migrate(QF* source, onDiskMQF* dest){
 }
 };
 
+
+
 #ifdef TEST
 	#include "tests/lowLevelTests.hpp"
 #endif

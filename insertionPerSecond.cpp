@@ -117,7 +117,7 @@ int main(int argc, char const *argv[]) {
 
 
 
-  
+
   uint64_t countedKmers=0;
   vector<uint64_t> input(BufferSize);
   auto now = std::chrono::high_resolution_clock::now();
@@ -162,15 +162,17 @@ int main(int argc, char const *argv[]) {
 
 
     now = std::chrono::high_resolution_clock::now();
-    if(0&& dataStrucureInput!="bmqf")
+    if(dataStrucureInput=="bmqf")
     {
-    
-    for(int j=0;j<BufferSize;j++)
-    {
-      dataStructure->query(input[j]);
+        ((BMQF*)dataStructure)->batchQuery(input);
     }
-  }
-  
+    else{
+      for(int j=0;j<BufferSize;j++)
+      {
+        dataStructure->query(input[j]);
+      }
+    }
+
     prev=now;
     now = std::chrono::high_resolution_clock::now();
 

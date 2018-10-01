@@ -87,6 +87,8 @@ extern "C" {
 	uint64_t bufferedMQF_count_key(const bufferedMQF *qf, uint64_t key);
 
 
+	void bufferedMQF_batchQuery( bufferedMQF* qf,QF* input,QF* output);
+
 
 	/* For debugging */
 	void bufferedMQF_dump(const bufferedMQF *);
