@@ -1,4 +1,4 @@
-TARGETS= load_test_mqf insertionPerSecond
+TARGETS= load_test_mqf insertionPerSecond speedPerformance compareLoadingFactor sizeTest
 TESTFILES = tests/CountingTests.o tests/HighLevelFunctionsTests.o tests/IOTests.o tests/tagTests.o tests/LayeredCountingTests.o tests/bufferedCountingTests.o tests/onDiskCountingTests.o
 OBJS= gqf.o LayeredMQF.o bufferedMQF.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
 ifdef D
@@ -26,12 +26,12 @@ LD= g++ -std=c++11
 
 INCLUDE= -I ThirdParty/stxxl/include/ -I ThirdParty/stxxl/build/include/
 
-CXXFLAGS =  -fPIC -Wall $(DEBUG) $(PROFILE) $(OPT) $(ARCH) $(INCLUDE) -fopenmp -m64 -I. -Wno-unused-result -Wno-strict-aliasing -Wno-unused-function -fpermissive
+CXXFLAGS =  -std=c++14  -fPIC -Wall $(DEBUG) $(PROFILE) $(OPT) $(ARCH) $(INCLUDE) -fopenmp -m64 -I. -Wno-unused-result -Wno-strict-aliasing -Wno-unused-function -fpermissive
 
 #STXXL= -L ThirdParty/stxxl/build/lib/ -llibstxxl
 STXXL= ThirdParty/stxxl/build/lib/libstxxl.a
 
-LDFLAGS = -fopenmp $(DEBUG) $(PROFILE) $(OPT)
+LDFLAGS = -fopenmp $(DEBUG) $(PROFILE) $(OPT) -lz -lbz2 -lpthread
 
 madoka = madoka/lib/sketch.o madoka/lib/approx.o  madoka/lib/file.o
 #
@@ -55,6 +55,17 @@ insertionPerSecond:	insertionPerSecond.o  LayeredMQF.o onDiskMQF.o bufferedMQF.o
 	$(LD) $^ $(madoka)  $(LDFLAGS) -o $@ $(STXXL)
 libgqf.so: gqf.o utils.o
 	$(LD) $^ $(LDFLAGS) --shared -o $@
+
+speedPerformance: speedPerformance.o LayeredMQF.o onDiskMQF.o bufferedMQF.o  gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
+	$(LD) $^ $(madoka)  $(LDFLAGS) -o $@ $(STXXL)
+
+compareLoadingFactor: compareLoadingFactor.o LayeredMQF.o onDiskMQF.o bufferedMQF.o  gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
+		$(LD) $^ $(madoka)  $(LDFLAGS) -o $@ $(STXXL)
+
+
+sizeTest: sizeTest.o LayeredMQF.o onDiskMQF.o bufferedMQF.o  gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
+				$(LD) $^ $(madoka)  $(LDFLAGS) -o $@ $(STXXL)
+
 
 test:  $(TESTFILES) gqf.cpp test.o utils.o
 	$(LD) $(LDFLAGS) -DTEST -o mqf_test test.o LayeredMQF.o bufferedMQF.o onDiskMQF.o utils.o $(TESTFILES) gqf.cpp $(STXXL)

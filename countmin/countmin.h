@@ -1,6 +1,7 @@
 // Two different structures:
 //   1 -- The basic CM Sketch
 //   2 -- The hierarchical CM Sketch: with log n levels, for range sums etc.
+#include <stdint.h>
 #ifdef __cplusplus
 extern "C"
 {
@@ -13,7 +14,7 @@ typedef struct CM_type{
   long long count;
   int depth;
   int width;
-  int ** counts;
+  uint8_t ** counts;
   unsigned int *hasha, *hashb;
 } CM_type;
 

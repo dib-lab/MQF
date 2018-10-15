@@ -177,7 +177,7 @@ int main(int argc, char const *argv[]) {
     now = std::chrono::high_resolution_clock::now();
 
     microseconds = (chrono::duration_cast<chrono::microseconds>(now-prev)).count();
-    querytime+=microseconds;
+    querytime=microseconds;
     {
       double millionInsertionSecond=(double)countedKmers/(double)insertiontime;
       cout<<capacity<<"\t"<<g->get_generated_elements()<<"\t"<<millionInsertionSecond;

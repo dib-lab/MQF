@@ -6,10 +6,16 @@
 #include <chrono>
 #include<cmath>
 #include <random>
+#include <set>
 #include <algorithm>
+#include "seqio.h"
+#include "../kmer.h"
 using namespace std;
 
+#define BITMASK(nbits) ((nbits) == 64 ? 0xffffffffffffffff : (1ULL << (nbits)) \
+												- 1ULL)
 
+//#define bufferSize 10000000
 /** Zipf-like random distribution.
  *
  * "Rejection-inversion to generate variates from monotone discrete
@@ -109,15 +115,34 @@ private:
     std::uniform_real_distribution<RealType> dist;  ///< [H(x_1), H(n)]
 };
 
+uint64_t ihash(uint64_t key,uint64_t mask)
+	{
+		key = (~key + (key << 21)) & mask; // key = (key << 21) - key - 1;
+		key = key ^ key >> 24;
+		key = ((key + (key << 3)) + (key << 8)) & mask; // key * 265
+		key = key ^ key >> 14;
+		key = ((key + (key << 2)) + (key << 4)) & mask; // key * 21
+		key = key ^ key >> 28;
+		key = (key + (key << 31)) & mask;
+		return key;
+	}
+
+
 class generator{
 protected:
   uint64_t num_elements;
   uint64_t range;
   uint64_t generated_elements;
+
 public:
+  uint64_t nunique_items;
+  string name;
+  string parameters;
+  set<uint64_t> newItems;
+  set<uint64_t> uniq;
   generator(){num_elements=0;generated_elements=0;}
   virtual bool getElement(uint64_t& res){return false;}
-  bool hasMore(){return num_elements==0 || generated_elements<num_elements;}
+  virtual bool hasMore(){cout<<"Here"<<endl;return num_elements==0 || generated_elements<num_elements;}
   uint64_t get_generated_elements(){return generated_elements;}
 };
 
@@ -129,33 +154,219 @@ private:
   mt19937_64 mt_rand64;
   mt19937 mt_rand;
   zipf_distribution<uint64_t,double> zipf;
+  vector<uint64_t> buffer;
+  uint64_t bufferTop;
+
 public:
+
   zipfGenerator(uint64_t num_elements,uint64_t range,double coefficient)
   {
+    name="Zipfian distribution";
+    parameters="Coefficient = "+to_string(coefficient);
     this->num_elements=num_elements;
     this->range=range;
     curr_count=0;
+    nunique_items=0;
     mt_rand64=mt19937_64(time(0));
     mt_rand=mt19937();
     zipf=zipf_distribution<uint64_t,double>(10000,coefficient);
-  }
+    uint64_t bufferSize=num_elements/20;
+    if(bufferSize==0)
+      bufferSize=10000000;
+    buffer=vector<uint64_t>(bufferSize);
+    newItems=set<uint64_t>();
+    for(int i=0;newItems.size()<100000;i++)
+    {
+        newItems.insert((uint64_t)mt_rand64());
+    }
 
-  bool getElement(uint64_t& res) override
+    // while(newItems.size()<100000)
+    // {
+    //   uint64_t tmp;
+    //   getElement(tmp);
+    //   generated_elements--;
+    //   newItems.insert(tmp);
+    // }
+
+    bufferTop=0;
+    nunique_items=0;
+    curr_count=0;
+  //  curr_item=0;
+    fillBuffer();
+    generated_elements=0;
+  }
+  bool hasMore() override
   {
-    if(!this->hasMore()){
+    if(bufferTop==buffer.size() &&!fillBuffer())
+    {
       return false;
     }
+    return true;
+  }
+  bool fillBuffer(){
+    if(nunique_items>=num_elements)
+    {
+      return false;
+    }
+    for(int i=0;i<buffer.size();i++)
+    {
+      uint64_t tmp=2;
+      if(!generateElement(tmp))
+        return false;
+      buffer[i]=tmp;
+    }
+    random_shuffle(buffer.begin(),buffer.end());
+    bufferTop=0;
+    return true;
+  }
+  bool generateElement(uint64_t& res)
+  {
+
     if(curr_count==0)
     {
+      if(nunique_items==num_elements)
+      {
+        return false;
+      }
       curr_count=zipf(mt_rand);
-      curr_element=(uint64_t)mt_rand64()%(range);
+
+      do{
+        do{
+          curr_element=(uint64_t)mt_rand64();
+        }while(newItems.find(curr_element)!=newItems.end());
+      }while(uniq.find(curr_element)!=uniq.end());
+  //    uniq.insert(curr_element);
+      nunique_items++;
     }
     res=curr_element;
     curr_count--;
+
+    return true;
+  }
+  bool getElement(uint64_t& res) override
+  {
+    // if(!this->hasMore()){
+    //   return false;
+    // }
+    if(bufferTop==buffer.size() &&!fillBuffer())
+    {
+      return false;
+    }
+    res=buffer[bufferTop++];
     generated_elements++;
     return true;
   }
 };
+
+
+
+
+class kmersGenerator: public generator{
+private:
+
+
+  string currSeq;
+  uint32_t pos;
+//  kseq_t *seq;
+  uint64_t kSize;
+  bool end;
+  klibpp::KSeq record;
+  klibpp::SeqStreamIn* iss;
+  vector<klibpp::KSeq> buffRecords;
+  uint32_t buffTop;
+  uint64_t mask;
+
+public:
+  kmersGenerator(uint64_t num_elements,string fastaFilePath, uint64_t kSize)
+  {
+    iss= new klibpp::SeqStreamIn(fastaFilePath.c_str());
+    buffRecords=iss->read(10000);
+    buffTop=0;
+    record=buffRecords[buffTop++];
+    currSeq=string(record.seq);
+    //currSeq=string(seq->seq.s);
+    pos=0;
+    name="Real Kmers";
+    parameters="File = "+fastaFilePath+
+    ",Ksize = "+to_string(kSize);
+    end=false;
+    this->num_elements=num_elements;
+    this->kSize=kSize;
+    this->mask=BITMASK(2*kSize);
+
+    uint64_t bufferSize=num_elements/20;
+    if(bufferSize==0)
+      bufferSize=10000000;
+
+    newItems=set<uint64_t>();
+    // uint64_t tmp;
+    // generateElement(tmp);
+    // newItems.insert(tmp);
+
+    for(int i=0;newItems.size()<10000;i++)
+    {
+        uint64_t tmp;
+        generateElement(tmp);
+        newItems.insert(tmp);
+
+    }
+
+
+    generated_elements=0;
+  }
+  bool hasMore() override
+  {
+    return generated_elements <num_elements && !end;
+  }
+
+  bool generateElement(uint64_t& res)
+  {
+    if(pos>currSeq.size()-kSize)
+    {
+      if(buffRecords.size()==buffTop)
+      {
+        buffRecords=iss->read(10000);
+        buffTop=0;
+        if(iss->eof()){
+          end=true;
+          return false;
+        }
+      }
+      record=buffRecords[buffTop++];
+      pos=0;
+      currSeq=string(record.seq);
+    //  cout<<currSeq<<endl;
+    }
+    string kmer=currSeq.substr(pos,kSize);
+    // for(int i=0;i<pos;i++)
+    // cout<<" ";
+    // cout<<kmer<<"\n";
+    res=ihash(kmercounting::str_to_int(kmer),mask);
+    pos++;
+    return true;
+  }
+  bool getElement(uint64_t& res) override
+  {
+    if(!hasMore()){
+      return false;
+    }
+    uint64_t curr_element;
+    do{
+      if(!generateElement(curr_element)){
+        return false;
+      };
+    }while(newItems.find(curr_element)!=newItems.end());
+
+    if(!generateElement(curr_element)){
+      return false;
+    };
+    res=curr_element;
+    generated_elements++;
+    nunique_items++;
+    return true;
+  }
+};
+
 
 class uniformGenerator: public generator{
 private:

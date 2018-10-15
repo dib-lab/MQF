@@ -46,8 +46,8 @@ CM_type * CM_Init(int width, int depth, int seed)
       cm->depth=depth;
       cm->width=width;
       cm->count=0;
-      cm->counts=(int **)calloc(sizeof(int *),cm->depth);
-      cm->counts[0]=(int *)calloc(sizeof(int), cm->depth*cm->width);
+      cm->counts=(uint8_t **)calloc(sizeof(int *),cm->depth);
+      cm->counts[0]=(uint8_t *)calloc(sizeof(int), cm->depth*cm->width);
       cm->hasha=(unsigned int *)calloc(sizeof(unsigned int),cm->depth);
       cm->hashb=(unsigned int *)calloc(sizeof(unsigned int),cm->depth);
       if (cm->counts && cm->hasha && cm->hashb && cm->counts[0])
@@ -57,7 +57,7 @@ CM_type * CM_Init(int width, int depth, int seed)
 	      cm->hasha[j]=prng_int(prng) & MOD;
 	      cm->hashb[j]=prng_int(prng) & MOD;
 	      // pick the hash functions
-	      cm->counts[j]=(int *) cm->counts[0]+(j*cm->width);
+	      cm->counts[j]=(uint8_t *) cm->counts[0]+(j*cm->width);
 	    }
 	}
       else cm=NULL;
@@ -77,8 +77,8 @@ CM_type * CM_Copy(CM_type * cmold)
       cm->depth=cmold->depth;
       cm->width=cmold->width;
       cm->count=0;
-      cm->counts=(int **)calloc(sizeof(int *),cm->depth);
-      cm->counts[0]=(int *)calloc(sizeof(int), cm->depth*cm->width);
+      cm->counts=(uint8_t **)calloc(sizeof(int *),cm->depth);
+      cm->counts[0]=(uint8_t *)calloc(sizeof(int), cm->depth*cm->width);
       cm->hasha=(unsigned int *)calloc(sizeof(unsigned int),cm->depth);
       cm->hashb=(unsigned int *)calloc(sizeof(unsigned int),cm->depth);
       if (cm->counts && cm->hasha && cm->hashb && cm->counts[0])
@@ -87,7 +87,7 @@ CM_type * CM_Copy(CM_type * cmold)
 	    {
 	      cm->hasha[j]=cmold->hasha[j];
 	      cm->hashb[j]=cmold->hashb[j];
-	      cm->counts[j]=(int *) cm->counts[0]+(j*cm->width);
+	      cm->counts[j]=(uint8_t *) cm->counts[0]+(j*cm->width);
 	    }
 	}
       else cm=NULL;
@@ -114,7 +114,7 @@ int CM_Size(CM_type * cm)
   int counts, hashes, admin;
   if (!cm) return 0;
   admin=sizeof(CM_type);
-  counts=cm->width*cm->depth*sizeof(int);
+  counts=cm->width*cm->depth*sizeof(uint8_t);
   hashes=cm->depth*2*sizeof(unsigned int);
   return(admin + hashes + counts);
 }
