@@ -504,6 +504,13 @@ inline stxxl::vector<onDisk_qfblock<> >::iterator  get_block(onDiskMQF *qf, uint
 		//return (qfblock*)&(*it);
 		return it;
 }
+
+inline stxxl::vector<onDisk_qfblock<> >::const_iterator  get_block_const(onDiskMQF *qf, uint64_t block_index)
+{
+	 	stxxl::vector<onDisk_qfblock<> >::const_iterator it = begin(qf->blocks);
+		it+=block_index;
+		return it;
+}
 #endif
 
 static inline int is_runend(onDiskMQF *qf, uint64_t index)
@@ -582,7 +589,7 @@ static inline uint64_t _get_slot(onDiskMQF *qf, uint64_t index)
 	/* Should use __uint128_t to support up to 64-bit remainders, but gcc seems
 	 * to generate buggy code.  :/  */
 
-	uint64_t *p = (uint64_t *)&get_block(qf, index /
+	uint64_t *p = (uint64_t *)&get_block_const(qf, index /
 																			 SLOTS_PER_BLOCK)->slots[(index %
 																																SLOTS_PER_BLOCK)
 																			 * qf->metadata->bits_per_slot / 8];
@@ -1848,8 +1855,7 @@ static inline bool insert(onDiskMQF *qf, __uint128_t hash, uint64_t count, bool 
  * Code that uses the above to implement key-value-counter operations. *
  ***********************************************************************/
 
-void onDiskMQF_init(onDiskMQF *qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_counter_size,
-						  uint64_t memorySizeinMB,const char * path)
+void onDiskMQF_init(onDiskMQF *qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_counter_size ,const char * path)
 {
 	//qf=(QF*)calloc(sizeof(QF),1);
 	uint64_t num_slots, xnslots, nblocks;
@@ -1875,7 +1881,8 @@ void onDiskMQF_init(onDiskMQF *qf, uint64_t nslots, uint64_t key_bits, uint64_t 
 	bits_per_slot = key_remainder_bits+fixed_counter_size+tag_bits ;
 
 	size = nblocks * (sizeof(qfblock) + (8 * bits_per_slot )) ;
-
+	qf->stxxlBufferSize= (uint64_t)((double)(size)*0.2/(1024.0*1024.0));
+	qf->stxxlBufferSize=max(qf->stxxlBufferSize,(uint64_t)16);
 	qf->mem = (qfmem *)calloc(sizeof(qfmem), 1);
 	qf->metadata = (qfmetadata *)calloc(sizeof(qfmetadata), 1);
 	qf->metadata->mem=false;
@@ -1912,7 +1919,7 @@ void onDiskMQF_init(onDiskMQF *qf, uint64_t nslots, uint64_t key_bits, uint64_t 
 																					sizeof(volatile int));
 
 
-	qf->blocks=stxxl::vector<onDisk_qfblock<> >(qf->metadata->nblocks,memorySizeinMB/16);
+	qf->blocks=stxxl::vector<onDisk_qfblock<> >(qf->metadata->nblocks,qf->stxxlBufferSize/16);
 	for(int i=0;i<qf->metadata->nblocks;i++)
 		qf->blocks[i]=onDisk_qfblock<>();
   //

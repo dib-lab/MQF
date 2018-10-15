@@ -21,7 +21,7 @@ TEST_CASE( "simple counting test(onDisk)","[onDisk]" ) {
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   uint64_t count,fixed_counter;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-  onDiskMQF_init(&qf ,(1ULL<<qbits), num_hash_bits, 0,counter_size,MemSize, "tmp.ser");
+  onDiskMQF_init(&qf ,(1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser");
 
 
 
@@ -65,7 +65,7 @@ TEST_CASE( "Maximum count(onDisk)","[onDisk]" ) {
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
    INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-   onDiskMQF_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size,MemSize ,"tmp.ser");
+   onDiskMQF_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size ,"tmp.ser");
   qf.metadata->maximum_count=10;
   onDiskMQF_insert(&qf,100,100000,false,false);
   uint64_t count = onDiskMQF_count_key(&qf, 100);
@@ -87,7 +87,7 @@ TEST_CASE( "Big count(onDisk)","[onDisk]" ) {
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-  onDiskMQF_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size,MemSize, "tmp.ser");
+  onDiskMQF_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser");
   onDiskMQF_insert(&qf,100,100000,false,false);
   uint64_t count = onDiskMQF_count_key(&qf, 100);
 
@@ -103,7 +103,7 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )(onDisk)" 
   uint64_t num_hash_bits=qbits+9;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-  onDiskMQF_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size,MemSize, "tmp.ser");
+  onDiskMQF_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser");
   uint64_t nvals = (1ULL<<qbits)*2;
   uint64_t *vals;
   vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
@@ -233,7 +233,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(onD
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-  onDiskMQF_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size,MemSize, "tmp.ser");
+  onDiskMQF_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser");
 
   uint64_t nvals = (1ULL<<diskQbits);
   //uint64_t nvals = 3;

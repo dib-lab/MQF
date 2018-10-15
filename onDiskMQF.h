@@ -66,6 +66,7 @@ namespace onDiskMQF_Namespace{
 		qfmem *mem;
 		qfmetadata *metadata;
 		stxxl::vector<onDisk_qfblock<> > blocks;
+		uint64_t stxxlBufferSize;
 		uint64_t* blocksFilePos;
 		uint64_t reverseBlocksPointer;
 		std::fstream diskMQFStream;
@@ -99,8 +100,7 @@ namespace onDiskMQF_Namespace{
 	@param uint32_t seed: useless value. To be removed
 		  */
 
-	void onDiskMQF_init(onDiskMQF *qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_counter_size,
-							  uint64_t memorySizeinMB,const char * path);
+	void onDiskMQF_init(onDiskMQF *qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_counter_size,const char * path);
 	void onDiskMQF_reset(onDiskMQF*qf);
 
 	void onDiskMQF_destroy(onDiskMQF*qf);
