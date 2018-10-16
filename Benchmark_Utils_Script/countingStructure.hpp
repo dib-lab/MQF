@@ -170,7 +170,7 @@ public:
       qf_insert(inputBuffer,b%(mqf.disk->metadata->range),1);
     }
 
-    bufferedMQF_patchQuery(&mqf,inputBuffer);
+    bufferedMQF_BatchQuery(&mqf,inputBuffer);
 
     return inputBuffer;
   }

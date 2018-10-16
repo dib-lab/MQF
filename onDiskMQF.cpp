@@ -40,7 +40,7 @@ namespace onDiskMQF_Namespace{
 #define NUM_SLOTS_TO_LOCK (1ULL<<16)
 #define CLUSTER_SIZE (1ULL<<14)
 
-#define METADATA_WORD(qf,field,slot_index) (get_block((qf), (slot_index) / \
+#define METADATA_WORD(qf,field,slot_index) (qf->get_block(slot_index / \
 					SLOTS_PER_BLOCK)->field[((slot_index)  % SLOTS_PER_BLOCK) / 64])
 
 uint64_t bitmaskLookup[]={0,1, 3, 7, 15, 31, 63, 127, 255, 511, 1023,
@@ -86,61 +86,6 @@ static __inline__ unsigned long long rdtsc(void)
 	return ( (unsigned long long)lo)|( ((unsigned long long)hi)<<32 );
 }
 
-#ifdef LOG_WAIT_TIME
-static inline bool onDiskMQF_spin_lock(onDiskMQF *cf, volatile int *lock, uint64_t idx, bool
-																flag_spin)
-{
-	struct timespec start, end;
-	bool ret;
-
-	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
-	if (!flag_spin) {
-		ret = !__sync_lock_test_and_set(lock, 1);
-		clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
-		cf->mem->wait_times[idx].locks_acquired_single_attempt++;
-		cf->mem->wait_times[idx].total_time_single += BILLION * (end.tv_sec -
-																												start.tv_sec) +
-			end.tv_nsec - start.tv_nsec;
-	} else {
-		if (!__sync_lock_test_and_set(lock, 1)) {
-			clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
-			cf->mem->wait_times[idx].locks_acquired_single_attempt++;
-			cf->mem->wait_times[idx].total_time_single += BILLION * (end.tv_sec -
-																													start.tv_sec) +
-			end.tv_nsec - start.tv_nsec;
-		} else {
-			while (__sync_lock_test_and_set(lock, 1))
-				while (*lock);
-			clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
-			cf->mem->wait_times[idx].total_time_spinning += BILLION * (end.tv_sec -
-																														start.tv_sec) +
-				end.tv_nsec - start.tv_nsec;
-		}
-		ret = true;
-	}
-	cf->mem->wait_times[idx].locks_taken++;
-
-	return ret;
-
-	/*start = rdtsc();*/
-	/*if (!__sync_lock_test_and_set(lock, 1)) {*/
-		/*clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);*/
-		/*cf->mem->wait_times[idx].locks_acquired_single_attempt++;*/
-		/*cf->mem->wait_times[idx].total_time_single += BILLION * (end.tv_sec -
-		 * start.tv_sec) + end.tv_nsec - start.tv_nsec;*/
-	/*} else {*/
-		/*while (__sync_lock_test_and_set(lock, 1))*/
-			/*while (*lock);*/
-		/*clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);*/
-		/*cf->mem->wait_times[idx].total_time_spinning += BILLION * (end.tv_sec -
-		 * start.tv_sec) + end.tv_nsec - start.tv_nsec;*/
-	/*}*/
-
-	/*end = rdtsc();*/
-	/*cf->mem->wait_times[idx].locks_taken++;*/
-	/*return;*/
-}
-#else
 /**
  * Try to acquire a lock once and return even if the lock is busy.
  * If spin flag is set, then spin until the lock is available.
@@ -157,7 +102,7 @@ static inline bool onDiskMQF_spin_lock(volatile int *lock, bool flag_spin)
 
 	return false;
 }
-#endif
+
 
 static inline void onDiskMQF_spin_unlock(volatile int *lock)
 {
@@ -165,22 +110,11 @@ static inline void onDiskMQF_spin_unlock(volatile int *lock)
 	return;
 }
 
+
 static bool onDiskMQF_lock(onDiskMQF *cf, uint64_t hash_bucket_index, bool spin, bool flag)
 {
 	uint64_t hash_bucket_lock_offset  = hash_bucket_index % NUM_SLOTS_TO_LOCK;
 	if (flag) {
-#ifdef LOG_WAIT_TIME
-		if (!onDiskMQF_spin_lock(cf, &cf->mem->locks[hash_bucket_index/NUM_SLOTS_TO_LOCK],
-											hash_bucket_index/NUM_SLOTS_TO_LOCK, spin))
-			return false;
-		if (NUM_SLOTS_TO_LOCK - hash_bucket_lock_offset <= CLUSTER_SIZE) {
-			if (!onDiskMQF_spin_lock(cf, &cf->mem->locks[hash_bucket_index/NUM_SLOTS_TO_LOCK+1],
-												hash_bucket_index/NUM_SLOTS_TO_LOCK+1, spin)) {
-				onDiskMQF_spin_unlock(&cf->mem->locks[hash_bucket_index/NUM_SLOTS_TO_LOCK]);
-				return false;
-			}
-		}
-#else
 		if (!onDiskMQF_spin_lock(&cf->mem->locks[hash_bucket_index/NUM_SLOTS_TO_LOCK], spin))
 			return false;
 		if (NUM_SLOTS_TO_LOCK - hash_bucket_lock_offset <= CLUSTER_SIZE) {
@@ -190,32 +124,10 @@ static bool onDiskMQF_lock(onDiskMQF *cf, uint64_t hash_bucket_index, bool spin,
 				return false;
 			}
 		}
-#endif
 	} else {
 		/* take the lock for two lock-blocks; the lock-block in which the
 		 * hash_bucket_index falls and the next lock-block */
 
-#ifdef LOG_WAIT_TIME
-		if (hash_bucket_index >= NUM_SLOTS_TO_LOCK && hash_bucket_lock_offset <=
-				CLUSTER_SIZE) {
-			if (!onDiskMQF_spin_lock(cf, &cf->mem->locks[hash_bucket_index/NUM_SLOTS_TO_LOCK-1], spin))
-				return false;
-		}
-		if (!onDiskMQF_spin_lock(cf, &cf->mem->locks[hash_bucket_index/NUM_SLOTS_TO_LOCK], spin)) {
-			if (hash_bucket_index >= NUM_SLOTS_TO_LOCK && hash_bucket_lock_offset <=
-					CLUSTER_SIZE)
-				onDiskMQF_spin_unlock(&cf->mem->locks[hash_bucket_index/NUM_SLOTS_TO_LOCK-1]);
-			return false;
-		}
-		if (!onDiskMQF_spin_lock(cf, &cf->mem->locks[hash_bucket_index/NUM_SLOTS_TO_LOCK+1],
-											spin)) {
-			onDiskMQF_spin_unlock(&cf->mem->locks[hash_bucket_index/NUM_SLOTS_TO_LOCK]);
-			if (hash_bucket_index >= NUM_SLOTS_TO_LOCK && hash_bucket_lock_offset <=
-					CLUSTER_SIZE)
-				onDiskMQF_spin_unlock(&cf->mem->locks[hash_bucket_index/NUM_SLOTS_TO_LOCK-1]);
-			return false;
-		}
-#else
 		if (hash_bucket_index >= NUM_SLOTS_TO_LOCK && hash_bucket_lock_offset <=
 				CLUSTER_SIZE) {
 			if (!onDiskMQF_spin_lock(&cf->mem->locks[hash_bucket_index/NUM_SLOTS_TO_LOCK-1], spin))
@@ -235,12 +147,13 @@ static bool onDiskMQF_lock(onDiskMQF *cf, uint64_t hash_bucket_index, bool spin,
 				onDiskMQF_spin_unlock(&cf->mem->locks[hash_bucket_index/NUM_SLOTS_TO_LOCK-1]);
 			return false;
 		}
-#endif
+
 	}
 	return true;
 }
 
-static void onDiskMQF_unlock(onDiskMQF *cf, uint64_t hash_bucket_index, bool flag)
+
+void onDiskMQF_unlock(onDiskMQF *cf, uint64_t hash_bucket_index, bool flag)
 {
 	uint64_t hash_bucket_lock_offset  = hash_bucket_index % NUM_SLOTS_TO_LOCK;
 	if (flag) {
@@ -257,13 +170,10 @@ static void onDiskMQF_unlock(onDiskMQF *cf, uint64_t hash_bucket_index, bool fla
 	}
 }
 
+
 static void modify_metadata(onDiskMQF *cf, uint64_t *metadata, int cnt)
 {
-#ifdef LOG_WAIT_TIME
-	onDiskMQF_spin_lock(cf, &cf->mem->metadata_lock,cf->num_locks, true);
-#else
 	onDiskMQF_spin_lock(&cf->mem->metadata_lock, true);
-#endif
 	*metadata = *metadata + cnt;
 	onDiskMQF_spin_unlock(&cf->mem->metadata_lock);
 	return;
@@ -465,53 +375,49 @@ inline void writeAndFreeBlocks(uint64_t memoryBufferIndex)
 	// qf->blocksPointers[qf->reverseBlocksPointer[memoryBufferIndex]]=NULL;
 
 }
-#if BITS_PER_SLOT > 0
-static inline qfblock * get_block(onDiskMQF *qf, uint64_t block_index)
-{
-	return &qf->blocks[block_index];
-}
-#else
-inline stxxl::vector<onDisk_qfblock<> >::iterator  get_block(onDiskMQF *qf, uint64_t block_index)
-{
-	 // printf("block = %p\n",(void*)(((char *)qf->blocks) + block_index * (sizeof(qfblock) +
-	 // 					 qf->metadata->bits_per_slot * 8 +
-	 // 					8*qf->metadata->fixed_counter_size +
-	 // 					8*qf->metadata->tag_bits
-	 // 				 )) );
-	 //printf("blocks start=%p\n",qf->blocks );
-	// uint64_t BasepointerIndex= block_index / qf->diskParams->nBlocksPerPointer;
-	// char* basePointer=(char*)qf->blocksPointers[BasepointerIndex];
-	// if(basePointer==NULL)
-	// {
-	// 		//load
-	// 		for(uint64_t i=0;i<qf->diskParams->nBlocksPerIOBatch;i+=qf->diskParams->nBlocksPerPointer)
-	// 		{
-	// 			writeAndFreeBlocks(qf->diskParams->memoryBufferPos+i);
-	// 		}
-	// }
-	// uint64_t pointerShift= (block_index % qf->diskParams->nBlocksPerPointer)
-	// 													*(sizeof(qfblock) + (8 * qf->metadata->bits_per_slot ));
-	// return (qfblock*)(basePointer+pointerShift);
-	//return (qfblock *)(((char *)qf->blocks) + block_index * (sizeof(qfblock) +
-		//				 qf->metadata->bits_per_slot * 8
-			//		 ));
 
-			stxxl::vector<onDisk_qfblock<> >::iterator it = begin(qf->blocks);
+// template<uint64_t bitsPerSlot>
+// inline typename stxxl::vector<onDisk_qfblock<bitsPerSlot> >::iterator  get_block(onDiskMQF *qf, uint64_t block_index)
+// {
+// 	 // printf("block = %p\n",(void*)(((char *)qf->blocks) + block_index * (sizeof(qfblock) +
+// 	 // 					 qf->metadata->bits_per_slot * 8 +
+// 	 // 					8*qf->metadata->fixed_counter_size +
+// 	 // 					8*qf->metadata->tag_bits
+// 	 // 				 )) );
+// 	 //printf("blocks start=%p\n",qf->blocks );
+// 	// uint64_t BasepointerIndex= block_index / qf->diskParams->nBlocksPerPointer;
+// 	// char* basePointer=(char*)qf->blocksPointers[BasepointerIndex];
+// 	// if(basePointer==NULL)
+// 	// {
+// 	// 		//load
+// 	// 		for(uint64_t i=0;i<qf->diskParams->nBlocksPerIOBatch;i+=qf->diskParams->nBlocksPerPointer)
+// 	// 		{
+// 	// 			writeAndFreeBlocks(qf->diskParams->memoryBufferPos+i);
+// 	// 		}
+// 	// }
+// 	// uint64_t pointerShift= (block_index % qf->diskParams->nBlocksPerPointer)
+// 	// 													*(sizeof(qfblock) + (8 * qf->metadata->bits_per_slot ));
+// 	// return (qfblock*)(basePointer+pointerShift);
+// 	//return (qfblock *)(((char *)qf->blocks) + block_index * (sizeof(qfblock) +
+// 		//				 qf->metadata->bits_per_slot * 8
+// 			//		 ));
+//
+// 			typename stxxl::vector<onDisk_qfblock<bitsPerSlot> >::iterator it = begin(qf->blocks);
+//
+// 			//return NULL;
+//
+// 		it+=block_index;
+// 		//return (qfblock*)&(*it);
+// 		return it;
+// }
+// template<uint64_t bitsPerSlot>
+// inline typename stxxl::vector<onDisk_qfblock<bitsPerSlot> >::const_iterator  get_block_const(onDiskMQF *qf, uint64_t block_index)
+// {
+// 	 	typename stxxl::vector<onDisk_qfblock<bitsPerSlot> >::const_iterator it = begin(qf->blocks);
+// 		it+=block_index;
+// 		return it;
+// }
 
-			//return NULL;
-
-		it+=block_index;
-		//return (qfblock*)&(*it);
-		return it;
-}
-
-inline stxxl::vector<onDisk_qfblock<> >::const_iterator  get_block_const(onDiskMQF *qf, uint64_t block_index)
-{
-	 	stxxl::vector<onDisk_qfblock<> >::const_iterator it = begin(qf->blocks);
-		it+=block_index;
-		return it;
-}
-#endif
 
 static inline int is_runend(onDiskMQF *qf, uint64_t index)
 {
@@ -525,60 +431,10 @@ static inline int is_occupied(onDiskMQF *qf, uint64_t index)
 																									64)) & 1ULL;
 }
 
-#if BITS_PER_SLOT == 8 || BITS_PER_SLOT == 16 || BITS_PER_SLOT == 32 || BITS_PER_SLOT == 64
 
-static inline uint64_t get_slot(onDiskMQF *qf, uint64_t index)
-{
-	assert(index < qf->metadata->xnslots);
-	return get_block(qf, index / SLOTS_PER_BLOCK)->slots[index % SLOTS_PER_BLOCK];
-}
 
-static inline void set_slot(onDiskMQF *qf, uint64_t index, uint64_t value)
-{
-	assert(index < qf->metadata->xnslots);
-	get_block(qf, index / SLOTS_PER_BLOCK)->slots[index % SLOTS_PER_BLOCK] =
-		value & BITMASK(qf->metadata->bits_per_slot);
-}
 
-#elif BITS_PER_SLOT > 0
 
-/* Little-endian code ....  Big-endian is TODO */
-
-static inline uint64_t get_slot(onDiskMQF *qf, uint64_t index)
-{
-	/* Should use __uint128_t to support up to 64-bit remainders, but gcc seems
-	 * to generate buggy code.  :/  */
-	assert(index < qf->metadata->xnslots);
-	uint64_t *p = (uint64_t *)&get_block(qf, index /
-																			 SLOTS_PER_BLOCK)->slots[(index %
-																																SLOTS_PER_BLOCK)
-																			 * BITS_PER_SLOT / 8];
-	return (uint64_t)(((*p) >> (((index % SLOTS_PER_BLOCK) * BITS_PER_SLOT) %
-															8)) & BITMASK(BITS_PER_SLOT));
-}
-
-static inline void set_slot(onDiskMQF *qf, uint64_t index, uint64_t value)
-{
-	/* Should use __uint128_t to support up to 64-bit remainders, but gcc seems
-	 * to generate buggy code.  :/  */
-	assert(index < qf->metadata->xnslots);
-
-	uint64_t *p = (uint64_t *)&get_block(qf, index /
-																			 SLOTS_PER_BLOCK)->slots[(index %
-																																SLOTS_PER_BLOCK)
-																			 * BITS_PER_SLOT / 8];
-	uint64_t t = *p;
-	uint64_t mask = BITMASK(BITS_PER_SLOT);
-	uint64_t v = value;
-	int shift = ((index % SLOTS_PER_BLOCK) * BITS_PER_SLOT) % 8;
-	mask <<= shift;
-	v <<= shift;
-	t &= ~mask;
-	t |= v;
-	*p = t;
-}
-
-#else
 
 
 /* Little-endian code ....  Big-endian is TODO */
@@ -589,7 +445,7 @@ static inline uint64_t _get_slot(onDiskMQF *qf, uint64_t index)
 	/* Should use __uint128_t to support up to 64-bit remainders, but gcc seems
 	 * to generate buggy code.  :/  */
 
-	uint64_t *p = (uint64_t *)&get_block_const(qf, index /
+	uint64_t *p = (uint64_t *)&qf->get_block_const( index /
 																			 SLOTS_PER_BLOCK)->slots[(index %
 																																SLOTS_PER_BLOCK)
 																			 * qf->metadata->bits_per_slot / 8];
@@ -604,7 +460,7 @@ static inline void _set_slot(onDiskMQF *qf, uint64_t index, uint64_t value)
 	/* Should use __uint128_t to support up to 64-bit remainders, but gcc seems
 	 * to generate buggy code.  :/  */
 	 //printf("ss %d\n",(index %SLOTS_PER_BLOCK)* qf->metadata->bits_per_slot / 8 );
-	uint64_t *p = (uint64_t *)&get_block(qf, index /
+	uint64_t *p = (uint64_t *)&qf->get_block( index /
 																			 SLOTS_PER_BLOCK)->slots[(index %
 																																SLOTS_PER_BLOCK)
 																			 * qf->metadata->bits_per_slot / 8];
@@ -636,7 +492,7 @@ static inline uint64_t get_slot(onDiskMQF *qf, uint64_t index)
 }
 
 
-#endif
+
 
 static inline uint64_t get_fixed_counter(onDiskMQF *qf, uint64_t index)
 {
@@ -645,7 +501,7 @@ static inline uint64_t get_fixed_counter(onDiskMQF *qf, uint64_t index)
 	return t&mask;
 	// uint64_t res=0;
 	// uint64_t base=1;
-	// uint64_t* p=(uint64_t*)((uint8_t*)get_block(qf, index /SLOTS_PER_BLOCK)->slots+
+	// uint64_t* p=(uint64_t*)((uint8_t*)qf->get_block( index /SLOTS_PER_BLOCK)->slots+
 	// 															(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot )/ 8);
   //
 	// for(int i=qf->metadata->fixed_counter_size-1;i>=0;i--){
@@ -655,6 +511,7 @@ static inline uint64_t get_fixed_counter(onDiskMQF *qf, uint64_t index)
   //
 	// return res;
 }
+
  inline  void set_fixed_counter(onDiskMQF *qf, uint64_t index,uint64_t value)
 {
 	uint64_t mask=BITMASK(qf->metadata->fixed_counter_size);
@@ -663,13 +520,14 @@ static inline uint64_t get_fixed_counter(onDiskMQF *qf, uint64_t index)
 	_set_slot(qf,index,tvalue);
 }
 
-static inline uint64_t get_tag(onDiskMQF *qf, uint64_t index)
+static inline uint64_t _get_tag(onDiskMQF *qf, uint64_t index)
 {
 	uint64_t mask=BITMASK(qf->metadata->tag_bits);
 	uint64_t t=_get_slot(qf,index);
 	t >>= (qf->metadata->fixed_counter_size+qf->metadata->key_remainder_bits);
 	return t&mask;
 }
+
 static inline void set_tag(onDiskMQF *qf, uint64_t index,uint64_t value)
 {
 	uint64_t original_value=_get_slot(qf,index);
@@ -709,18 +567,20 @@ static inline void super_set(onDiskMQF *qf, uint64_t index,uint64_t slot,uint64_
 
 static inline uint64_t run_end(onDiskMQF *qf, uint64_t hash_bucket_index);
 
+
 static inline uint64_t block_offset(onDiskMQF *qf, uint64_t blockidx)
 {
 	/* If we have extended counters and a 16-bit (or larger) offset
 		 field, then we can safely ignore the possibility of overflowing
 		 that field. */
-	if (sizeof(qf->blocks[0].offset) > 1 ||
-			get_block(qf, blockidx)->offset < BITMASK(8*sizeof(qf->blocks[0].offset)))
-		return get_block(qf, blockidx)->offset;
+	if (sizeof(qf->get_block(0)->offset) > 1 ||
+			qf->get_block( blockidx)->offset < BITMASK(8*sizeof(qf->get_block(0)->offset)))
+		return qf->get_block( blockidx)->offset;
 
 	return run_end(qf, SLOTS_PER_BLOCK * blockidx - 1) - SLOTS_PER_BLOCK *
 		blockidx + 1;
 }
+
 
 static inline uint64_t run_end(onDiskMQF *qf, uint64_t hash_bucket_index)
 {
@@ -728,7 +588,7 @@ static inline uint64_t run_end(onDiskMQF *qf, uint64_t hash_bucket_index)
 	uint64_t bucket_intrablock_offset = hash_bucket_index % SLOTS_PER_BLOCK;
 	uint64_t bucket_blocks_offset = block_offset(qf, bucket_block_index);
 
-	uint64_t bucket_intrablock_rank   = bitrank(get_block(qf,
+	uint64_t bucket_intrablock_rank   = bitrank(qf->get_block(
 																				bucket_block_index)->occupieds[0],
 																				bucket_intrablock_offset);
 
@@ -743,7 +603,7 @@ static inline uint64_t run_end(onDiskMQF *qf, uint64_t hash_bucket_index)
 		SLOTS_PER_BLOCK;
 	uint64_t runend_ignore_bits  = bucket_blocks_offset % SLOTS_PER_BLOCK;
 	uint64_t runend_rank         = bucket_intrablock_rank - 1;
-	uint64_t runend_block_offset = bitselectv(get_block(qf,
+	uint64_t runend_block_offset = bitselectv(qf->get_block(
 																						runend_block_index)->runends[0],
 																						runend_ignore_bits, runend_rank);
 	if (runend_block_offset == SLOTS_PER_BLOCK) {
@@ -753,12 +613,12 @@ static inline uint64_t run_end(onDiskMQF *qf, uint64_t hash_bucket_index)
 			return hash_bucket_index;
 		} else {
 			do {
-				runend_rank        -= popcntv(get_block(qf,
+				runend_rank        -= popcntv(qf->get_block(
 																								runend_block_index)->runends[0],
 																			runend_ignore_bits);
 				runend_block_index++;
 				runend_ignore_bits  = 0;
-				runend_block_offset = bitselectv(get_block(qf,
+				runend_block_offset = bitselectv(qf->get_block(
 																									 runend_block_index)->runends[0],
 																				 runend_ignore_bits, runend_rank);
 			} while (runend_block_offset == SLOTS_PER_BLOCK);
@@ -773,26 +633,26 @@ static inline uint64_t run_end(onDiskMQF *qf, uint64_t hash_bucket_index)
 		return runend_index;
 }
 
-static inline uint64_t run_end2(onDiskMQF *qf, uint64_t hash_bucket_index)
-{
-	uint8_t offset=hash_bucket_index % SLOTS_PER_BLOCK;
-	uint64_t t= METADATA_WORD(qf, runends, hash_bucket_index)
-	&BITMASK(offset);
-	uint64_t tt=hash_bucket_index / SLOTS_PER_BLOCK;
-	hash_bucket_index+=SLOTS_PER_BLOCK-offset;
-	while(t==0){
-		t= METADATA_WORD(qf, runends, hash_bucket_index);
-		hash_bucket_index+=64;
-		tt+=1;
-	}
-	uint64_t res=(tt*64)+SLOTS_PER_BLOCK-LOG2(t)-1;
-	return res;
-}
+// static inline uint64_t run_end2(onDiskMQF *qf, uint64_t hash_bucket_index)
+// {
+// 	uint8_t offset=hash_bucket_index % SLOTS_PER_BLOCK;
+// 	uint64_t t= METADATA_WORD(qf, runends, hash_bucket_index)
+// 	&BITMASK(offset);
+// 	uint64_t tt=hash_bucket_index / SLOTS_PER_BLOCK;
+// 	hash_bucket_index+=SLOTS_PER_BLOCK-offset;
+// 	while(t==0){
+// 		t= METADATA_WORD(qf, runends, hash_bucket_index);
+// 		hash_bucket_index+=64;
+// 		tt+=1;
+// 	}
+// 	uint64_t res=(tt*64)+SLOTS_PER_BLOCK-LOG2(t)-1;
+// 	return res;
+// }
 
 
 static inline int offset_lower_bound(onDiskMQF *qf, uint64_t slot_index)
 {
-	auto  b = get_block(qf, slot_index / SLOTS_PER_BLOCK);
+	auto  b = qf->get_block( slot_index / SLOTS_PER_BLOCK);
 	const uint64_t slot_offset = slot_index % SLOTS_PER_BLOCK;
 	const uint64_t boffset = b->offset;
 	const uint64_t occupieds = b->occupieds[0] & BITMASK(slot_offset+1);
@@ -804,10 +664,12 @@ static inline int offset_lower_bound(onDiskMQF *qf, uint64_t slot_index)
 	return boffset - slot_offset + popcnt(occupieds);
 }
 
+
 static inline int is_empty2(onDiskMQF *qf, uint64_t slot_index)
 {
 	return offset_lower_bound(qf, slot_index) == 0;
 }
+
 
 static inline int might_be_empty(onDiskMQF *qf, uint64_t slot_index)
 {
@@ -815,12 +677,14 @@ static inline int might_be_empty(onDiskMQF *qf, uint64_t slot_index)
 		&& !is_runend(qf, slot_index);
 }
 
+
 static inline int probably_is_empty(onDiskMQF *qf, uint64_t slot_index)
 {
 	return get_slot(qf, slot_index) == 0
 		&& !is_occupied(qf, slot_index)
 		&& !is_runend(qf, slot_index);
 }
+
 
 static inline uint64_t find_first_empty_slot(onDiskMQF *qf, uint64_t from)
 {
@@ -850,36 +714,9 @@ static inline uint64_t shift_into_b(const uint64_t a, const uint64_t b,
 	return a_component | b_shifted | (b & b_mask);
 }
 
-#if BITS_PER_SLOT == 8 || BITS_PER_SLOT == 16 || BITS_PER_SLOT == 32 || BITS_PER_SLOT == 64
 
-static inline void shift_remainders(onDiskMQF *qf, uint64_t start_index, uint64_t
-																		empty_index)
-{
-	uint64_t start_block  = start_index / SLOTS_PER_BLOCK;
-	uint64_t start_offset = start_index % SLOTS_PER_BLOCK;
-	uint64_t empty_block  = empty_index / SLOTS_PER_BLOCK;
-	uint64_t empty_offset = empty_index % SLOTS_PER_BLOCK;
+#define REMAINDER_WORD(qf, i) ((uint64_t *)&(qf->get_block( (i)/qf->metadata->bits_per_slot)->slots[8 * ((i) % qf->metadata->bits_per_slot)]))
 
-	assert (start_index <= empty_index && empty_index < qf->metadata->xnslots);
-
-	while (start_block < empty_block) {
-		memmove(&get_block(qf, empty_block)->slots[1],
-						&get_block(qf, empty_block)->slots[0],
-						empty_offset * sizeof(qf->blocks[0].slots[0]));
-		get_block(qf, empty_block)->slots[0] = get_block(qf,
-																			empty_block-1)->slots[SLOTS_PER_BLOCK-1];
-		empty_block--;
-		empty_offset = SLOTS_PER_BLOCK-1;
-	}
-
-	memmove(&get_block(qf, empty_block)->slots[start_offset+1],
-					&get_block(qf, empty_block)->slots[start_offset],
-					(empty_offset - start_offset) * sizeof(qf->blocks[0].slots[0]));
-}
-
-#else
-
-#define REMAINDER_WORD(qf, i) ((uint64_t *)&(get_block(qf, (i)/qf->metadata->bits_per_slot)->slots[8 * ((i) % qf->metadata->bits_per_slot)]))
 
 static inline void shift_remainders(onDiskMQF *qf, const uint64_t start_index, const
 																		uint64_t empty_index)
@@ -902,13 +739,13 @@ static inline void shift_remainders(onDiskMQF *qf, const uint64_t start_index, c
 																								qf->metadata->bits_per_slot);
 }
 
-#endif
-
-static inline void onDiskMQF_dump_block(onDiskMQF *qf, uint64_t i)
+template<uint64_t bitsPerSlot>
+static inline void _onDiskMQF<bitsPerSlot>::dump_block(uint64_t i)
 {
+	_onDiskMQF<bitsPerSlot>* qf=this;
 	uint64_t j;
  	printf("#Block %lu \n",i );
-	printf("%-192d", get_block(qf, i)->offset);
+	printf("%-192d", qf->get_block( i)->offset);
 	printf("\n");
 
 	for (j = 0; j < SLOTS_PER_BLOCK; j++)
@@ -916,22 +753,22 @@ static inline void onDiskMQF_dump_block(onDiskMQF *qf, uint64_t i)
 	printf("\n");
 
 	for (j = 0; j < SLOTS_PER_BLOCK; j++)
-		printf(" %d ", (get_block(qf, i)->occupieds[j/64] & (1ULL << (j%64))) ? 1 : 0);
+		printf(" %d ", (qf->get_block( i)->occupieds[j/64] & (1ULL << (j%64))) ? 1 : 0);
 	printf("\n");
 
 	for (j = 0; j < SLOTS_PER_BLOCK; j++)
-		printf(" %d ", (get_block(qf, i)->runends[j/64] & (1ULL << (j%64))) ? 1 : 0);
+		printf(" %d ", (qf->get_block( i)->runends[j/64] & (1ULL << (j%64))) ? 1 : 0);
 	printf("\n");
 
 #if BITS_PER_SLOT == 8 || BITS_PER_SLOT == 16 || BITS_PER_SLOT == 32
 	for (j = 0; j < SLOTS_PER_BLOCK; j++)
-		printf("%02x ", get_block(qf, i)->slots[j]);
+		printf("%02x ", qf->get_block( i)->slots[j]);
 #elif BITS_PER_SLOT == 64
 	for (j = 0; j < SLOTS_PER_BLOCK; j++)
-		printf("%02lx ", get_block(qf, i)->slots[j]);
+		printf("%02lx ", qf->get_block( i)->slots[j]);
 #else
 	//for (j = 0; j < SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8; j++)
-	//	printf("%02x ", get_block(qf, i)->slots[j]);
+	//	printf("%02x ", qf->get_block( i)->slots[j]);
 
 #endif
 
@@ -951,7 +788,7 @@ for(int j=0;j<64 && (j+64*i)<qf->metadata->xnslots;j++)
 
 	for(int j=0;j<64&& (j+64*i)<qf->metadata->xnslots;j++)
 	{
-		printf("%lu ", get_tag(qf,j+64*i));
+		printf("%lu ", _get_tag(qf,j+64*i));
 	}
 
 
@@ -959,8 +796,10 @@ for(int j=0;j<64 && (j+64*i)<qf->metadata->xnslots;j++)
 	printf("\n");
 }
 
-void onDiskMQF_dump(onDiskMQF *qf)
+template<uint64_t bitsPerSlot>
+void _onDiskMQF<bitsPerSlot>::dump()
 {
+	_onDiskMQF<bitsPerSlot>* qf=this;
 	uint64_t i;
 
 	printf("%lu %lu %lu\n",
@@ -972,7 +811,7 @@ void onDiskMQF_dump(onDiskMQF *qf)
 		if(i==540){
 			cout<<"last bloc"<<endl;
 		}
-		onDiskMQF_dump_block(qf, i);
+		dump_block(qf);
 	}
 	printf("End\n");
 
@@ -1044,21 +883,21 @@ static inline void shift_runends(onDiskMQF *qf, int64_t first, uint64_t last,
 // 		last_word=tmp;
 // 		bend=tmp_bend;
 // 		if (last_word != first_word) {
-// 			curr=(uint64_t*)((uint8_t*)get_block(qf, last_word)->slots+
+// 			curr=(uint64_t*)((uint8_t*)qf->get_block( last_word)->slots+
 // 			(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot) / 8);
-// 			prev=(uint64_t*)((uint8_t*)get_block(qf, last_word-1)->slots+
+// 			prev=(uint64_t*)((uint8_t*)qf->get_block( last_word-1)->slots+
 // 			(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot) / 8);
 // 			curr[i] = shift_into_b(prev[i],curr[i],0, bend, distance);
 // 			bend = 64;
 // 			last_word--;
 // 			while (last_word != first_word) {
-// 				curr=(uint64_t*)((uint8_t*)get_block(qf, last_word)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
-// 				prev=(uint64_t*)((uint8_t*)get_block(qf, last_word-1)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
+// 				curr=(uint64_t*)((uint8_t*)qf->get_block( last_word)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
+// 				prev=(uint64_t*)((uint8_t*)qf->get_block( last_word-1)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
 // 				curr[i] = shift_into_b(prev[i],curr[i],0, bend, distance);
 // 				last_word--;
 // 			}
 // 		}
-// 		curr=(uint64_t*)((uint8_t*)get_block(qf, last_word)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
+// 		curr=(uint64_t*)((uint8_t*)qf->get_block( last_word)->slots+(SLOTS_PER_BLOCK * qf->metadata->bits_per_slot / 8));
 // 		curr[i] = shift_into_b(0,curr[i], bstart, bend, distance);
 // 	}
 //
@@ -1078,23 +917,23 @@ static inline void shift_runends(onDiskMQF *qf, int64_t first, uint64_t last,
 // 		last_word=tmp;
 // 		bend=tmp_bend;
 // 		if (last_word != first_word) {
-// 			curr=(uint64_t*)((uint8_t*)get_block(qf, last_word)->slots+
+// 			curr=(uint64_t*)((uint8_t*)qf->get_block( last_word)->slots+
 // 											(8 *(qf->metadata->bits_per_slot + qf->metadata->fixed_counter_size )));
-// 			prev=(uint64_t*)((uint8_t*)get_block(qf, last_word-1)->slots+
+// 			prev=(uint64_t*)((uint8_t*)qf->get_block( last_word-1)->slots+
 // 											(8 *(qf->metadata->bits_per_slot + qf->metadata->fixed_counter_size )));
 // 			curr[i] = shift_into_b(prev[i],curr[i],0, bend, distance);
 // 			bend = 64;
 // 			last_word--;
 // 			while (last_word != first_word) {
-// 				curr=(uint64_t*)((uint8_t*)get_block(qf, last_word)->slots+
+// 				curr=(uint64_t*)((uint8_t*)qf->get_block( last_word)->slots+
 // 												(8 *(qf->metadata->bits_per_slot + qf->metadata->fixed_counter_size )));
-// 				prev=(uint64_t*)((uint8_t*)get_block(qf, last_word-1)->slots+
+// 				prev=(uint64_t*)((uint8_t*)qf->get_block( last_word-1)->slots+
 // 												(8 *(qf->metadata->bits_per_slot + qf->metadata->fixed_counter_size )));
 // 				curr[i] = shift_into_b(prev[i],curr[i],0, bend, distance);
 // 				last_word--;
 // 			}
 // 		}
-// 		curr=(uint64_t*)((uint8_t*)get_block(qf, last_word)->slots+
+// 		curr=(uint64_t*)((uint8_t*)qf->get_block( last_word)->slots+
 // 										(8 *(qf->metadata->bits_per_slot + qf->metadata->fixed_counter_size )));
 // 		curr[i] = shift_into_b(0,curr[i], bstart, bend, distance);
 // 	}
@@ -1190,23 +1029,24 @@ static inline void insert_replace_slots_and_shift_remainders_and_runends_and_off
 						 empties[ninserts - 1 - npreceding_empties]  / SLOTS_PER_BLOCK < i)
 				npreceding_empties++;
 
-			if (get_block(qf, i)->offset + ninserts - npreceding_empties < BITMASK(8*sizeof(qf->blocks[0].offset)))
-				get_block(qf, i)->offset += ninserts - npreceding_empties;
+			if (qf->get_block( i)->offset + ninserts - npreceding_empties < BITMASK(8*sizeof(qf->get_block(0)->offset)))
+				qf->get_block( i)->offset += ninserts - npreceding_empties;
 			else
-				get_block(qf, i)->offset = (uint8_t) BITMASK(8*sizeof(qf->blocks[0].offset));
+				qf->get_block( i)->offset = (uint8_t) BITMASK(8*sizeof(qf->get_block(0)->offset));
 		}
 	}
 	for (i = 0; i < total_remainders; i++){
 		//set_slot(qf, overwrite_index + i, remainders[i]);
 		//set_fixed_counter(qf,overwrite_index +i,fixed_size_counters[i]);
-		super_set(qf,overwrite_index+i,remainders[i],fixed_size_counters[i]);
+		super_get(qf,overwrite_index+i,remainders[i],fixed_size_counters[i]);
 //		printf("fixed counter = %lu\n",fixed_size_counters[i] );
 	}
 
 	modify_metadata(qf, &qf->metadata->noccupied_slots, ninserts);
 }
 
-static inline void remove_replace_slots_and_shift_remainders_and_runends_and_offsets(onDiskMQF		        *qf,
+
+static inline void remove_replace_slots_and_shift_remainders_and_runends_and_offsets(onDiskMQF *qf,
 																																										 int		 operation,
 																																										 uint64_t		 bucket_index,
 																																										 uint64_t		 overwrite_index,
@@ -1257,7 +1097,7 @@ static inline void remove_replace_slots_and_shift_remainders_and_runends_and_off
 			set_slot(qf, current_slot, get_slot(qf, current_slot + current_distance));
 			set_fixed_counter(qf, current_slot, get_fixed_counter(qf, current_slot + current_distance));
 			if(qf->metadata->tag_bits>0)
-				set_tag(qf, current_slot, get_tag(qf, current_slot + current_distance));
+				set_tag(qf, current_slot, _get_tag(qf, current_slot + current_distance));
 
 			if (is_runend(qf, current_slot) !=
 					is_runend(qf, current_slot + current_distance))
@@ -1293,32 +1133,32 @@ static inline void remove_replace_slots_and_shift_remainders_and_runends_and_off
 	// Update the offset of the block to which it belongs.
 	uint64_t original_block = original_bucket / SLOTS_PER_BLOCK;
 	while (1 && old_length > total_remainders) {	// we only update offsets if we shift/delete anything
-		int32_t last_occupieds_bit = bitscanreverse(get_block(qf, original_block)->occupieds[0]);
+		int32_t last_occupieds_bit = bitscanreverse(qf->get_block( original_block)->occupieds[0]);
 		// there is nothing in the block
 		if (last_occupieds_bit == -1) {
-			if (get_block(qf, original_block + 1)->offset == 0)
+			if (qf->get_block( original_block + 1)->offset == 0)
 				break;
-			get_block(qf, original_block + 1)->offset = 0;
+			qf->get_block( original_block + 1)->offset = 0;
 		} else {
 			uint64_t last_occupieds_hash_index = SLOTS_PER_BLOCK * original_block + last_occupieds_bit;
 			uint64_t runend_index = run_end(qf, last_occupieds_hash_index);
 			// runend spans across the block
 			// update the offset of the next block
 			if (runend_index / SLOTS_PER_BLOCK == original_block) { // if the run ends in the same block
-				if (get_block(qf, original_block + 1)->offset == 0)
+				if (qf->get_block( original_block + 1)->offset == 0)
 					break;
-				get_block(qf, original_block + 1)->offset = 0;
+				qf->get_block( original_block + 1)->offset = 0;
 			} else if (runend_index / SLOTS_PER_BLOCK == original_block + 1) { // if the last run spans across one block
-				if (get_block(qf, original_block + 1)->offset == (runend_index % SLOTS_PER_BLOCK) + 1)
+				if (qf->get_block( original_block + 1)->offset == (runend_index % SLOTS_PER_BLOCK) + 1)
 					break;
-				get_block(qf, original_block + 1)->offset = (runend_index % SLOTS_PER_BLOCK) + 1;
+				qf->get_block( original_block + 1)->offset = (runend_index % SLOTS_PER_BLOCK) + 1;
 			} else { // if the last run spans across multiple blocks
 				uint64_t i;
 				for (i = original_block + 1; i < runend_index / SLOTS_PER_BLOCK - 1; i++)
-					get_block(qf, i)->offset = SLOTS_PER_BLOCK;
-				if (get_block(qf, runend_index / SLOTS_PER_BLOCK)->offset == (runend_index % SLOTS_PER_BLOCK) + 1)
+					qf->get_block( i)->offset = SLOTS_PER_BLOCK;
+				if (qf->get_block( runend_index / SLOTS_PER_BLOCK)->offset == (runend_index % SLOTS_PER_BLOCK) + 1)
 					break;
-				get_block(qf, runend_index / SLOTS_PER_BLOCK)->offset = (runend_index % SLOTS_PER_BLOCK) + 1;
+				qf->get_block( runend_index / SLOTS_PER_BLOCK)->offset = (runend_index % SLOTS_PER_BLOCK) + 1;
 			}
 		}
 		original_block++;
@@ -1348,6 +1188,7 @@ static inline void remove_replace_slots_and_shift_remainders_and_runends_and_off
 	 Fixed counters :  [Maximum]     [Maximum]   [Maximum]      ... [up to Maximum -1]
 
  */
+
 static inline uint64_t *encode_counter(onDiskMQF *qf, uint64_t remainder, uint64_t
 																			 counter, uint64_t *slots, uint64_t *fixed_size_counters)
 {
@@ -1386,6 +1227,7 @@ static inline uint64_t *encode_counter(onDiskMQF *qf, uint64_t remainder, uint64
 
 /* Returns the length of the encoding.
 REQUIRES: index points to first slot of a counter. */
+
 static inline uint64_t decode_counter(onDiskMQF *qf, uint64_t index, uint64_t
 																			*remainder, uint64_t *count)
 {
@@ -1424,16 +1266,16 @@ static inline uint64_t decode_counter(onDiskMQF *qf, uint64_t index, uint64_t
 /* return the next slot which corresponds to a
  * different element
  * */
-static inline uint64_t next_slot(onDiskMQF *qf, uint64_t current)
-{
-	uint64_t rem = get_slot(qf, current);
-	current++;
-
-	while (get_slot(qf, current) == rem && current <= qf->metadata->nslots) {
-		current++;
-	}
-	return current;
-}
+// static inline uint64_t next_slot(onDiskMQF *qf, uint64_t current)
+// {
+// 	uint64_t rem = get_slot(qf, current);
+// 	current++;
+//
+// 	while (get_slot(qf, current) == rem && current <= qf->metadata->nslots) {
+// 		current++;
+// 	}
+// 	return current;
+// }
 
 static inline bool insert1(onDiskMQF *qf, __uint128_t hash, bool lock, bool spin)
 {
@@ -1457,7 +1299,7 @@ static inline bool insert1(onDiskMQF *qf, __uint128_t hash, bool lock, bool spin
 			(hash_bucket_block_offset % 64);
 		// set_slot(qf, hash_bucket_index, hash_remainder);
 		// set_fixed_counter(qf, hash_bucket_index, 0);
-		super_set(qf,hash_bucket_index,hash_remainder,0);
+		super_get(qf,hash_bucket_index,hash_remainder,0);
 		METADATA_WORD(qf, occupieds, hash_bucket_index) |= 1ULL <<
 			(hash_bucket_block_offset % 64);
 
@@ -1625,9 +1467,9 @@ static inline bool insert1(onDiskMQF *qf, __uint128_t hash, bool lock, bool spin
 			uint64_t i;
 			for (i = hash_bucket_index / SLOTS_PER_BLOCK + 1; i <=
 					 empty_slot_index/SLOTS_PER_BLOCK; i++) {
-				if (get_block(qf, i)->offset < BITMASK(8*sizeof(qf->blocks[0].offset)))
-					get_block(qf, i)->offset++;
-				assert(get_block(qf, i)->offset != 0);
+				if (qf->get_block( i)->offset < BITMASK(8*sizeof(qf->get_block(0)->offset)))
+					qf->get_block( i)->offset++;
+				assert(qf->get_block( i)->offset != 0);
 			}
 			modify_metadata(qf, &qf->metadata->noccupied_slots, 1);
 		}
@@ -1644,7 +1486,7 @@ static inline bool insert1(onDiskMQF *qf, __uint128_t hash, bool lock, bool spin
 	return true;
 }
 
-static inline bool insert(onDiskMQF *qf, __uint128_t hash, uint64_t count, bool lock=false,
+static inline bool _insert(onDiskMQF *qf, __uint128_t hash, uint64_t count, bool lock=false,
 													bool spin=false)
 {
 	if(qf->metadata->maximum_count!=0){
@@ -1674,7 +1516,7 @@ static inline bool insert(onDiskMQF *qf, __uint128_t hash, uint64_t count, bool 
 			(hash_bucket_block_offset % 64);
 		//set_slot(qf, hash_bucket_index, hash_remainder);
 		//set_fixed_counter(qf, hash_bucket_index, 0);
-		super_set(qf,hash_bucket_index,hash_remainder,0);
+		super_get(qf,hash_bucket_index,hash_remainder,0);
 		METADATA_WORD(qf, occupieds, hash_bucket_index) |= 1ULL <<
 			(hash_bucket_block_offset % 64);
 
@@ -1683,7 +1525,7 @@ static inline bool insert(onDiskMQF *qf, __uint128_t hash, uint64_t count, bool 
 		/*modify_metadata(qf, &qf->metadata->nelts, 1);*/
 		/* This trick will, I hope, keep the fast case fast. */
 		if (count > 1) {
-			insert(qf, hash, count - 1, false, false);
+			_insert(qf, hash, count - 1, false, false);
 		}
 	} else { /* Non-empty slot */
 		uint64_t new_values[67];
@@ -1777,8 +1619,10 @@ static inline bool insert(onDiskMQF *qf, __uint128_t hash, uint64_t count, bool 
 	return true;
 }
 
- bool onDiskMQF_remove(onDiskMQF *qf, uint64_t hash, uint64_t count , bool lock, bool spin)
+template<uint64_t bitsPerSlot>
+bool _onDiskMQF<bitsPerSlot>::remove(uint64_t hash, uint64_t count , bool lock, bool spin)
 {
+	_onDiskMQF<bitsPerSlot>* qf=this;
 	uint64_t hash_remainder           = hash & BITMASK(qf->metadata->key_remainder_bits);
 	uint64_t hash_bucket_index        = hash >> qf->metadata->key_remainder_bits;
 	uint64_t current_remainder, current_count, current_end;
@@ -1854,8 +1698,209 @@ static inline bool insert(onDiskMQF *qf, __uint128_t hash, uint64_t count, bool 
 /***********************************************************************
  * Code that uses the above to implement key-value-counter operations. *
  ***********************************************************************/
+ void onDiskMQF::init( onDiskMQF * qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_counter_size ,const char * path){
+	 uint64_t qbits=(uint64_t)log2((double)nslots);
+	 uint64_t tmpslotsSize=key_bits-qbits+fixed_counter_size;
+	 switch (tmpslotsSize) {
+		 case 1:
+		 		qf=new  onDiskMQF_Namespace::_onDiskMQF<1>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+	 			break;
+		 case 2:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<2>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 3:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<3>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 4:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<4>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 5:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<5>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 6:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<6>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 7:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<7>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 8:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<8>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 9:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<9>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 10:
+			 qf=(onDiskMQF_Namespace::onDiskMQF*)new  onDiskMQF_Namespace::_onDiskMQF<10>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 11:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<11>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 12:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<12>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 13:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<13>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 14:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<14>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 15:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<15>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 16:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<16>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 17:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<17>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 18:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<18>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 19:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<19>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 20:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<20>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 21:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<21>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 22:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<22>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 23:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<23>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 24:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<24>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 25:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<25>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 26:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<26>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 27:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<27>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 28:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<28>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 29:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<29>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 30:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<30>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 31:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<31>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 32:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<32>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 33:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<33>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 34:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<34>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 35:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<35>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 36:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<36>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 37:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<37>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 38:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<38>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 39:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<39>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 40:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<40>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 41:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<41>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 42:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<42>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 43:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<43>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 44:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<44>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 45:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<45>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 46:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<46>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 47:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<47>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 48:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<48>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 49:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<49>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 50:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<50>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 51:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<51>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 52:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<52>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 53:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<53>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 54:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<54>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 55:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<55>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 56:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<56>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 57:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<57>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 58:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<58>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 59:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<59>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 60:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<60>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 61:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<61>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 62:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<62>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 63:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<63>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
+		 case 64:
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<64>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 break;
 
-void onDiskMQF_init(onDiskMQF *qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_counter_size ,const char * path)
+	 }
+	 qf->insert(100,1,false,false);
+ }
+
+template<uint64_t bitsPerSlot>
+_onDiskMQF<bitsPerSlot>::_onDiskMQF( uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_counter_size ,const char * path)
 {
 	//qf=(QF*)calloc(sizeof(QF),1);
 	uint64_t num_slots, xnslots, nblocks;
@@ -1881,47 +1926,47 @@ void onDiskMQF_init(onDiskMQF *qf, uint64_t nslots, uint64_t key_bits, uint64_t 
 	bits_per_slot = key_remainder_bits+fixed_counter_size+tag_bits ;
 
 	size = nblocks * (sizeof(qfblock) + (8 * bits_per_slot )) ;
-	qf->stxxlBufferSize= (uint64_t)((double)(size)*0.2/(1024.0*1024.0));
-	qf->stxxlBufferSize=max(qf->stxxlBufferSize,(uint64_t)16);
-	qf->mem = (qfmem *)calloc(sizeof(qfmem), 1);
-	qf->metadata = (qfmetadata *)calloc(sizeof(qfmetadata), 1);
-	qf->metadata->mem=false;
-	qf->metadata->size = size;
-	qf->metadata->seed = 2038074761;
-	qf->metadata->nslots = num_slots;
-	qf->metadata->xnslots = qf->metadata->nslots +
-		10*sqrt((double)qf->metadata->nslots);
-	qf->metadata->key_bits = key_bits;
-	qf->metadata->tag_bits = tag_bits;
-	qf->metadata->fixed_counter_size = fixed_counter_size;
-	qf->metadata->key_remainder_bits = key_remainder_bits;
-	qf->metadata->bits_per_slot = bits_per_slot;
+	stxxlBufferSize= (uint64_t)((double)(size)*0.2/(1024.0*1024.0));
+	stxxlBufferSize=max(stxxlBufferSize,(uint64_t)16);
+	mem = (qfmem *)calloc(sizeof(qfmem), 1);
+	metadata = (qfmetadata *)calloc(sizeof(qfmetadata), 1);
+	metadata->mem=false;
+	metadata->size = size;
+	metadata->seed = 2038074761;
+	metadata->nslots = num_slots;
+	metadata->xnslots = metadata->nslots +
+		10*sqrt((double)metadata->nslots);
+	metadata->key_bits = key_bits;
+	metadata->tag_bits = tag_bits;
+	metadata->fixed_counter_size = fixed_counter_size;
+	metadata->key_remainder_bits = key_remainder_bits;
+	metadata->bits_per_slot = bits_per_slot;
 
-	qf->metadata->range = qf->metadata->nslots;
-	qf->metadata->range <<= qf->metadata->key_remainder_bits;
-	qf->metadata->nblocks = (qf->metadata->xnslots + SLOTS_PER_BLOCK - 1) /
+	metadata->range = metadata->nslots;
+	metadata->range <<= metadata->key_remainder_bits;
+	metadata->nblocks = (metadata->xnslots + SLOTS_PER_BLOCK - 1) /
 		SLOTS_PER_BLOCK;
-	qf->metadata->nelts = 0;
-	qf->metadata->ndistinct_elts = 0;
-	qf->metadata->noccupied_slots = 0;
-	qf->metadata->maximum_occupied_slots=(uint64_t)((double)qf->metadata->xnslots *0.95);
-	qf->metadata->num_locks = (qf->metadata->xnslots/NUM_SLOTS_TO_LOCK)+2;
-	qf->metadata->maximum_count = 0;
-	qf->metadata->tags_map=NULL;
+	metadata->nelts = 0;
+	metadata->ndistinct_elts = 0;
+	metadata->noccupied_slots = 0;
+	metadata->maximum_occupied_slots=(uint64_t)((double)metadata->xnslots *0.95);
+	metadata->num_locks = (metadata->xnslots/NUM_SLOTS_TO_LOCK)+2;
+	metadata->maximum_count = 0;
+	metadata->tags_map=NULL;
 
 
 
 
 	/* initialize all the locks to 0 */
-	qf->mem->metadata_lock = 0;
-	qf->mem->general_lock = 0;
-	qf->mem->locks = (volatile int *)calloc(qf->metadata->num_locks,
+	mem->metadata_lock = 0;
+	mem->general_lock = 0;
+	mem->locks = (volatile int *)calloc(metadata->num_locks,
 																					sizeof(volatile int));
 
 
-	qf->blocks=stxxl::vector<onDisk_qfblock<> >(qf->metadata->nblocks,qf->stxxlBufferSize/16);
-	for(int i=0;i<qf->metadata->nblocks;i++)
-		qf->blocks[i]=onDisk_qfblock<>();
+	blocks=stxxl::vector<onDisk_qfblock<bitsPerSlot> >(metadata->nblocks,stxxlBufferSize/16);
+	for(int i=0;i<metadata->nblocks;i++)
+		blocks[i]=onDisk_qfblock<bitsPerSlot>();
   //
 	// qf->diskParams=new diskParameters();
 	// diskParameters* diskParams=qf->diskParams;
@@ -1976,17 +2021,19 @@ void onDiskMQF_init(onDiskMQF *qf, uint64_t nslots, uint64_t key_bits, uint64_t 
 
 /* The caller should call onDiskMQF_init on the dest QF before calling this function.
  */
-void onDiskMQF_copy(onDiskMQF *dest, onDiskMQF *src)
+template<uint64_t bitsPerSlot>
+void _onDiskMQF<bitsPerSlot>::copy(onDiskMQF *dest)
 {
+	// _onDiskMQF<bitsPerSlot>* qf=this;
 	throw std::logic_error("not implemented yet");
-	memcpy(dest->mem, src->mem, sizeof(qfmem));
-	memcpy(dest->metadata, src->metadata, sizeof(qfmetadata));
-	//memcpy(dest->blocks, src->blocks, src->metadata->size);
-
-	if(src->metadata->tags_map!=NULL){
-		dest->metadata->tags_map=
-		new std::map<uint64_t, std::vector<int> >(*src->metadata->tags_map);
-	}
+	// memcpy(dest->mem, src->mem, sizeof(qfmem));
+	// memcpy(dest->metadata, src->metadata, sizeof(qfmetadata));
+	// //memcpy(dest->blocks, src->blocks, src->metadata->size);
+  //
+	// if(src->metadata->tags_map!=NULL){
+	// 	dest->metadata->tags_map=
+	// 	new std::map<uint64_t, std::vector<int> >(*src->metadata->tags_map);
+	// }
 }
 
 /* free up the memory if the QF is in memory.
@@ -1994,9 +2041,10 @@ void onDiskMQF_copy(onDiskMQF *dest, onDiskMQF *src)
  *
  * It does not delete the file on disk for on-disk QF.
  */
-void onDiskMQF_destroy(onDiskMQF *qf)
+template<uint64_t bitsPerSlot>
+_onDiskMQF<bitsPerSlot>::~_onDiskMQF()
 {
-
+	_onDiskMQF<bitsPerSlot>* qf=this;
 	//assert(qf->blocks != NULL);
 
 	qf->metadata->noccupied_slots=0;
@@ -2012,26 +2060,30 @@ void onDiskMQF_destroy(onDiskMQF *qf)
 	} else {
 	//msync(qf->metadata, qf->metadata->size + sizeof(qfmetadata),MS_SYNC);
 //	munmap(qf->metadata, qf->metadata->size + sizeof(qfmetadata));
-	close(qf->mem->fd);
+	//close(qf->mem->fd);
 	}
 
 }
 
-void onDiskMQF_close(onDiskMQF *qf)
-{
-	//assert(qf->blocks != NULL);
-	munmap(qf->metadata, qf->metadata->size + sizeof(qfmetadata));
-	close(qf->mem->fd);
-}
+// template<uint64_t bitsPerSlot>
+// void _onDiskMQF<bitsPerSlot>::close()
+// {
+// 	_onDiskMQF<bitsPerSlot>* qf=this;
+// 	//assert(qf->blocks != NULL);
+// 	munmap(qf->metadata, qf->metadata->size + sizeof(qfmetadata));
+// 	close(qf->mem->fd);
+// }
 
 /*
  * Will read the on-disk QF using mmap.
  * Data won't be copied in memory.
  *
  */
- void onDiskMQF_read(onDiskMQF *qf, const char *path)
+ template<uint64_t bitsPerSlot>
+ void _onDiskMQF<bitsPerSlot>::read( const char *path)
  {
 	 throw std::logic_error("not implemented yet");
+	 _onDiskMQF<bitsPerSlot>* qf=this;
 	 struct stat sb;
 	 int ret;
 
@@ -2069,29 +2121,28 @@ void onDiskMQF_close(onDiskMQF *qf)
 
 }
 
-void onDiskMQF_reset(onDiskMQF *qf)
+template<uint64_t bitsPerSlot>
+void _onDiskMQF<bitsPerSlot>::reset()
 {
 	//assert(popcnt(nslots) == 1); /* nslots must be a power of 2 */
+	_onDiskMQF<bitsPerSlot> *qf=this;
 	throw std::logic_error("not implemented yet");
 	qf->metadata->nelts = 0;
 	qf->metadata->ndistinct_elts = 0;
 	qf->metadata->noccupied_slots = 0;
 	if(qf->metadata->tags_map!=NULL)
 		qf->metadata->tags_map->clear();
-#ifdef LOG_WAIT_TIME
-	memset(qf->wait_times, 0, (qf->metadata->num_locks+1)*sizeof(wait_time_data));
-#endif
-#if BITS_PER_SLOT == 8 || BITS_PER_SLOT == 16 || BITS_PER_SLOT == 32 || BITS_PER_SLOT == 64
-	memset(qf->blocks, 0, qf->metadata->nblocks* sizeof(qfblock));
-#else
+
 	//memset(qf->blocks, 0, qf->metadata->nblocks*(sizeof(qfblock) + SLOTS_PER_BLOCK *
 	//																	 qf->metadata->bits_per_slot / 8));
-#endif
+
 }
 
-void onDiskMQF_serialize(onDiskMQF *qf, const char *filename)
+template<uint64_t bitsPerSlot>
+void _onDiskMQF<bitsPerSlot>::serialize(const char *filename)
 {
 	throw std::logic_error("not implemented yet");
+	_onDiskMQF<bitsPerSlot>* qf=this;
 	FILE *fout;
 	fout = fopen(filename, "wb+");
 	if (fout == NULL) {
@@ -2111,10 +2162,11 @@ void onDiskMQF_serialize(onDiskMQF *qf, const char *filename)
 }
 
 
-
-void onDiskMQF_deserialize(onDiskMQF *qf, const char *filename)
+template<uint64_t bitsPerSlot>
+void _onDiskMQF<bitsPerSlot>::deserialize(const char *filename)
 {
 	throw std::logic_error("not implemented yet");
+	_onDiskMQF<bitsPerSlot>* qf=this;
 	FILE *fin;
 	fin = fopen(filename, "rb");
 	if (fin == NULL) {
@@ -2144,8 +2196,10 @@ void onDiskMQF_deserialize(onDiskMQF *qf, const char *filename)
 
 
 }
-uint64_t onDiskMQF_add_tag(onDiskMQF *qf, uint64_t key, uint64_t tag, bool lock, bool spin)
+template<uint64_t bitsPerSlot>
+uint64_t _onDiskMQF<bitsPerSlot>::add_tag(uint64_t key, uint64_t tag, bool lock, bool spin)
 {
+	_onDiskMQF<bitsPerSlot>* qf=this;
 	if(qf->metadata->tag_bits==0){
 		return 0;
 	}
@@ -2194,9 +2248,10 @@ uint64_t onDiskMQF_add_tag(onDiskMQF *qf, uint64_t key, uint64_t tag, bool lock,
 	return 0;
 }
 
-uint64_t onDiskMQF_remove_tag(onDiskMQF *qf, uint64_t key ,bool lock, bool spin)
+template<uint64_t bitsPerSlot>
+uint64_t _onDiskMQF<bitsPerSlot>::remove_tag(uint64_t key ,bool lock, bool spin)
 {
-
+_onDiskMQF<bitsPerSlot>* qf=this;
 	if(qf->metadata->tag_bits==0){
 		return 0;
 	}
@@ -2241,9 +2296,10 @@ uint64_t onDiskMQF_remove_tag(onDiskMQF *qf, uint64_t key ,bool lock, bool spin)
 
 	return 0;
 }
-
-uint64_t onDiskMQF_get_tag(onDiskMQF *qf, uint64_t key)
+template<uint64_t bitsPerSlot>
+uint64_t _onDiskMQF<bitsPerSlot>::get_tag(uint64_t key)
 {
+	_onDiskMQF<bitsPerSlot>* qf=this;
 	if(qf->metadata->tag_bits==0){
 		return 0;
 	}
@@ -2269,7 +2325,7 @@ uint64_t onDiskMQF_get_tag(onDiskMQF *qf, uint64_t key)
 		current_end = decode_counter(qf, runstart_index, &current_remainder,
 																 &current_count);
 		if (current_remainder == hash_remainder){
-			return get_tag(qf,runstart_index);
+			return _get_tag(qf,runstart_index);
 		}
 		runstart_index = current_end + 1;
 	} while (!is_runend(qf, current_end));
@@ -2277,10 +2333,11 @@ uint64_t onDiskMQF_get_tag(onDiskMQF *qf, uint64_t key)
 	return 0;
 }
 
-
-bool onDiskMQF_insert(onDiskMQF *qf, uint64_t key, uint64_t count, bool
+template<uint64_t bitsPerSlot>
+bool _onDiskMQF<bitsPerSlot>::insert(uint64_t key, uint64_t count, bool
 							 lock, bool spin)
 {
+	_onDiskMQF<bitsPerSlot>* qf=this;
 	if(count==0)
 	{
 		return true;
@@ -2289,11 +2346,13 @@ bool onDiskMQF_insert(onDiskMQF *qf, uint64_t key, uint64_t count, bool
 	if (count == 1)
 	 return insert1(qf, key, lock, spin);
 	else
-	 return insert(qf, key, count, lock, spin);
+	 return _insert(qf, key, count, lock, spin);
 }
 
-uint64_t onDiskMQF_count_key(onDiskMQF *qf, uint64_t key)
+template<uint64_t bitsPerSlot>
+uint64_t _onDiskMQF<bitsPerSlot>::count_key(uint64_t key)
 {
+	_onDiskMQF<bitsPerSlot>* qf=this;
 	__uint128_t hash = key;
 	uint64_t hash_remainder   = hash & BITMASK(qf->metadata->key_remainder_bits);
 	int64_t hash_bucket_index = hash >> qf->metadata->key_remainder_bits;
@@ -2328,18 +2387,20 @@ uint64_t onDiskMQF_count_key(onDiskMQF *qf, uint64_t key)
 /* initialize the iterator at the run corresponding
  * to the position index
  */
-bool onDiskMQF_iterator(onDiskMQF *qf, onDiskMQFIterator *qfi, uint64_t position)
+template<uint64_t bitsPerSlot>
+bool _onDiskMQF<bitsPerSlot>::getIterator(onDiskMQFIterator<bitsPerSlot> *qfi, uint64_t position)
 {
+	_onDiskMQF<bitsPerSlot>* qf=this;
 	if(position > qf->metadata->xnslots){
 		throw std::out_of_range("onDiskMQF_iterator is called with position out of range");
 	}
 	if (!is_occupied(qf, position)) {
 		uint64_t block_index = position;
-		uint64_t idx = bitselect(get_block(qf, block_index)->occupieds[0], 0);
+		uint64_t idx = bitselect(qf->get_block( block_index)->occupieds[0], 0);
 		if (idx == 64) {
 			while(idx == 64 && block_index < qf->metadata->nblocks) {
 				block_index++;
-				idx = bitselect(get_block(qf, block_index)->occupieds[0], 0);
+				idx = bitselect(qf->get_block( block_index)->occupieds[0], 0);
 			}
 		}
 		position = block_index * SLOTS_PER_BLOCK + idx;
@@ -2352,27 +2413,24 @@ bool onDiskMQF_iterator(onDiskMQF *qf, onDiskMQFIterator *qfi, uint64_t position
 	if (qfi->current < position)
 		qfi->current = position;
 
-#ifdef LOG_CLUSTER_LENGTH
-	qfi->c_info = (cluster_data* )calloc(qf->metadata->nslots/32, sizeof(cluster_data));
-	qfi->cur_start_index = position;
-	qfi->cur_length = 1;
-#endif
+
 
 	if (qfi->current >= qf->metadata->nslots)
 		return false;
 	return true;
 }
 
-int onDiskMQFIterator_get(onDiskMQFIterator *qfi, uint64_t *key, uint64_t *value, uint64_t *count)
+template<uint64_t bitsPerSlot>
+int onDiskMQFIterator<bitsPerSlot>::get(uint64_t *key, uint64_t *value, uint64_t *count)
 {
-
+	onDiskMQFIterator<bitsPerSlot> *qfi=this;
 	if(qfi->current > qfi->qf->metadata->xnslots){
 		throw std::out_of_range("onDiskMQFIterator_get is called with hash index out of range");
 	}
 	uint64_t current_remainder, current_count;
 	decode_counter(qfi->qf, qfi->current, &current_remainder, &current_count);
 	*key = (qfi->run << qfi->qf->metadata->key_remainder_bits) | current_remainder;
-	*value = get_tag(qfi->qf,qfi->current);   // for now we are not using value
+	*value = _get_tag(qfi->qf,qfi->current);   // for now we are not using value
 	*count = current_count;
 
 	qfi->qf->metadata->ndistinct_elts++;
@@ -2382,9 +2440,10 @@ int onDiskMQFIterator_get(onDiskMQFIterator *qfi, uint64_t *key, uint64_t *value
 																		//of the iterator
 	return 0;
 }
-
-int onDiskMQFIterator_next(onDiskMQFIterator *qfi)
+template<uint64_t bitsPerSlot>
+int onDiskMQFIterator<bitsPerSlot>::next()
 {
+	onDiskMQFIterator<bitsPerSlot> *qfi=this;
 	if (onDiskMQFIterator_end(qfi))
 		return 1;
 	else {
@@ -2395,29 +2454,23 @@ int onDiskMQFIterator_next(onDiskMQFIterator *qfi)
 
 		if (!is_runend(qfi->qf, qfi->current)) {
 			qfi->current++;
-#ifdef LOG_CLUSTER_LENGTH
-			qfi->cur_length++;
-#endif
+
 			if (qfi->current > qfi->qf->metadata->xnslots)
 				return 1;
 			return 0;
 		}
 		else {
-#ifdef LOG_CLUSTER_LENGTH
-			/* save to check if the new current is the new cluster. */
-			uint64_t old_current = qfi->current;
-#endif
+
 			uint64_t block_index = qfi->run / SLOTS_PER_BLOCK;
-			uint64_t rank = bitrank(get_block(qfi->qf, block_index)->occupieds[0],
+			uint64_t rank = bitrank(qfi->qf->get_block(block_index)->occupieds[0],
 															qfi->run % SLOTS_PER_BLOCK);
-			uint64_t next_run = bitselect(get_block(qfi->qf,
-																							block_index)->occupieds[0],
+			uint64_t next_run = bitselect(qfi->qf->get_block(block_index)->occupieds[0],
 																		rank);
 			if (next_run == 64) {
 				rank = 0;
 				while (next_run == 64 && block_index < qfi->qf->metadata->nblocks) {
 					block_index++;
-					next_run = bitselect(get_block(qfi->qf, block_index)->occupieds[0],
+					next_run = bitselect(qfi->qf->get_block(block_index)->occupieds[0],
 															 rank);
 				}
 			}
@@ -2430,26 +2483,16 @@ int onDiskMQFIterator_next(onDiskMQFIterator *qfi)
 			qfi->current++;
 			if (qfi->current < qfi->run)
 				qfi->current = qfi->run;
-#ifdef LOG_CLUSTER_LENGTH
-			if (qfi->current > old_current + 1) { /* new cluster. */
-				if (qfi->cur_length > 10) {
-					qfi->c_info[qfi->num_clusters].start_index = qfi->cur_start_index;
-					qfi->c_info[qfi->num_clusters].length = qfi->cur_length;
-					qfi->num_clusters++;
-				}
-				qfi->cur_start_index = qfi->run;
-				qfi->cur_length = 1;
-			} else {
-				qfi->cur_length++;
-			}
-#endif
+
 			return 0;
 		}
 	}
 }
 
-inline int onDiskMQFIterator_end(onDiskMQFIterator *qfi)
+template<uint64_t bitsPerSlot>
+inline int onDiskMQFIterator<bitsPerSlot>::end()
 {
+	onDiskMQFIterator<bitsPerSlot> *qfi=this;
 	if (qfi->current >= qfi->qf->metadata->xnslots /*&& is_runend(qfi->qf, qfi->current)*/)
 		return 1;
 	else
@@ -2522,497 +2565,469 @@ void subtractFn(uint64_t  key_a, uint64_t  tag_a,uint64_t  count_a,
  * insert(min, ic)
  * increment either ia or ib, whichever is minimum.
  */
-void _onDiskMQF_merge(onDiskMQF *qfa, onDiskMQF *qfb, onDiskMQF *qfc,
-	void(*mergeFn)(uint64_t   keya, uint64_t  tag_a,uint64_t  count_a,
-						  	 uint64_t   keyb, uint64_t  tag_b,uint64_t  count_b,
-							   uint64_t*  keyc, uint64_t* tag_c,uint64_t* count_c
-							 ))
-{
-	onDiskMQFIterator qfia, qfib;
-	if(qfa->metadata->range != qfb->metadata->range ||
-	qfb->metadata->range != qfc->metadata->range )
-	{
-		throw std::logic_error("Merging non compatible filters");
-	}
-	onDiskMQF_iterator(qfa, &qfia, 0);
-	onDiskMQF_iterator(qfb, &qfib, 0);
-
-	uint64_t keya, taga, counta, keyb, tagb, countb;
-	uint64_t keyc,tagc, countc;
-	onDiskMQFIterator_get(&qfia, &keya, &taga, &counta);
-	onDiskMQFIterator_get(&qfib, &keyb, &tagb, &countb);
-
-	do {
-		if (keya < keyb) {
-			mergeFn(keya,taga,counta,0,0,0,&keyc,&tagc,&countc);
-			onDiskMQFIterator_next(&qfia);
-			onDiskMQFIterator_get(&qfia, &keya, &taga, &counta);
-		}
-		else if(keya > keyb) {
-			mergeFn(0,0,0,keyb,tagb,countb,&keyc,&tagc,&countc);
-			onDiskMQFIterator_next(&qfib);
-			onDiskMQFIterator_get(&qfib, &keyb, &tagb, &countb);
-		}
-		else{
-			mergeFn(keya,taga,counta,keyb,tagb,countb,&keyc,&tagc,&countc);
-			onDiskMQFIterator_next(&qfia);
-			onDiskMQFIterator_next(&qfib);
-			onDiskMQFIterator_get(&qfia, &keya, &taga, &counta);
-			onDiskMQFIterator_get(&qfib, &keyb, &tagb, &countb);
-		}
-		if(countc!=0){
-			onDiskMQF_insert(qfc, keyc, countc, true, true);
-			onDiskMQF_add_tag(qfc,keya,tagc);
-		}
-
-	} while(!onDiskMQFIterator_end(&qfia) && !onDiskMQFIterator_end(&qfib));
-
-	if (!onDiskMQFIterator_end(&qfia)) {
-
-		do {
-			onDiskMQFIterator_get(&qfia, &keya, &taga, &counta);
-			mergeFn(keya,taga,counta,0,0,0,&keyc,&tagc,&countc);
-			if(countc!=0){
-				onDiskMQF_insert(qfc, keyc, countc, true, true);
-				onDiskMQF_add_tag(qfc,keyc,tagc);
-			}
-		} while(!onDiskMQFIterator_next(&qfia));
-	}
-
-	if (!onDiskMQFIterator_end(&qfib)) {
-		do {
-			onDiskMQFIterator_get(&qfib, &keyb, &tagb, &countb);
-			mergeFn(0,0,0,keyb,tagb,countb,&keyc,&tagc,&countc);
-			if(countc!=0){
-				onDiskMQF_insert(qfc, keyc, countc, true, true);
-				onDiskMQF_add_tag(qfc,keyc,tagc);
-			}
-		} while(!onDiskMQFIterator_next(&qfib));
-	}
-
-	return;
-}
-void onDiskMQF_merge(onDiskMQF *qfa, onDiskMQF *qfb, onDiskMQF *qfc)
-{
-	_onDiskMQF_merge(qfa,qfb,qfc,unionFn);
-}
-
-void onDiskMQF_intersect(onDiskMQF *qfa, onDiskMQF *qfb, onDiskMQF *qfc)
-{
-	_onDiskMQF_merge(qfa,qfb,qfc,intersectFn);
-}
-void onDiskMQF_subtract(onDiskMQF *qfa, onDiskMQF *qfb, onDiskMQF *qfc)
-{
-	_onDiskMQF_merge(qfa,qfb,qfc,subtractFn);
-}
-
-bool onDiskMQF_equals(onDiskMQF *qfa, onDiskMQF *qfb)
-{
-	onDiskMQFIterator qfia, qfib;
-	if(qfa->metadata->range != qfb->metadata->range  )
-	{
-		throw std::logic_error("comparing non compatible filters");
-	}
-	onDiskMQF_iterator(qfa, &qfia, 0);
-	onDiskMQF_iterator(qfb, &qfib, 0);
-
-	uint64_t keya, valuea, counta, keyb, valueb, countb;
-	onDiskMQFIterator_get(&qfia, &keya, &valuea, &counta);
-	onDiskMQFIterator_get(&qfib, &keyb, &valueb, &countb);
-	do {
-		if (keya != keyb) {
-			return false;
-		}
-		else {
-			if(counta!=countb || valuea != valueb)
-			{
-				return false;
-			}
-			onDiskMQFIterator_next(&qfib);
-			onDiskMQFIterator_next(&qfia);
-			onDiskMQFIterator_get(&qfia, &keya, &valuea, &counta);
-			onDiskMQFIterator_get(&qfib, &keyb, &valueb, &countb);
-		}
-	} while(!onDiskMQFIterator_end(&qfia) && !onDiskMQFIterator_end(&qfib));
-
-	if (!onDiskMQFIterator_end(&qfia) || !onDiskMQFIterator_end(&qfib)) {
-		return false;
-	}
-
-	return true;
-}
-
-
-
-std::map<std::string, uint64_t> Tags_map;
-uint64_t last_index=0;
-void union_multi_Fn(uint64_t   key_arr[], uint64_t  tag_arr[],uint64_t  count_arr[]
-	,std::map<uint64_t, std::vector<int> > ** inverted_indexes,int nqf,
-							 uint64_t*  key_c, uint64_t* tag_c,uint64_t* count_c)
-{
-
-	*count_c=0;
-	for(int i=0;i<nqf;i++)
-	{
-		//printf("key =%lu, count=%lu\n", key_arr[i],count_arr[i]);
-		if(count_arr[i]!=0)
-		{
-			*key_c=key_arr[i];
-			*tag_c=tag_arr[i];
-			*count_c+=count_arr[i];
-		}
-	}
-
-}
-
-void _onDiskMQF_multi_merge(onDiskMQF *onDiskMQF_arr[],int nqf, onDiskMQF *qfr,
-	void(*mergeFn)(uint64_t   key_arr[], uint64_t  tag_arr[],uint64_t  count_arr[],
-								std::map<uint64_t, std::vector<int> > ** inverted_indexes,int nqf,
-							   uint64_t*  keyc, uint64_t* tag_c,uint64_t* count_c
-							 ))
-{
-	int i;
-	uint64_t range=onDiskMQF_arr[0]->metadata->range;
-	for (i=1; i<nqf; i++) {
-		if(onDiskMQF_arr[i]->metadata->range!=range)
-		{
-			throw std::logic_error("Merging non compatible filters");
-		}
-	}
-
-	onDiskMQFIterator *onDiskMQFIterator_arr[nqf];
-
-	uint64_t smallest_key=UINT64_MAX,second_smallest_key;
-	uint64_t keys[nqf];
-	uint64_t tags[nqf];
-	uint64_t counts[nqf];
-	std::map<uint64_t, std::vector<int> > ** inverted_indexes=new std::map<uint64_t, std::vector<int> >*[nqf];
-
-	for (i=0; i<nqf; i++) {
-		onDiskMQFIterator_arr[i]=new onDiskMQFIterator();
-		onDiskMQF_iterator(onDiskMQF_arr[i], onDiskMQFIterator_arr[i], 0);
-		onDiskMQFIterator_get(onDiskMQFIterator_arr[i], &keys[i], &tags[i], &counts[i]);
-		smallest_key=std::min(keys[i],smallest_key);
-		inverted_indexes[i]=onDiskMQF_arr[i]->metadata->tags_map;
-	}
-
-	uint64_t keys_m[nqf];
-	uint64_t tags_m[nqf];
-	uint64_t counts_m[nqf];
-
-
-	bool finish=false;
-	while(!finish)
-	{
-		finish=true;
-		second_smallest_key=UINT64_MAX;
-		//printf("smallest_key = %llu\n",smallest_key );
-		for(i=0;i<nqf;i++)
-		{
-			keys_m[i]=0;
-			counts_m[i]=0;
-			tags_m[i]=0;
-
-			//printf(" key = %llu\n",keys[i]);
-			if(keys[i]==smallest_key){
-				keys_m[i]=keys[i];
-				counts_m[i]=counts[i];
-				tags_m[i]=tags[i];
-				onDiskMQFIterator_next(onDiskMQFIterator_arr[i]);
-				if(!onDiskMQFIterator_end(onDiskMQFIterator_arr[i]))
-				{
-					finish=false;
-					onDiskMQFIterator_get(onDiskMQFIterator_arr[i], &keys[i], &tags[i], &counts[i]);
-				}else{
-					keys[i]=UINT64_MAX;
-				}
-			}
-			second_smallest_key=std::min(second_smallest_key,keys[i]);
-		}
-		for (i = 0; i < nqf; i++) {
-			if(keys[i]!=UINT64_MAX)
-			{
-				finish=false;
-				break;
-			}
-		}
-		//printf("second_smallest_key=%llu finish=%d\n",second_smallest_key,finish);
-		uint64_t keyc,tagc, countc;
-		mergeFn(keys_m,tags_m,counts_m,inverted_indexes,nqf,&keyc,&tagc,&countc);
-
-		if(countc!=0){
-			onDiskMQF_insert(qfr, keyc, countc, true, true);
-			onDiskMQF_add_tag(qfr,keyc,tagc);
-		}
-		smallest_key=second_smallest_key;
-	}
-	// cout<<"before delete"<<endl;
-	delete  inverted_indexes;
-	for(i=0;i<nqf;i++)
-	{
-		delete onDiskMQFIterator_arr[i];
-	}
-
-	return;
-}
-
-/*
- * Merge an array of qfs into the resultant QF
- */
-void onDiskMQF_multi_merge(onDiskMQF *onDiskMQF_arr[], int nqf, onDiskMQF *qfr)
-{
-	_onDiskMQF_multi_merge(onDiskMQF_arr,nqf,qfr,union_multi_Fn);
-
-}
-
-void inverted_union_multi_Fn(uint64_t   key_arr[], uint64_t  tag_arr[],uint64_t  count_arr[],
-	std::map<uint64_t, std::vector<int> > ** inverted_indexes ,int nqf,
-							 uint64_t*  key_c, uint64_t* tag_c,uint64_t* count_c)
-{
-
-	std::string index_key="";
-	*count_c=0;
-	for(int i=0;i<nqf;i++)
-	{
-		if(count_arr[i]!=0)
-		{
-			*key_c=key_arr[i];
-			*count_c+=count_arr[i];
-			if(inverted_indexes==NULL){
-				index_key+=std::to_string(i);
-				index_key+=';';
-			}
-			else{
-				auto it=inverted_indexes[i]->find(tag_arr[i]);
-				for(auto k:it->second){
-					index_key+=std::to_string(k);
-					index_key+=';';
-				}
-			}
-
-		}
-	}
-	index_key.pop_back();
-	auto it=Tags_map.find(index_key);
-	if(it==Tags_map.end())
-	{
-
-		Tags_map.insert(std::make_pair(index_key,Tags_map.size()));
-		it=Tags_map.find(index_key);
-	}
-	*tag_c=it->second;
-
-}
-
-void inverted_union_multi_no_count_Fn(uint64_t   key_arr[], uint64_t  tag_arr[],uint64_t  count_arr[],
-									std::map<uint64_t, std::vector<int> > ** inverted_indexes, int nqf,
-							 uint64_t*  key_c, uint64_t* tag_c,uint64_t* count_c)
-{
-	std::string index_key="";
-	*count_c=0;
-	for(int i=0;i<nqf;i++)
-	{
-		//printf("key =%lu, count=%lu\n", key_arr[i],count_arr[i]);
-		if(count_arr[i]!=0)
-		{
-			*key_c=key_arr[i];
-			if(inverted_indexes==NULL){
-				index_key+=std::to_string(i);
-				index_key+=';';
-			}
-			else{
-				auto it=inverted_indexes[i]->find(tag_arr[i]);
-				for(auto k:it->second){
-					index_key+=std::to_string(k);
-					index_key+=';';
-				}
-			}
-
-		}
-	}
-	index_key.pop_back();
-	auto it=Tags_map.find(index_key);
-	if(it==Tags_map.end())
-	{
-
-		Tags_map.insert(std::make_pair(index_key,last_index));
-		last_index++;
-		it=Tags_map.find(index_key);
-	}
-	*count_c=it->second;
-
-}
-
-
-void onDiskMQF_invertable_merge(onDiskMQF *onDiskMQF_arr[], int nqf, onDiskMQF *qfr)
-{
-	int i;
-	int last_tag=0;
-	Tags_map.clear();
-	last_index=0;
-	for(i=0;i<nqf;i++){
-		if(onDiskMQF_arr[i]->metadata->tags_map==NULL){
-			onDiskMQF_arr[i]->metadata->tags_map=new std::map<uint64_t, std::vector<int> >();
-			vector<int> tmp(1);
-			tmp[0]=last_index;
-			Tags_map.insert(std::make_pair(std::to_string(i),last_index++));
-			onDiskMQF_arr[i]->metadata->tags_map->insert(make_pair(0,tmp));
-		}
-		else{
-			auto it=onDiskMQF_arr[i]->metadata->tags_map->begin();
-			int updated_tags=0;
-			while(it!=onDiskMQF_arr[i]->metadata->tags_map->end()){
-				for(int j=0;j<it->second.size();j++){
-					it->second[j]+=last_tag;
-					auto it2=Tags_map.find(std::to_string(it->second[j]));
-					if(it2==Tags_map.end()){
-						Tags_map.insert(std::make_pair(std::to_string(it->second[j]),it->second[j]));
-						updated_tags++;
-					}
-				}
-				it++;
-			}
-		}
-		last_tag+=Tags_map.size();
-	}
-
-
-
-	_onDiskMQF_multi_merge(onDiskMQF_arr,nqf,qfr,inverted_union_multi_Fn);
-	qfr->metadata->tags_map=new std::map<uint64_t, std::vector<int> >();
-	auto it=Tags_map.begin();
-	while(it!=Tags_map.end()){
-		std::vector<int> tmp=key_to_vector_int(it->first);
-		qfr->metadata->tags_map->insert(std::make_pair(it->second,tmp));
-		it++;
-
-	}
-
-
-}
-
-void onDiskMQF_invertable_merge_no_count(onDiskMQF *onDiskMQF_arr[], int nqf, onDiskMQF *qfr)
-{
-
-	int i;
-	int last_tag=0;
-	Tags_map.clear();
-	last_index=0;
-	for(i=0;i<nqf;i++){
-		if(onDiskMQF_arr[i]->metadata->tags_map==NULL){
-			onDiskMQF_arr[i]->metadata->tags_map=new std::map<uint64_t, std::vector<int> >();
-			vector<int> tmp(1);
-			tmp[0]=last_index;
-			Tags_map.insert(std::make_pair(std::to_string(i),last_index++));
-			onDiskMQF_arr[i]->metadata->tags_map->insert(make_pair(0,tmp));
-		}
-		else{
-			auto it=onDiskMQF_arr[i]->metadata->tags_map->begin();
-			int updated_tags=0;
-			while(it!=onDiskMQF_arr[i]->metadata->tags_map->end()){
-				for(int j=0;j<it->second.size();j++){
-					it->second[j]+=last_tag;
-					auto it2=Tags_map.find(std::to_string(it->second[j]));
-					if(it2==Tags_map.end()){
-						Tags_map.insert(std::make_pair(std::to_string(it->second[j]),it->second[j]));
-						updated_tags++;
-					}
-				}
-				it++;
-			}
-		}
-		last_tag+=Tags_map.size();
-	}
-
-
-	_onDiskMQF_multi_merge(onDiskMQF_arr,nqf,qfr,inverted_union_multi_no_count_Fn);
-
-	qfr->metadata->tags_map=new std::map<uint64_t, std::vector<int> >();
-	auto it=Tags_map.begin();
-	while(it!=Tags_map.end()){
-		std::vector<int> tmp=key_to_vector_int(it->first);
-		qfr->metadata->tags_map->insert(std::make_pair(it->second,tmp));
-		it++;
-	}
-
-
-}
-
-onDiskMQF* onDiskMQF_resize(onDiskMQF* qf, int newQ, const char * originalFilename, const char * newFilename)
-{
-	throw std::logic_error("not implemented yet");
-	if((int)qf->metadata->key_bits-newQ <2)
-	{
-		throw std::logic_error("Resize cannot be done. Slot size cannot be less than 2");
-	}
-
-	if(originalFilename)
-	{
-		onDiskMQF_serialize(qf,originalFilename);
-		onDiskMQF_destroy(qf);
-		onDiskMQF_read(qf,originalFilename);
-	}
-	onDiskMQF* newQF=(onDiskMQF *)calloc(sizeof(QF), 1);
-	if(newFilename)
-	{
-		//onDiskMQF_init(newQF, (1ULL<<newQ),qf->metadata->key_bits, qf->metadata->tag_bits,qf->metadata->fixed_counter_size, false, newFilename, 2038074761);
-	}
-	else{
-		//onDiskMQF_init(newQF, (1ULL<<newQ),qf->metadata->key_bits, qf->metadata->tag_bits,qf->metadata->fixed_counter_size, true, "" , 2038074761);
-	}
-	onDiskMQFIterator qfi;
-	onDiskMQF_iterator(qf, &qfi, 0);
-
-
-	uint64_t keya, valuea, counta;
-	onDiskMQFIterator_get(&qfi, &keya, &valuea, &counta);
-
-	do {
-			onDiskMQF_insert(newQF, keya, counta);
-			onDiskMQF_add_tag(newQF,keya,valuea);
-			onDiskMQFIterator_next(&qfi);
-			onDiskMQFIterator_get(&qfi, &keya, &valuea, &counta);
-	} while(!onDiskMQFIterator_end(&qfi));
-	onDiskMQF_destroy(qf);
-	return newQF;
-
-
-}
-
-/* find cosine similarity between two QFs. */
-uint64_t onDiskMQF_inner_product(onDiskMQF *qfa, onDiskMQF *qfb)
-{
-	uint64_t acc = 0;
-	onDiskMQFIterator qfi;
-	onDiskMQF *onDiskMQF_mem, *onDiskMQF_disk;
-
-	// create the iterator on the larger QF.
-	if (qfa->metadata->size > qfb->metadata->size) {
-		onDiskMQF_mem = qfb;
-		onDiskMQF_disk = qfa;
-	} else {
-		onDiskMQF_mem = qfa;
-		onDiskMQF_disk = qfb;
-	}
-
-	onDiskMQF_iterator(onDiskMQF_disk, &qfi, 0);
-	do {
-		uint64_t key = 0, value = 0, count = 0;
-		uint64_t count_mem;
-		onDiskMQFIterator_get(&qfi, &key, &value, &count);
-		if ((count_mem = onDiskMQF_count_key(onDiskMQF_mem, key)) > 0) {
-			acc += count*count_mem;
-		}
-	} while (!onDiskMQFIterator_next(&qfi));
-
-	return acc;
-}
-
-/* find cosine similarity between two QFs. */
-// void onDiskMQF_intersect(QF *qfa, QF *qfb, QF *qfr)
+// void _onDiskMQF_merge(onDiskMQF *qfa, onDiskMQF *qfb, onDiskMQF *qfc,
+// 	void(*mergeFn)(uint64_t   keya, uint64_t  tag_a,uint64_t  count_a,
+// 						  	 uint64_t   keyb, uint64_t  tag_b,uint64_t  count_b,
+// 							   uint64_t*  keyc, uint64_t* tag_c,uint64_t* count_c
+// 							 ))
 // {
-// 	QFi qfi;
-// 	QF *onDiskMQF_mem, *onDiskMQF_disk;
+// 	onDiskMQFIterator qfia, qfib;
+// 	if(qfa->metadata->range != qfb->metadata->range ||
+// 	qfb->metadata->range != qfc->metadata->range )
+// 	{
+// 		throw std::logic_error("Merging non compatible filters");
+// 	}
+// 	onDiskMQF_iterator(qfa, &qfia, 0);
+// 	onDiskMQF_iterator(qfb, &qfib, 0);
+//
+// 	uint64_t keya, taga, counta, keyb, tagb, countb;
+// 	uint64_t keyc,tagc, countc;
+// 	onDiskMQFIterator_get(&qfia, &keya, &taga, &counta);
+// 	onDiskMQFIterator_get(&qfib, &keyb, &tagb, &countb);
+//
+// 	do {
+// 		if (keya < keyb) {
+// 			mergeFn(keya,taga,counta,0,0,0,&keyc,&tagc,&countc);
+// 			onDiskMQFIterator_next(&qfia);
+// 			onDiskMQFIterator_get(&qfia, &keya, &taga, &counta);
+// 		}
+// 		else if(keya > keyb) {
+// 			mergeFn(0,0,0,keyb,tagb,countb,&keyc,&tagc,&countc);
+// 			onDiskMQFIterator_next(&qfib);
+// 			onDiskMQFIterator_get(&qfib, &keyb, &tagb, &countb);
+// 		}
+// 		else{
+// 			mergeFn(keya,taga,counta,keyb,tagb,countb,&keyc,&tagc,&countc);
+// 			onDiskMQFIterator_next(&qfia);
+// 			onDiskMQFIterator_next(&qfib);
+// 			onDiskMQFIterator_get(&qfia, &keya, &taga, &counta);
+// 			onDiskMQFIterator_get(&qfib, &keyb, &tagb, &countb);
+// 		}
+// 		if(countc!=0){
+// 			onDiskMQF_insert(qfc, keyc, countc, true, true);
+// 			onDiskMQF_add_tag(qfc,keya,tagc);
+// 		}
+//
+// 	} while(!onDiskMQFIterator_end(&qfia) && !onDiskMQFIterator_end(&qfib));
+//
+// 	if (!onDiskMQFIterator_end(&qfia)) {
+//
+// 		do {
+// 			onDiskMQFIterator_get(&qfia, &keya, &taga, &counta);
+// 			mergeFn(keya,taga,counta,0,0,0,&keyc,&tagc,&countc);
+// 			if(countc!=0){
+// 				onDiskMQF_insert(qfc, keyc, countc, true, true);
+// 				onDiskMQF_add_tag(qfc,keyc,tagc);
+// 			}
+// 		} while(!onDiskMQFIterator_next(&qfia));
+// 	}
+//
+// 	if (!onDiskMQFIterator_end(&qfib)) {
+// 		do {
+// 			onDiskMQFIterator_get(&qfib, &keyb, &tagb, &countb);
+// 			mergeFn(0,0,0,keyb,tagb,countb,&keyc,&tagc,&countc);
+// 			if(countc!=0){
+// 				onDiskMQF_insert(qfc, keyc, countc, true, true);
+// 				onDiskMQF_add_tag(qfc,keyc,tagc);
+// 			}
+// 		} while(!onDiskMQFIterator_next(&qfib));
+// 	}
+//
+// 	return;
+// }
+// void onDiskMQF_merge(onDiskMQF *qfa, onDiskMQF *qfb, onDiskMQF *qfc)
+// {
+// 	_onDiskMQF_merge(qfa,qfb,qfc,unionFn);
+// }
+//
+// void onDiskMQF_intersect(onDiskMQF *qfa, onDiskMQF *qfb, onDiskMQF *qfc)
+// {
+// 	_onDiskMQF_merge(qfa,qfb,qfc,intersectFn);
+// }
+// void onDiskMQF_subtract(onDiskMQF *qfa, onDiskMQF *qfb, onDiskMQF *qfc)
+// {
+// 	_onDiskMQF_merge(qfa,qfb,qfc,subtractFn);
+// }
+//
+// bool onDiskMQF_equals(onDiskMQF *qfa, onDiskMQF *qfb)
+// {
+// 	onDiskMQFIterator qfia, qfib;
+// 	if(qfa->metadata->range != qfb->metadata->range  )
+// 	{
+// 		throw std::logic_error("comparing non compatible filters");
+// 	}
+// 	onDiskMQF_iterator(qfa, &qfia, 0);
+// 	onDiskMQF_iterator(qfb, &qfib, 0);
+//
+// 	uint64_t keya, valuea, counta, keyb, valueb, countb;
+// 	onDiskMQFIterator_get(&qfia, &keya, &valuea, &counta);
+// 	onDiskMQFIterator_get(&qfib, &keyb, &valueb, &countb);
+// 	do {
+// 		if (keya != keyb) {
+// 			return false;
+// 		}
+// 		else {
+// 			if(counta!=countb || valuea != valueb)
+// 			{
+// 				return false;
+// 			}
+// 			onDiskMQFIterator_next(&qfib);
+// 			onDiskMQFIterator_next(&qfia);
+// 			onDiskMQFIterator_get(&qfia, &keya, &valuea, &counta);
+// 			onDiskMQFIterator_get(&qfib, &keyb, &valueb, &countb);
+// 		}
+// 	} while(!onDiskMQFIterator_end(&qfia) && !onDiskMQFIterator_end(&qfib));
+//
+// 	if (!onDiskMQFIterator_end(&qfia) || !onDiskMQFIterator_end(&qfib)) {
+// 		return false;
+// 	}
+//
+// 	return true;
+// }
+//
+//
+//
+// std::map<std::string, uint64_t> Tags_map;
+// uint64_t last_index=0;
+// void union_multi_Fn(uint64_t   key_arr[], uint64_t  tag_arr[],uint64_t  count_arr[]
+// 	,std::map<uint64_t, std::vector<int> > ** inverted_indexes,int nqf,
+// 							 uint64_t*  key_c, uint64_t* tag_c,uint64_t* count_c)
+// {
+//
+// 	*count_c=0;
+// 	for(int i=0;i<nqf;i++)
+// 	{
+// 		//printf("key =%lu, count=%lu\n", key_arr[i],count_arr[i]);
+// 		if(count_arr[i]!=0)
+// 		{
+// 			*key_c=key_arr[i];
+// 			*tag_c=tag_arr[i];
+// 			*count_c+=count_arr[i];
+// 		}
+// 	}
+//
+// }
+//
+// void _onDiskMQF_multi_merge(onDiskMQF *onDiskMQF_arr[],int nqf, onDiskMQF *qfr,
+// 	void(*mergeFn)(uint64_t   key_arr[], uint64_t  tag_arr[],uint64_t  count_arr[],
+// 								std::map<uint64_t, std::vector<int> > ** inverted_indexes,int nqf,
+// 							   uint64_t*  keyc, uint64_t* tag_c,uint64_t* count_c
+// 							 ))
+// {
+// 	int i;
+// 	uint64_t range=onDiskMQF_arr[0]->metadata->range;
+// 	for (i=1; i<nqf; i++) {
+// 		if(onDiskMQF_arr[i]->metadata->range!=range)
+// 		{
+// 			throw std::logic_error("Merging non compatible filters");
+// 		}
+// 	}
+//
+// 	onDiskMQFIterator *onDiskMQFIterator_arr[nqf];
+//
+// 	uint64_t smallest_key=UINT64_MAX,second_smallest_key;
+// 	uint64_t keys[nqf];
+// 	uint64_t tags[nqf];
+// 	uint64_t counts[nqf];
+// 	std::map<uint64_t, std::vector<int> > ** inverted_indexes=new std::map<uint64_t, std::vector<int> >*[nqf];
+//
+// 	for (i=0; i<nqf; i++) {
+// 		onDiskMQFIterator_arr[i]=new onDiskMQFIterator();
+// 		onDiskMQF_iterator(onDiskMQF_arr[i], onDiskMQFIterator_arr[i], 0);
+// 		onDiskMQFIterator_get(onDiskMQFIterator_arr[i], &keys[i], &tags[i], &counts[i]);
+// 		smallest_key=std::min(keys[i],smallest_key);
+// 		inverted_indexes[i]=onDiskMQF_arr[i]->metadata->tags_map;
+// 	}
+//
+// 	uint64_t keys_m[nqf];
+// 	uint64_t tags_m[nqf];
+// 	uint64_t counts_m[nqf];
+//
+//
+// 	bool finish=false;
+// 	while(!finish)
+// 	{
+// 		finish=true;
+// 		second_smallest_key=UINT64_MAX;
+// 		//printf("smallest_key = %llu\n",smallest_key );
+// 		for(i=0;i<nqf;i++)
+// 		{
+// 			keys_m[i]=0;
+// 			counts_m[i]=0;
+// 			tags_m[i]=0;
+//
+// 			//printf(" key = %llu\n",keys[i]);
+// 			if(keys[i]==smallest_key){
+// 				keys_m[i]=keys[i];
+// 				counts_m[i]=counts[i];
+// 				tags_m[i]=tags[i];
+// 				onDiskMQFIterator_next(onDiskMQFIterator_arr[i]);
+// 				if(!onDiskMQFIterator_end(onDiskMQFIterator_arr[i]))
+// 				{
+// 					finish=false;
+// 					onDiskMQFIterator_get(onDiskMQFIterator_arr[i], &keys[i], &tags[i], &counts[i]);
+// 				}else{
+// 					keys[i]=UINT64_MAX;
+// 				}
+// 			}
+// 			second_smallest_key=std::min(second_smallest_key,keys[i]);
+// 		}
+// 		for (i = 0; i < nqf; i++) {
+// 			if(keys[i]!=UINT64_MAX)
+// 			{
+// 				finish=false;
+// 				break;
+// 			}
+// 		}
+// 		//printf("second_smallest_key=%llu finish=%d\n",second_smallest_key,finish);
+// 		uint64_t keyc,tagc, countc;
+// 		mergeFn(keys_m,tags_m,counts_m,inverted_indexes,nqf,&keyc,&tagc,&countc);
+//
+// 		if(countc!=0){
+// 			onDiskMQF_insert(qfr, keyc, countc, true, true);
+// 			onDiskMQF_add_tag(qfr,keyc,tagc);
+// 		}
+// 		smallest_key=second_smallest_key;
+// 	}
+// 	// cout<<"before delete"<<endl;
+// 	delete  inverted_indexes;
+// 	for(i=0;i<nqf;i++)
+// 	{
+// 		delete onDiskMQFIterator_arr[i];
+// 	}
+//
+// 	return;
+// }
+//
+// /*
+//  * Merge an array of qfs into the resultant QF
+//  */
+// void onDiskMQF_multi_merge(onDiskMQF *onDiskMQF_arr[], int nqf, onDiskMQF *qfr)
+// {
+// 	_onDiskMQF_multi_merge(onDiskMQF_arr,nqf,qfr,union_multi_Fn);
+//
+// }
+//
+// void inverted_union_multi_Fn(uint64_t   key_arr[], uint64_t  tag_arr[],uint64_t  count_arr[],
+// 	std::map<uint64_t, std::vector<int> > ** inverted_indexes ,int nqf,
+// 							 uint64_t*  key_c, uint64_t* tag_c,uint64_t* count_c)
+// {
+//
+// 	std::string index_key="";
+// 	*count_c=0;
+// 	for(int i=0;i<nqf;i++)
+// 	{
+// 		if(count_arr[i]!=0)
+// 		{
+// 			*key_c=key_arr[i];
+// 			*count_c+=count_arr[i];
+// 			if(inverted_indexes==NULL){
+// 				index_key+=std::to_string(i);
+// 				index_key+=';';
+// 			}
+// 			else{
+// 				auto it=inverted_indexes[i]->find(tag_arr[i]);
+// 				for(auto k:it->second){
+// 					index_key+=std::to_string(k);
+// 					index_key+=';';
+// 				}
+// 			}
+//
+// 		}
+// 	}
+// 	index_key.pop_back();
+// 	auto it=Tags_map.find(index_key);
+// 	if(it==Tags_map.end())
+// 	{
+//
+// 		Tags_map.insert(std::make_pair(index_key,Tags_map.size()));
+// 		it=Tags_map.find(index_key);
+// 	}
+// 	*tag_c=it->second;
+//
+// }
+//
+// void inverted_union_multi_no_count_Fn(uint64_t   key_arr[], uint64_t  tag_arr[],uint64_t  count_arr[],
+// 									std::map<uint64_t, std::vector<int> > ** inverted_indexes, int nqf,
+// 							 uint64_t*  key_c, uint64_t* tag_c,uint64_t* count_c)
+// {
+// 	std::string index_key="";
+// 	*count_c=0;
+// 	for(int i=0;i<nqf;i++)
+// 	{
+// 		//printf("key =%lu, count=%lu\n", key_arr[i],count_arr[i]);
+// 		if(count_arr[i]!=0)
+// 		{
+// 			*key_c=key_arr[i];
+// 			if(inverted_indexes==NULL){
+// 				index_key+=std::to_string(i);
+// 				index_key+=';';
+// 			}
+// 			else{
+// 				auto it=inverted_indexes[i]->find(tag_arr[i]);
+// 				for(auto k:it->second){
+// 					index_key+=std::to_string(k);
+// 					index_key+=';';
+// 				}
+// 			}
+//
+// 		}
+// 	}
+// 	index_key.pop_back();
+// 	auto it=Tags_map.find(index_key);
+// 	if(it==Tags_map.end())
+// 	{
+//
+// 		Tags_map.insert(std::make_pair(index_key,last_index));
+// 		last_index++;
+// 		it=Tags_map.find(index_key);
+// 	}
+// 	*count_c=it->second;
+//
+// }
+//
+//
+// void onDiskMQF_invertable_merge(onDiskMQF *onDiskMQF_arr[], int nqf, onDiskMQF *qfr)
+// {
+// 	int i;
+// 	int last_tag=0;
+// 	Tags_map.clear();
+// 	last_index=0;
+// 	for(i=0;i<nqf;i++){
+// 		if(onDiskMQF_arr[i]->metadata->tags_map==NULL){
+// 			onDiskMQF_arr[i]->metadata->tags_map=new std::map<uint64_t, std::vector<int> >();
+// 			vector<int> tmp(1);
+// 			tmp[0]=last_index;
+// 			Tags_map.insert(std::make_pair(std::to_string(i),last_index++));
+// 			onDiskMQF_arr[i]->metadata->tags_map->insert(make_pair(0,tmp));
+// 		}
+// 		else{
+// 			auto it=onDiskMQF_arr[i]->metadata->tags_map->begin();
+// 			int updated_tags=0;
+// 			while(it!=onDiskMQF_arr[i]->metadata->tags_map->end()){
+// 				for(int j=0;j<it->second.size();j++){
+// 					it->second[j]+=last_tag;
+// 					auto it2=Tags_map.find(std::to_string(it->second[j]));
+// 					if(it2==Tags_map.end()){
+// 						Tags_map.insert(std::make_pair(std::to_string(it->second[j]),it->second[j]));
+// 						updated_tags++;
+// 					}
+// 				}
+// 				it++;
+// 			}
+// 		}
+// 		last_tag+=Tags_map.size();
+// 	}
+//
+//
+//
+// 	_onDiskMQF_multi_merge(onDiskMQF_arr,nqf,qfr,inverted_union_multi_Fn);
+// 	qfr->metadata->tags_map=new std::map<uint64_t, std::vector<int> >();
+// 	auto it=Tags_map.begin();
+// 	while(it!=Tags_map.end()){
+// 		std::vector<int> tmp=key_to_vector_int(it->first);
+// 		qfr->metadata->tags_map->insert(std::make_pair(it->second,tmp));
+// 		it++;
+//
+// 	}
+//
+//
+// }
+//
+// void onDiskMQF_invertable_merge_no_count(onDiskMQF *onDiskMQF_arr[], int nqf, onDiskMQF *qfr)
+// {
+//
+// 	int i;
+// 	int last_tag=0;
+// 	Tags_map.clear();
+// 	last_index=0;
+// 	for(i=0;i<nqf;i++){
+// 		if(onDiskMQF_arr[i]->metadata->tags_map==NULL){
+// 			onDiskMQF_arr[i]->metadata->tags_map=new std::map<uint64_t, std::vector<int> >();
+// 			vector<int> tmp(1);
+// 			tmp[0]=last_index;
+// 			Tags_map.insert(std::make_pair(std::to_string(i),last_index++));
+// 			onDiskMQF_arr[i]->metadata->tags_map->insert(make_pair(0,tmp));
+// 		}
+// 		else{
+// 			auto it=onDiskMQF_arr[i]->metadata->tags_map->begin();
+// 			int updated_tags=0;
+// 			while(it!=onDiskMQF_arr[i]->metadata->tags_map->end()){
+// 				for(int j=0;j<it->second.size();j++){
+// 					it->second[j]+=last_tag;
+// 					auto it2=Tags_map.find(std::to_string(it->second[j]));
+// 					if(it2==Tags_map.end()){
+// 						Tags_map.insert(std::make_pair(std::to_string(it->second[j]),it->second[j]));
+// 						updated_tags++;
+// 					}
+// 				}
+// 				it++;
+// 			}
+// 		}
+// 		last_tag+=Tags_map.size();
+// 	}
+//
+//
+// 	_onDiskMQF_multi_merge(onDiskMQF_arr,nqf,qfr,inverted_union_multi_no_count_Fn);
+//
+// 	qfr->metadata->tags_map=new std::map<uint64_t, std::vector<int> >();
+// 	auto it=Tags_map.begin();
+// 	while(it!=Tags_map.end()){
+// 		std::vector<int> tmp=key_to_vector_int(it->first);
+// 		qfr->metadata->tags_map->insert(std::make_pair(it->second,tmp));
+// 		it++;
+// 	}
+//
+//
+// }
+//
+// onDiskMQF* onDiskMQF_resize(onDiskMQF* qf, int newQ, const char * originalFilename, const char * newFilename)
+// {
+// 	throw std::logic_error("not implemented yet");
+// 	if((int)qf->metadata->key_bits-newQ <2)
+// 	{
+// 		throw std::logic_error("Resize cannot be done. Slot size cannot be less than 2");
+// 	}
+//
+// 	if(originalFilename)
+// 	{
+// 		onDiskMQF_serialize(qf,originalFilename);
+// 		onDiskMQF_destroy(qf);
+// 		onDiskMQF_read(qf,originalFilename);
+// 	}
+// 	onDiskMQF* newQF=(onDiskMQF *)calloc(sizeof(QF), 1);
+// 	if(newFilename)
+// 	{
+// 		//onDiskMQF_init(newQF, (1ULL<<newQ),qf->metadata->key_bits, qf->metadata->tag_bits,qf->metadata->fixed_counter_size, false, newFilename, 2038074761);
+// 	}
+// 	else{
+// 		//onDiskMQF_init(newQF, (1ULL<<newQ),qf->metadata->key_bits, qf->metadata->tag_bits,qf->metadata->fixed_counter_size, true, "" , 2038074761);
+// 	}
+// 	onDiskMQFIterator qfi;
+// 	onDiskMQF_iterator(qf, &qfi, 0);
+//
+//
+// 	uint64_t keya, valuea, counta;
+// 	onDiskMQFIterator_get(&qfi, &keya, &valuea, &counta);
+//
+// 	do {
+// 			onDiskMQF_insert(newQF, keya, counta);
+// 			onDiskMQF_add_tag(newQF,keya,valuea);
+// 			onDiskMQFIterator_next(&qfi);
+// 			onDiskMQFIterator_get(&qfi, &keya, &valuea, &counta);
+// 	} while(!onDiskMQFIterator_end(&qfi));
+// 	onDiskMQF_destroy(qf);
+// 	return newQF;
+//
+//
+// }
+//
+// /* find cosine similarity between two QFs. */
+// uint64_t onDiskMQF_inner_product(onDiskMQF *qfa, onDiskMQF *qfb)
+// {
+// 	uint64_t acc = 0;
+// 	onDiskMQFIterator qfi;
+// 	onDiskMQF *onDiskMQF_mem, *onDiskMQF_disk;
 //
 // 	// create the iterator on the larger QF.
 // 	if (qfa->metadata->size > qfb->metadata->size) {
@@ -3026,57 +3041,92 @@ uint64_t onDiskMQF_inner_product(onDiskMQF *qfa, onDiskMQF *qfb)
 // 	onDiskMQF_iterator(onDiskMQF_disk, &qfi, 0);
 // 	do {
 // 		uint64_t key = 0, value = 0, count = 0;
+// 		uint64_t count_mem;
 // 		onDiskMQFIterator_get(&qfi, &key, &value, &count);
-// 		if (onDiskMQF_count_key(onDiskMQF_mem, key) > 0)
-// 			onDiskMQF_insert(qfr, key, count, false, false);
+// 		if ((count_mem = onDiskMQF_count_key(onDiskMQF_mem, key)) > 0) {
+// 			acc += count*count_mem;
+// 		}
 // 	} while (!onDiskMQFIterator_next(&qfi));
+//
+// 	return acc;
 // }
-
-/* magnitude of a QF. */
-uint64_t onDiskMQF_magnitude(onDiskMQF *qf)
+//
+// /* find cosine similarity between two QFs. */
+// // void onDiskMQF_intersect(QF *qfa, QF *qfb, QF *qfr)
+// // {
+// // 	QFi qfi;
+// // 	QF *onDiskMQF_mem, *onDiskMQF_disk;
+// //
+// // 	// create the iterator on the larger QF.
+// // 	if (qfa->metadata->size > qfb->metadata->size) {
+// // 		onDiskMQF_mem = qfb;
+// // 		onDiskMQF_disk = qfa;
+// // 	} else {
+// // 		onDiskMQF_mem = qfa;
+// // 		onDiskMQF_disk = qfb;
+// // 	}
+// //
+// // 	onDiskMQF_iterator(onDiskMQF_disk, &qfi, 0);
+// // 	do {
+// // 		uint64_t key = 0, value = 0, count = 0;
+// // 		onDiskMQFIterator_get(&qfi, &key, &value, &count);
+// // 		if (onDiskMQF_count_key(onDiskMQF_mem, key) > 0)
+// // 			onDiskMQF_insert(qfr, key, count, false, false);
+// // 	} while (!onDiskMQFIterator_next(&qfi));
+// // }
+//
+// /* magnitude of a QF. */
+// uint64_t onDiskMQF_magnitude(onDiskMQF *qf)
+// {
+// 	return sqrt(onDiskMQF_inner_product(qf, qf));
+// }
+//
+template<uint64_t bitsPerSlot>
+int _onDiskMQF<bitsPerSlot>::space()
 {
-	return sqrt(onDiskMQF_inner_product(qf, qf));
-}
-
-
-int onDiskMQF_space(onDiskMQF *qf)
-{
+	_onDiskMQF<bitsPerSlot>* qf=this;
 		return (int)(((double)qf->metadata->noccupied_slots/
 								 (double)qf->metadata->xnslots
 							 )* 100.0);
 }
 
-
-bool onDiskMQF_general_lock(onDiskMQF* qf, bool spin){
+template<uint64_t bitsPerSlot>
+bool onDiskMQF_Namespace::_onDiskMQF<bitsPerSlot>::general_lock(bool spin){
+	_onDiskMQF<bitsPerSlot>* qf=this;
 	if (!onDiskMQF_spin_lock(&qf->mem->general_lock, spin))
 		return false;
 	return true;
 }
-void onDiskMQF_general_unlock(onDiskMQF* qf){
+template<uint64_t bitsPerSlot>
+void _onDiskMQF<bitsPerSlot>::general_unlock(){
+	_onDiskMQF<bitsPerSlot>* qf=this;
 	onDiskMQF_spin_unlock(&qf->mem->general_lock);
 }
-void onDiskMQF_migrate(onDiskMQF* source, onDiskMQF* dest){
-	onDiskMQFIterator source_i;
-	if (onDiskMQF_iterator(source, &source_i, 0)) {
-		do {
-			uint64_t key = 0, value = 0, count = 0;
-			onDiskMQFIterator_get(&source_i, &key, &value, &count);
-			onDiskMQF_insert(dest, key, count, true, true);
-			onDiskMQF_add_tag(dest,key,value);
-		} while (!onDiskMQFIterator_next(&source_i));
-	}
-}
-void onDiskMQF_migrate(QF* source, onDiskMQF* dest){
+// void onDiskMQF_migrate(onDiskMQF* source, onDiskMQF* dest){
+// 	onDiskMQFIterator source_i;
+// 	if (onDiskMQF_iterator(source, &source_i, 0)) {
+// 		do {
+// 			uint64_t key = 0, value = 0, count = 0;
+// 			onDiskMQFIterator_get(&source_i, &key, &value, &count);
+// 			onDiskMQF_insert(dest, key, count, true, true);
+// 			onDiskMQF_add_tag(dest,key,value);
+// 		} while (!onDiskMQFIterator_next(&source_i));
+// 	}
+// }
+
+template<uint64_t bitsPerSlot>
+void onDiskMQF_Namespace::_onDiskMQF<bitsPerSlot>::migrateFromQF(QF* source){
 	QFi source_i;
 	if (qf_iterator(source, &source_i, 0)) {
 		do {
 			uint64_t key = 0, value = 0, count = 0;
 			qfi_get(&source_i, &key, &value, &count);
-			onDiskMQF_insert(dest, key, count, true, true);
-			onDiskMQF_add_tag(dest,key,value);
+			insert(key, count, true, true);
+			add_tag(key,value);
 		} while (!qfi_next(&source_i));
 	}
 }
+
 };
 
 
