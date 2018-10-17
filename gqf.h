@@ -199,6 +199,8 @@ extern "C" {
 			*/
 	uint64_t qf_remove_tag(const QF *qf, uint64_t key, bool lock=false, bool spin=false);
 
+
+	void qf_setCounter(QF* qf,uint64_t key, uint64_t count, bool lock=false, bool spin=false);
 	/* Initialize an iterator */
 	bool qf_iterator(QF *qf, QFi *qfi, uint64_t position);
 
@@ -271,6 +273,8 @@ extern "C" {
 
 	void qf_migrate(QF* source, QF* destination);
 	double slotsUsedInCounting(QF* qf);
+
+	void qf_BatchQuery( QF* qf,QF* Batch);
 
 #ifdef __cplusplus
 }
