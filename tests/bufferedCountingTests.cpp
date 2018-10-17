@@ -239,7 +239,7 @@ TEST_CASE( "batch query(singletons)" ,"[buffered]") {
       bufferedMQF_BatchQuery(&qf,inputBuffer);
       for(int j=start;j<=i;j++)
       {
-        count=qf_count_key(outputBuffer,vals[j]);
+        count=qf_count_key(inputBuffer,vals[j]);
         CHECK(count >= 1);
       }
       start=i+1;
@@ -251,7 +251,7 @@ TEST_CASE( "batch query(singletons)" ,"[buffered]") {
   bufferedMQF_BatchQuery(&qf,inputBuffer);
   for(int j=start;j<i;j++)
   {
-    count=qf_count_key(outputBuffer,vals[j]);
+    count=qf_count_key(inputBuffer,vals[j]);
     CHECK(count >= 1);
   }
 
@@ -460,13 +460,12 @@ TEST_CASE( "batch query" ,"[buffered]"){
     qf_insert(inputBuffer,vals[i],1);
     if(qf_space(inputBuffer)>50)
     {
-      cout<<"Batch"<<endl;
       bufferedMQF_BatchQuery(&qf,inputBuffer);
       for(int j=start;j<=i;j++)
       {
         count=qf_count_key(inputBuffer,vals[j]);
         INFO("value = "<<vals[j]<<" Repeated " <<nRepetitions[j]);
-        CHECK(count >= nRepetitions[j]);
+        REQUIRE(count >= nRepetitions[j]);
       }
       start=i+1;
       qf_reset(inputBuffer);

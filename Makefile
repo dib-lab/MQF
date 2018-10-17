@@ -26,7 +26,7 @@ LD= g++ -std=c++11
 
 INCLUDE= -I ThirdParty/stxxl/include/ -I ThirdParty/stxxl/build/include/
 
-CXXFLAGS =  -std=c++14  -fPIC -Wall $(DEBUG) $(PROFILE) $(OPT) $(ARCH) $(INCLUDE) -fopenmp -m64 -I. -Wno-unused-result -Wno-strict-aliasing -Wno-unused-function -fpermissive
+CXXFLAGS =  -std=c++14  -fPIC -Wall -Wno-sign-compare -Wno-unused-variable $(DEBUG) $(PROFILE) $(OPT) $(ARCH) $(INCLUDE) -fopenmp -m64 -I. -Wno-unused-result -Wno-strict-aliasing -Wno-unused-function -fpermissive
 
 #STXXL= -L ThirdParty/stxxl/build/lib/ -llibstxxl
 STXXL= ThirdParty/stxxl/build/lib/libstxxl.a

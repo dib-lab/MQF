@@ -22,8 +22,7 @@ TEST_CASE( "simple counting test(onDisk)","[onDisk]" ) {
   uint64_t count,fixed_counter;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
   onDiskMQF::init(qf ,(1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser");
-
-
+//  qf=new  onDiskMQF_Namespace::_onDiskMQF<10>((1ULL<<qbits),num_hash_bits,0,counter_size,"tmp.ser");
 
   for(uint64_t i=0;i<=10;i++){
     qf->insert(100,1,false,false);
@@ -77,23 +76,23 @@ TEST_CASE( "Maximum count(onDisk)","[onDisk]" ) {
   CHECK(count==10);
 
 }
+// //
+// TEST_CASE( "Big count(onDisk)","[onDisk]" ) {
+//   onDiskMQF* qf;
+//   int counter_size=4;
+//   srand (1);
+//   uint64_t qbits=5;
+//   uint64_t diskQbits=6;
+//   uint64_t num_hash_bits=qbits+8;
+//   uint64_t maximum_count=(1ULL<<counter_size)-1;
+//   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
+//   onDiskMQF::init(qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser");
+//   qf->insert(100,100000,false,false);
+//   uint64_t count = qf->count_key(100);
 //
-TEST_CASE( "Big count(onDisk)","[onDisk]" ) {
-  onDiskMQF* qf;
-  int counter_size=4;
-  srand (1);
-  uint64_t qbits=5;
-  uint64_t diskQbits=6;
-  uint64_t num_hash_bits=qbits+8;
-  uint64_t maximum_count=(1ULL<<counter_size)-1;
-  INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-  onDiskMQF::init(qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser");
-  qf->insert(100,100000,false,false);
-  uint64_t count = qf->count_key(100);
-
-  CHECK(count==100000);
-
-}
+//   CHECK(count==100000);
+//
+// }
 
 TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )(onDisk)" ,"[onDisk]") {
   //except first item is inserted 5 times to full test _insert1
@@ -177,51 +176,51 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )(onDisk)" 
 }
 //
 //
-// TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )" ) {
-//   onDiskMQF* qf;
-//   int counter_size=4;
-//   uint64_t qbits=15;
-//   uint64_t num_hash_bits=qbits+8;
-//   uint64_t maximum_count=(1ULL<<counter_size)-1;
-//   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-//   onDiskMQF::init(qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
-//
-//   uint64_t nvals = (1ULL<<qbits);
-//   uint64_t *vals;
-//   vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
-//   for(uint64_t i=0;i<nvals;i++)
-//   {
-//     vals[i]=rand();
-//     vals[i]=(vals[i]<<32)|rand();
-//     vals[i]=vals[i]%(qf->metadata->range);
-//   }
-//   double loadFactor=(double)qf->metadata->noccupied_slots/(double)qf->metadata->nslots;
-//   uint64_t insertedItems=0;
-//   uint64_t count;
-//   while(loadFactor<0.9){
-//     qf->insert(vals[insertedItems],50,false,false);
-//
-//     insertedItems++;
-//     loadFactor=(double)qf->metadata->noccupied_slots/(double)qf->metadata->nslots;
-//   }
-//
-//   for(uint64_t i=0;i<insertedItems;i++)
-//   {
-//     count = qf->count_key(vals[i]);
-//     CHECK(count >= 50);
-//   }
-//   onDiskMQFIterator qfi;
-//   onDiskMQF_iterator(&qf, &qfi, 0);
-//   do {
-//     uint64_t key, value, count;
-//     qfi_get(&qfi, &key, &value, &count);
-//     count=qf->count_key(key);
-//     CHECK(count >= 50);
-//   } while(!qfi_next(&qfi));
-//
-//   onDiskMQF_destroy(&qf);
-//
-// }
+TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor ) (onDisk)" ,"[onDisk]" ) {
+  onDiskMQF* qf;
+  int counter_size=4;
+  uint64_t qbits=15;
+  uint64_t num_hash_bits=qbits+8;
+  uint64_t maximum_count=(1ULL<<counter_size)-1;
+  INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
+  onDiskMQF::init(qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser");
+
+  uint64_t nvals = (1ULL<<qbits);
+  uint64_t *vals;
+  vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
+  for(uint64_t i=0;i<nvals;i++)
+  {
+    vals[i]=rand();
+    vals[i]=(vals[i]<<32)|rand();
+    vals[i]=vals[i]%(qf->metadata->range);
+  }
+  double loadFactor=(double)qf->metadata->noccupied_slots/(double)qf->metadata->nslots;
+  uint64_t insertedItems=0;
+  uint64_t count;
+  while(loadFactor<0.9){
+    qf->insert(vals[insertedItems],50,false,false);
+
+    insertedItems++;
+    loadFactor=(double)qf->metadata->noccupied_slots/(double)qf->metadata->nslots;
+  }
+
+  for(uint64_t i=0;i<insertedItems;i++)
+  {
+    count = qf->count_key(vals[i]);
+    CHECK(count >= 50);
+  }
+  // onDiskMQFIterator qfi;
+  // onDiskMQF_iterator(&qf, &qfi, 0);
+  // do {
+  //   uint64_t key, value, count;
+  //   qfi_get(&qfi, &key, &value, &count);
+  //   count=qf->count_key(key);
+  //   CHECK(count >= 50);
+  // } while(!qfi_next(&qfi));
+
+//  onDiskMQF_destroy(&qf);
+
+}
 //
 //
 TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(onDisk)","[onDisk]" ) {

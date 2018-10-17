@@ -105,9 +105,7 @@ namespace onDiskMQF_Namespace{
 		std::fstream diskMQFStream;
 		qfblock **blocksPointers;
 		diskParameters* diskParams;
-		static void init( onDiskMQF * qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_counter_size ,const char * path);
-		virtual inline onDisk_qfblock<> *  get_block(uint64_t block_index)=0;
-		virtual inline const onDisk_qfblock<> * get_block_const( uint64_t block_index)=0;
+		static void init( onDiskMQF *&qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_counter_size ,const char * path);
 
 	/*!
 	@breif initialize mqf .
@@ -292,13 +290,15 @@ namespace onDiskMQF_Namespace{
 		void unlock(uint64_t hash_bucket_index, bool flag);
 		void modify_metadata(uint64_t *metadata, int cnt);
 
+		int is_runend(uint64_t index);
+		int is_occupied(uint64_t index);
 		uint64_t _get_slot(uint64_t index);
 		void _set_slot(uint64_t index, uint64_t value);
 		void set_slot(uint64_t index, uint64_t value);
 		uint64_t get_slot(uint64_t index);
 		uint64_t get_fixed_counter(uint64_t index);
 		void set_fixed_counter(uint64_t index,uint64_t value);
-		uint64_t get_tag(uint64_t index);
+		uint64_t _get_tag(uint64_t index);
 		void set_tag(uint64_t index,uint64_t value);
 		void super_get(uint64_t index,uint64_t* slot,uint64_t *fcounter);
 		void super_set(uint64_t index,uint64_t slot,uint64_t fcounter);
@@ -313,6 +313,19 @@ namespace onDiskMQF_Namespace{
 		void find_next_n_empty_slots(uint64_t from, uint64_t n,uint64_t *indices);
 		void shift_slots(int64_t first, uint64_t last, uint64_t distance);
 		void shift_runends(int64_t first, uint64_t last, uint64_t distance);
+		void insert_replace_slots_and_shift_remainders_and_runends_and_offsets(
+							int operation,uint64_t bucket_index,uint64_t overwrite_index,
+							const uint64_t *remainders,const uint64_t	*fixed_size_counters,
+							uint64_t total_remainders,uint64_t noverwrites);
+		void remove_replace_slots_and_shift_remainders_and_runends_and_offsets(
+							int operation,uint64_t bucket_index,uint64_t overwrite_index,
+							const uint64_t *remainders,const uint64_t	*fixed_size_counters,
+							uint64_t total_remainders,uint64_t noverwrites);
+		uint64_t *encode_counter(uint64_t remainder, uint64_t counter, uint64_t *slots, uint64_t *fixed_size_counters);
+		uint64_t decode_counter(uint64_t index, uint64_t *remainder, uint64_t *count);
+		bool insert1(__uint128_t hash, bool lock, bool spin);
+		bool _insert(__uint128_t hash, uint64_t count, bool lock=false, bool spin=false);
+
 	public:
 		stxxl::vector<onDisk_qfblock<bitsPerSlot> > blocks;
 	/*!
@@ -332,17 +345,17 @@ namespace onDiskMQF_Namespace{
 	void reset() override;
 
 	~_onDiskMQF();
-	inline onDisk_qfblock<> *  get_block(uint64_t block_index) override
+	inline typename stxxl::vector<onDisk_qfblock<bitsPerSlot> >::iterator  get_block(uint64_t block_index)
 	{
 			typename stxxl::vector<onDisk_qfblock<bitsPerSlot> >::iterator it = this->blocks.begin();
 			it+=block_index;
-			return (onDisk_qfblock<> *)&(*it);
+			return it;
 	}
-	inline const onDisk_qfblock<> * get_block_const( uint64_t block_index) override
+	inline typename stxxl::vector<onDisk_qfblock<bitsPerSlot> >::const_iterator get_block_const( uint64_t block_index)
 	{
-			typename stxxl::vector<onDisk_qfblock<bitsPerSlot> >::const_iterator it = this->blocks.begin();
+			typename stxxl::vector<onDisk_qfblock<bitsPerSlot> >::const_iterator it = this->blocks.cbegin();
 			it+=block_index;
-			return (const onDisk_qfblock<>*)&(*it);
+		  return it;
 	}
 
 	void copy(onDiskMQF *dest)override;

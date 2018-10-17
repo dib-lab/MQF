@@ -1,4 +1,4 @@
-#include <stdlib.h>
+ #include <stdlib.h>
 #if 0
 # include <assert.h>
 #else
@@ -40,8 +40,9 @@ namespace onDiskMQF_Namespace{
 #define NUM_SLOTS_TO_LOCK (1ULL<<16)
 #define CLUSTER_SIZE (1ULL<<14)
 
-#define METADATA_WORD(qf,field,slot_index) (qf->get_block(slot_index / \
+#define METADATA_WORD(field,slot_index) (get_block((slot_index) / \
 					SLOTS_PER_BLOCK)->field[((slot_index)  % SLOTS_PER_BLOCK) / 64])
+
 
 uint64_t bitmaskLookup[]={0,1, 3, 7, 15, 31, 63, 127, 255, 511, 1023,
 2047, 4095, 8191, 16383, 32767, 65535, 131071, 262143, 524287, 1048575,
@@ -90,6 +91,7 @@ static __inline__ unsigned long long rdtsc(void)
  * Try to acquire a lock once and return even if the lock is busy.
  * If spin flag is set, then spin until the lock is available.
  */
+
 static inline bool onDiskMQF_spin_lock(volatile int *lock, bool flag_spin)
 {
 	if (!flag_spin) {
@@ -110,9 +112,10 @@ static inline void onDiskMQF_spin_unlock(volatile int *lock)
 	return;
 }
 
-
-static bool onDiskMQF_lock(onDiskMQF *cf, uint64_t hash_bucket_index, bool spin, bool flag)
+template<uint64_t bitsPerSlot>
+  bool _onDiskMQF<bitsPerSlot>::spin_lock(uint64_t hash_bucket_index, bool spin, bool flag)
 {
+	_onDiskMQF<bitsPerSlot> *cf=this;
 	uint64_t hash_bucket_lock_offset  = hash_bucket_index % NUM_SLOTS_TO_LOCK;
 	if (flag) {
 		if (!onDiskMQF_spin_lock(&cf->mem->locks[hash_bucket_index/NUM_SLOTS_TO_LOCK], spin))
@@ -152,9 +155,10 @@ static bool onDiskMQF_lock(onDiskMQF *cf, uint64_t hash_bucket_index, bool spin,
 	return true;
 }
 
-
-void onDiskMQF_unlock(onDiskMQF *cf, uint64_t hash_bucket_index, bool flag)
+template<uint64_t bitsPerSlot>
+void _onDiskMQF<bitsPerSlot>::unlock(uint64_t hash_bucket_index, bool flag)
 {
+	_onDiskMQF<bitsPerSlot>* cf=this;
 	uint64_t hash_bucket_lock_offset  = hash_bucket_index % NUM_SLOTS_TO_LOCK;
 	if (flag) {
 		if (NUM_SLOTS_TO_LOCK - hash_bucket_lock_offset <= CLUSTER_SIZE) {
@@ -170,9 +174,10 @@ void onDiskMQF_unlock(onDiskMQF *cf, uint64_t hash_bucket_index, bool flag)
 	}
 }
 
-
-static void modify_metadata(onDiskMQF *cf, uint64_t *metadata, int cnt)
+template<uint64_t bitsPerSlot>
+  void _onDiskMQF<bitsPerSlot>::modify_metadata(uint64_t *metadata, int cnt)
 {
+	_onDiskMQF<bitsPerSlot> *cf=this;
 	onDiskMQF_spin_lock(&cf->mem->metadata_lock, true);
 	*metadata = *metadata + cnt;
 	onDiskMQF_spin_unlock(&cf->mem->metadata_lock);
@@ -418,16 +423,19 @@ inline void writeAndFreeBlocks(uint64_t memoryBufferIndex)
 // 		return it;
 // }
 
-
-static inline int is_runend(onDiskMQF *qf, uint64_t index)
+template<uint64_t bitsPerSlot>
+  inline int _onDiskMQF<bitsPerSlot>::is_runend(uint64_t index)
 {
-	return (METADATA_WORD(qf, runends, index) >> ((index % SLOTS_PER_BLOCK) %
+	_onDiskMQF<bitsPerSlot> *qf=this;
+	return (METADATA_WORD( runends, index) >> ((index % SLOTS_PER_BLOCK) %
 																								64)) & 1ULL;
 }
 
-static inline int is_occupied(onDiskMQF *qf, uint64_t index)
+template<uint64_t bitsPerSlot>
+ inline int _onDiskMQF<bitsPerSlot>::is_occupied(uint64_t index)
 {
-	return (METADATA_WORD(qf, occupieds, index) >> ((index % SLOTS_PER_BLOCK) %
+	_onDiskMQF<bitsPerSlot> *qf=this;
+	return (METADATA_WORD( occupieds, index) >> ((index % SLOTS_PER_BLOCK) %
 																									64)) & 1ULL;
 }
 
@@ -438,9 +446,10 @@ static inline int is_occupied(onDiskMQF *qf, uint64_t index)
 
 
 /* Little-endian code ....  Big-endian is TODO */
-
-static inline uint64_t _get_slot(onDiskMQF *qf, uint64_t index)
+template<uint64_t bitsPerSlot>
+  inline uint64_t _onDiskMQF<bitsPerSlot>::_get_slot(uint64_t index)
 {
+	_onDiskMQF<bitsPerSlot> *qf=this;
 	assert(index < qf->metadata->xnslots);
 	/* Should use __uint128_t to support up to 64-bit remainders, but gcc seems
 	 * to generate buggy code.  :/  */
@@ -454,9 +463,10 @@ static inline uint64_t _get_slot(onDiskMQF *qf, uint64_t index)
 										BITMASK(qf->metadata->bits_per_slot));
 }
 
-static inline void _set_slot(onDiskMQF *qf, uint64_t index, uint64_t value)
+template<uint64_t bitsPerSlot>
+  inline void _onDiskMQF<bitsPerSlot>::_set_slot(uint64_t index, uint64_t value)
 {
-
+	_onDiskMQF<bitsPerSlot> *qf=this;
 	/* Should use __uint128_t to support up to 64-bit remainders, but gcc seems
 	 * to generate buggy code.  :/  */
 	 //printf("ss %d\n",(index %SLOTS_PER_BLOCK)* qf->metadata->bits_per_slot / 8 );
@@ -473,19 +483,23 @@ static inline void _set_slot(onDiskMQF *qf, uint64_t index, uint64_t value)
 
 }
 
-static inline void set_slot(onDiskMQF *qf, uint64_t index, uint64_t value){
-	uint64_t original_value=_get_slot(qf,index);
+template<uint64_t bitsPerSlot>
+  inline void _onDiskMQF<bitsPerSlot>::set_slot(uint64_t index, uint64_t value){
+	_onDiskMQF<bitsPerSlot> *qf=this;
+	uint64_t original_value=_get_slot(index);
 	value<<=qf->metadata->fixed_counter_size;
 	uint64_t mask=BITMASK(qf->metadata->fixed_counter_size);
 	original_value&=mask;
 	value|=original_value;
-	_set_slot(qf,index,value);
+	_set_slot(index,value);
 }
 
-static inline uint64_t get_slot(onDiskMQF *qf, uint64_t index)
+template<uint64_t bitsPerSlot>
+  inline uint64_t _onDiskMQF<bitsPerSlot>::get_slot(uint64_t index)
 {
+	_onDiskMQF<bitsPerSlot> *qf=this;
 	uint64_t mask=BITMASK(qf->metadata->key_remainder_bits);
-	uint64_t t=_get_slot(qf,index);
+	uint64_t t=_get_slot(index);
 	t >>= qf->metadata->fixed_counter_size;
 
 	return t&mask;
@@ -493,10 +507,11 @@ static inline uint64_t get_slot(onDiskMQF *qf, uint64_t index)
 
 
 
-
-static inline uint64_t get_fixed_counter(onDiskMQF *qf, uint64_t index)
+template<uint64_t bitsPerSlot>
+  inline uint64_t _onDiskMQF<bitsPerSlot>::get_fixed_counter(uint64_t index)
 {
-	uint64_t t=_get_slot(qf,index);
+	_onDiskMQF<bitsPerSlot> *qf=this;
+	uint64_t t=_get_slot(index);
 	uint64_t mask=BITMASK(qf->metadata->fixed_counter_size);
 	return t&mask;
 	// uint64_t res=0;
@@ -512,64 +527,72 @@ static inline uint64_t get_fixed_counter(onDiskMQF *qf, uint64_t index)
 	// return res;
 }
 
- inline  void set_fixed_counter(onDiskMQF *qf, uint64_t index,uint64_t value)
+template<uint64_t bitsPerSlot>
+ inline  void _onDiskMQF<bitsPerSlot>::set_fixed_counter(uint64_t index,uint64_t value)
 {
+	_onDiskMQF<bitsPerSlot> *qf=this;
 	uint64_t mask=BITMASK(qf->metadata->fixed_counter_size);
-	uint64_t tvalue=_get_slot(qf,index);
+	uint64_t tvalue=_get_slot(index);
 	tvalue=tvalue ^ ((tvalue ^ value) & mask);
-	_set_slot(qf,index,tvalue);
+	_set_slot(index,tvalue);
 }
 
-static inline uint64_t _get_tag(onDiskMQF *qf, uint64_t index)
+template<uint64_t bitsPerSlot>
+  inline uint64_t _onDiskMQF<bitsPerSlot>::_get_tag(uint64_t index)
 {
+	_onDiskMQF<bitsPerSlot> *qf=this;
 	uint64_t mask=BITMASK(qf->metadata->tag_bits);
-	uint64_t t=_get_slot(qf,index);
+	uint64_t t=_get_slot(index);
 	t >>= (qf->metadata->fixed_counter_size+qf->metadata->key_remainder_bits);
 	return t&mask;
 }
 
-static inline void set_tag(onDiskMQF *qf, uint64_t index,uint64_t value)
+template<uint64_t bitsPerSlot>
+  inline void _onDiskMQF<bitsPerSlot>::set_tag(uint64_t index,uint64_t value)
 {
-	uint64_t original_value=_get_slot(qf,index);
+	_onDiskMQF<bitsPerSlot> *qf=this;
+	uint64_t original_value=_get_slot(index);
 	value<<=(qf->metadata->fixed_counter_size+qf->metadata->key_remainder_bits);
 	uint64_t mask=BITMASK(qf->metadata->fixed_counter_size+qf->metadata->key_remainder_bits);
 	original_value&=mask;
 	value|=original_value;
-	_set_slot(qf,index,value);
+	_set_slot(index,value);
 
 }
 
-static inline void super_get(onDiskMQF *qf, uint64_t index,uint64_t* slot,uint64_t *fcounter)
+template<uint64_t bitsPerSlot>
+  inline void _onDiskMQF<bitsPerSlot>::super_get(uint64_t index,uint64_t* slot,uint64_t *fcounter)
 {
-	uint64_t t=_get_slot(qf,index);
+	_onDiskMQF<bitsPerSlot> *qf=this;
+	uint64_t t=_get_slot(index);
 	*fcounter=t & BITMASK(qf->metadata->fixed_counter_size);
 	*slot= t >> qf->metadata->fixed_counter_size & BITMASK(qf->metadata->key_remainder_bits) ;
 }
 
-
-static inline void super_set(onDiskMQF *qf, uint64_t index,uint64_t slot,uint64_t fcounter)
+template<uint64_t bitsPerSlot>
+  inline void _onDiskMQF<bitsPerSlot>::super_set(uint64_t index,uint64_t slot,uint64_t fcounter)
 {
+	_onDiskMQF<bitsPerSlot> *qf=this;
 	uint64_t mask=BITMASK(qf->metadata->fixed_counter_size);
 	slot<<=qf->metadata->fixed_counter_size;
 	uint64_t newValue= slot ^ ((slot ^ fcounter) & mask);
 	//cout<<"slot= "<<slot<<" fcounter= "<<fcounter<<" newValue= "<<newValue<<endl;
-	uint64_t original_value=_get_slot(qf,index);
+	uint64_t original_value=_get_slot(index);
 
 	mask=BITMASK(qf->metadata->fixed_counter_size+
 										qf->metadata->key_remainder_bits);
 	newValue= original_value ^ ((original_value ^ newValue) & mask);
 
-	_set_slot(qf,index,newValue);
+	_set_slot(index,newValue);
 
 
 }
 
 
-static inline uint64_t run_end(onDiskMQF *qf, uint64_t hash_bucket_index);
-
-
-static inline uint64_t block_offset(onDiskMQF *qf, uint64_t blockidx)
+template<uint64_t bitsPerSlot>
+  inline uint64_t _onDiskMQF<bitsPerSlot>::block_offset(uint64_t blockidx)
 {
+	_onDiskMQF<bitsPerSlot> *qf=this;
 	/* If we have extended counters and a 16-bit (or larger) offset
 		 field, then we can safely ignore the possibility of overflowing
 		 that field. */
@@ -577,16 +600,17 @@ static inline uint64_t block_offset(onDiskMQF *qf, uint64_t blockidx)
 			qf->get_block( blockidx)->offset < BITMASK(8*sizeof(qf->get_block(0)->offset)))
 		return qf->get_block( blockidx)->offset;
 
-	return run_end(qf, SLOTS_PER_BLOCK * blockidx - 1) - SLOTS_PER_BLOCK *
+	return run_end( SLOTS_PER_BLOCK * blockidx - 1) - SLOTS_PER_BLOCK *
 		blockidx + 1;
 }
 
-
-static inline uint64_t run_end(onDiskMQF *qf, uint64_t hash_bucket_index)
+template<uint64_t bitsPerSlot>
+  inline uint64_t _onDiskMQF<bitsPerSlot>::run_end(uint64_t hash_bucket_index)
 {
+	_onDiskMQF<bitsPerSlot> *qf=this;
 	uint64_t bucket_block_index       = hash_bucket_index / SLOTS_PER_BLOCK;
 	uint64_t bucket_intrablock_offset = hash_bucket_index % SLOTS_PER_BLOCK;
-	uint64_t bucket_blocks_offset = block_offset(qf, bucket_block_index);
+	uint64_t bucket_blocks_offset = block_offset( bucket_block_index);
 
 	uint64_t bucket_intrablock_rank   = bitrank(qf->get_block(
 																				bucket_block_index)->occupieds[0],
@@ -633,15 +657,15 @@ static inline uint64_t run_end(onDiskMQF *qf, uint64_t hash_bucket_index)
 		return runend_index;
 }
 
-// static inline uint64_t run_end2(onDiskMQF *qf, uint64_t hash_bucket_index)
+//   inline uint64_t run_end2(onDiskMQF *qf, uint64_t hash_bucket_index)
 // {
 // 	uint8_t offset=hash_bucket_index % SLOTS_PER_BLOCK;
-// 	uint64_t t= METADATA_WORD(qf, runends, hash_bucket_index)
+// 	uint64_t t= METADATA_WORD( runends, hash_bucket_index)
 // 	&BITMASK(offset);
 // 	uint64_t tt=hash_bucket_index / SLOTS_PER_BLOCK;
 // 	hash_bucket_index+=SLOTS_PER_BLOCK-offset;
 // 	while(t==0){
-// 		t= METADATA_WORD(qf, runends, hash_bucket_index);
+// 		t= METADATA_WORD( runends, hash_bucket_index);
 // 		hash_bucket_index+=64;
 // 		tt+=1;
 // 	}
@@ -649,10 +673,11 @@ static inline uint64_t run_end(onDiskMQF *qf, uint64_t hash_bucket_index)
 // 	return res;
 // }
 
-
-static inline int offset_lower_bound(onDiskMQF *qf, uint64_t slot_index)
+template<uint64_t bitsPerSlot>
+  inline int _onDiskMQF<bitsPerSlot>::offset_lower_bound(uint64_t slot_index)
 {
-	auto  b = qf->get_block( slot_index / SLOTS_PER_BLOCK);
+	_onDiskMQF<bitsPerSlot> *qf=this;
+	typename stxxl::vector<onDisk_qfblock<bitsPerSlot> >::const_iterator  b = qf->get_block_const( slot_index / SLOTS_PER_BLOCK);
 	const uint64_t slot_offset = slot_index % SLOTS_PER_BLOCK;
 	const uint64_t boffset = b->offset;
 	const uint64_t occupieds = b->occupieds[0] & BITMASK(slot_offset+1);
@@ -664,32 +689,36 @@ static inline int offset_lower_bound(onDiskMQF *qf, uint64_t slot_index)
 	return boffset - slot_offset + popcnt(occupieds);
 }
 
-
-static inline int is_empty2(onDiskMQF *qf, uint64_t slot_index)
+template<uint64_t bitsPerSlot>
+  inline int _onDiskMQF<bitsPerSlot>::is_empty2(uint64_t slot_index)
 {
-	return offset_lower_bound(qf, slot_index) == 0;
+	_onDiskMQF<bitsPerSlot> *qf=this;
+	return offset_lower_bound( slot_index) == 0;
 }
 
-
-static inline int might_be_empty(onDiskMQF *qf, uint64_t slot_index)
+template<uint64_t bitsPerSlot>
+  inline int _onDiskMQF<bitsPerSlot>::might_be_empty(uint64_t slot_index)
 {
-	return !is_occupied(qf, slot_index)
-		&& !is_runend(qf, slot_index);
+	_onDiskMQF<bitsPerSlot> *qf=this;
+	return !is_occupied( slot_index)
+		&& !is_runend( slot_index);
 }
 
-
-static inline int probably_is_empty(onDiskMQF *qf, uint64_t slot_index)
+template<uint64_t bitsPerSlot>
+  inline int _onDiskMQF<bitsPerSlot>::probably_is_empty(uint64_t slot_index)
 {
-	return get_slot(qf, slot_index) == 0
-		&& !is_occupied(qf, slot_index)
-		&& !is_runend(qf, slot_index);
+	_onDiskMQF<bitsPerSlot> *qf=this;
+	return get_slot( slot_index) == 0
+		&& !is_occupied( slot_index)
+		&& !is_runend( slot_index);
 }
 
-
-static inline uint64_t find_first_empty_slot(onDiskMQF *qf, uint64_t from)
+template<uint64_t bitsPerSlot>
+  inline uint64_t _onDiskMQF<bitsPerSlot>::find_first_empty_slot(uint64_t from)
 {
+	_onDiskMQF<bitsPerSlot> *qf=this;
 	do {
-		int t = offset_lower_bound(qf, from);
+		int t = offset_lower_bound( from);
 		if(t<0)
 		{
 			cout<<"here"<<endl;
@@ -703,6 +732,7 @@ static inline uint64_t find_first_empty_slot(onDiskMQF *qf, uint64_t from)
 	return from;
 }
 
+
 static inline uint64_t shift_into_b(const uint64_t a, const uint64_t b,
 																		const int bstart, const int bend,
 																		const int amount)
@@ -715,32 +745,33 @@ static inline uint64_t shift_into_b(const uint64_t a, const uint64_t b,
 }
 
 
-#define REMAINDER_WORD(qf, i) ((uint64_t *)&(qf->get_block( (i)/qf->metadata->bits_per_slot)->slots[8 * ((i) % qf->metadata->bits_per_slot)]))
+#define REMAINDER_WORD(i) ((uint64_t *)&(get_block( (i)/metadata->bits_per_slot)->slots[8 * ((i) % metadata->bits_per_slot)]))
 
-
-static inline void shift_remainders(onDiskMQF *qf, const uint64_t start_index, const
+template<uint64_t bitsPerSlot>
+  inline void _onDiskMQF<bitsPerSlot>::shift_remainders(const uint64_t start_index, const
 																		uint64_t empty_index)
 {
+	_onDiskMQF<bitsPerSlot> *qf=this;
 	uint64_t last_word = (empty_index + 1) * qf->metadata->bits_per_slot / 64;
 	const uint64_t first_word = start_index * qf->metadata->bits_per_slot / 64;
 	int bend = ((empty_index + 1) * qf->metadata->bits_per_slot) % 64;
 	const int bstart = (start_index * qf->metadata->bits_per_slot) % 64;
 
 	while (last_word != first_word) {
-		*REMAINDER_WORD(qf, last_word) = shift_into_b(*REMAINDER_WORD(qf, last_word-1),
-																									*REMAINDER_WORD(qf, last_word),
+		*REMAINDER_WORD( last_word) = shift_into_b(*REMAINDER_WORD( last_word-1),
+																									*REMAINDER_WORD( last_word),
 																									0, bend, qf->metadata->bits_per_slot);
 		last_word--;
 		bend = 64;
 	}
-	*REMAINDER_WORD(qf, last_word) = shift_into_b(0, *REMAINDER_WORD(qf,
+	*REMAINDER_WORD( last_word) = shift_into_b(0, *REMAINDER_WORD(
 																																	 last_word),
 																								bstart, bend,
 																								qf->metadata->bits_per_slot);
 }
 
 template<uint64_t bitsPerSlot>
-static inline void _onDiskMQF<bitsPerSlot>::dump_block(uint64_t i)
+  inline void _onDiskMQF<bitsPerSlot>::dump_block(uint64_t i)
 {
 	_onDiskMQF<bitsPerSlot>* qf=this;
 	uint64_t j;
@@ -774,21 +805,21 @@ static inline void _onDiskMQF<bitsPerSlot>::dump_block(uint64_t i)
 
 for(int j=0;j<64 && (j+64*i)<qf->metadata->xnslots;j++)
 {
-	printf("%lu ", get_slot(qf,j+64*i));
+	printf("%lu ", get_slot(j+64*i));
 }
 
 	printf("\n fixed counter \n");
 
 	for(int j=0;j<64&& (j+64*i)<qf->metadata->xnslots;j++)
 	{
-		printf("%lu ", get_fixed_counter(qf,j+64*i));
+		printf("%lu ", get_fixed_counter(j+64*i));
 	}
 
 	printf("\n tags \n");
 
 	for(int j=0;j<64&& (j+64*i)<qf->metadata->xnslots;j++)
 	{
-		printf("%lu ", _get_tag(qf,j+64*i));
+		printf("%lu ", _get_tag(j+64*i));
 	}
 
 
@@ -811,7 +842,7 @@ void _onDiskMQF<bitsPerSlot>::dump()
 		if(i==540){
 			cout<<"last bloc"<<endl;
 		}
-		dump_block(qf);
+		dump_block(i);
 	}
 	printf("End\n");
 
@@ -820,56 +851,59 @@ void _onDiskMQF<bitsPerSlot>::dump()
 
 }
 
-static inline void find_next_n_empty_slots(onDiskMQF *qf, uint64_t from, uint64_t n,
+template<uint64_t bitsPerSlot>
+  inline void _onDiskMQF<bitsPerSlot>::find_next_n_empty_slots(uint64_t from, uint64_t n,
 																					 uint64_t *indices)
 {
 	while (n) {
-		indices[--n] = find_first_empty_slot(qf, from);
+		indices[--n] = find_first_empty_slot( from);
 		from = indices[n] + 1;
 	}
 }
 
-static inline void shift_slots(onDiskMQF *qf, int64_t first, uint64_t last, uint64_t
+template<uint64_t bitsPerSlot>
+  inline void _onDiskMQF<bitsPerSlot>::shift_slots(int64_t first, uint64_t last, uint64_t
 															 distance)
 {
 	int64_t i;
 	if (distance == 1)
-		shift_remainders(qf, first, last+1);
+		shift_remainders( first, last+1);
 	else
 		for (i = last; i >= first; i--)
-			_set_slot(qf, i + distance, _get_slot(qf, i));
+			_set_slot( i + distance, _get_slot( i));
 }
 
-static inline void shift_runends(onDiskMQF *qf, int64_t first, uint64_t last,
+template<uint64_t bitsPerSlot>
+  inline void _onDiskMQF<bitsPerSlot>::shift_runends(int64_t first, uint64_t last,
 																 uint64_t distance)
 {
-	assert(last < qf->metadata->xnslots && distance < 64);
+	assert(last < metadata->xnslots && distance < 64);
 	uint64_t first_word = first / 64;
 	uint64_t bstart = first % 64;
 	uint64_t last_word = (last + distance + 1) / 64;
 	uint64_t bend = (last + distance + 1) % 64;
 
 	if (last_word != first_word) {
-		METADATA_WORD(qf, runends, 64*last_word) = shift_into_b(METADATA_WORD(qf, runends, 64*(last_word-1)),
-																														METADATA_WORD(qf, runends, 64*last_word),
+		METADATA_WORD( runends, 64*last_word) = shift_into_b(METADATA_WORD( runends, 64*(last_word-1)),
+																														METADATA_WORD( runends, 64*last_word),
 																														0, bend, distance);
 		bend = 64;
 		last_word--;
 		while (last_word != first_word) {
-			METADATA_WORD(qf, runends, 64*last_word) = shift_into_b(METADATA_WORD(qf, runends, 64*(last_word-1)),
-																															METADATA_WORD(qf, runends, 64*last_word),
+			METADATA_WORD( runends, 64*last_word) = shift_into_b(METADATA_WORD( runends, 64*(last_word-1)),
+																															METADATA_WORD( runends, 64*last_word),
 																															0, bend, distance);
 			last_word--;
 		}
 	}
-	METADATA_WORD(qf, runends, 64*last_word) = shift_into_b(0, METADATA_WORD(qf,
+	METADATA_WORD( runends, 64*last_word) = shift_into_b(0, METADATA_WORD(
 																																					 runends,
 																																					 64*last_word),
 																													bstart, bend, distance);
 
 }
 
-// static inline void shift_fixed_counters(onDiskMQF *qf, int64_t first, uint64_t last,
+//   inline void shift_fixed_counters(onDiskMQF *qf, int64_t first, uint64_t last,
 // 																 uint64_t distance)
 // {
 // 	assert(last < qf->metadata->xnslots && distance < 64);
@@ -903,7 +937,7 @@ static inline void shift_runends(onDiskMQF *qf, int64_t first, uint64_t last,
 //
 // }
 
-// static inline void shift_tags(QF *qf, int64_t first, uint64_t last,
+//   inline void shift_tags(QF *qf, int64_t first, uint64_t last,
 // 																 uint64_t distance)
 // {
 // 	assert(last < qf->metadata->xnslots && distance < 64);
@@ -940,8 +974,8 @@ static inline void shift_runends(onDiskMQF *qf, int64_t first, uint64_t last,
 //
 // }
 
-static inline void insert_replace_slots_and_shift_remainders_and_runends_and_offsets(onDiskMQF		*qf,
-																																										 int		 operation,
+template<uint64_t bitsPerSlot>
+  inline void _onDiskMQF<bitsPerSlot>::insert_replace_slots_and_shift_remainders_and_runends_and_offsets(int		 operation,
 																																										 uint64_t		 bucket_index,
 																																										 uint64_t		 overwrite_index,
 																																										 const uint64_t	*remainders,
@@ -949,6 +983,7 @@ static inline void insert_replace_slots_and_shift_remainders_and_runends_and_off
 																																										 uint64_t		 total_remainders,
 																																										 uint64_t		 noverwrites)
 {
+	_onDiskMQF<bitsPerSlot> *qf=this;
 	uint64_t empties[67];
 	uint64_t i;
 	int64_t ninserts = total_remainders - noverwrites;
@@ -962,59 +997,59 @@ static inline void insert_replace_slots_and_shift_remainders_and_runends_and_off
 		/* First, shift things to create n empty spaces where we need them. */
 		//printf("shift %lu, ninserts=%lu\n",insert_index,ninserts );
 
-		find_next_n_empty_slots(qf, insert_index, ninserts, empties);
+		find_next_n_empty_slots( insert_index, ninserts, empties);
 		for (i = 0; i < ninserts - 1; i++){
-			shift_slots(qf, empties[i+1] + 1, empties[i] - 1, i + 1);
+			shift_slots( empties[i+1] + 1, empties[i] - 1, i + 1);
 		}
-		shift_slots(qf, insert_index, empties[ninserts - 1] - 1, ninserts);
+		shift_slots( insert_index, empties[ninserts - 1] - 1, ninserts);
 
 
 
 		for (i = 0; i < ninserts - 1; i++)
-			shift_runends(qf, empties[i+1] + 1, empties[i] - 1, i + 1);
-		shift_runends(qf, insert_index, empties[ninserts - 1] - 1, ninserts);
+			shift_runends( empties[i+1] + 1, empties[i] - 1, i + 1);
+		shift_runends( insert_index, empties[ninserts - 1] - 1, ninserts);
 
 
 
 		// for (i = 0; i < ninserts - 1; i++)
-		// 	shift_fixed_counters(qf, empties[i+1] + 1, empties[i] - 1, i + 1);
-		// shift_fixed_counters(qf, insert_index, empties[ninserts - 1] - 1, ninserts);
+		// 	shift_fixed_counters( empties[i+1] + 1, empties[i] - 1, i + 1);
+		// shift_fixed_counters( insert_index, empties[ninserts - 1] - 1, ninserts);
     //
     //
 		// for (i = 0; i < ninserts - 1; i++)
-		// 	shift_tags(qf, empties[i+1] + 1, empties[i] - 1, i + 1);
-		// shift_tags(qf, insert_index, empties[ninserts - 1] - 1, ninserts);
+		// 	shift_tags( empties[i+1] + 1, empties[i] - 1, i + 1);
+		// shift_tags( insert_index, empties[ninserts - 1] - 1, ninserts);
     //
 
 
 
 		for (i = noverwrites; i < total_remainders - 1; i++)
-			METADATA_WORD(qf, runends, overwrite_index + i) &= ~(1ULL <<
+			METADATA_WORD( runends, overwrite_index + i) &= ~(1ULL <<
 																													 (((overwrite_index
 																															+ i) %
 																														 SLOTS_PER_BLOCK)
 																														% 64));
 		// for (i = noverwrites; i < total_remainders - 1; i++)
-		// 	set_fixed_counter(qf,overwrite_index+i,0);
+		// 	set_fixed_counter(overwrite_index+i,0);
 
 
 		switch (operation) {
 			case 0: /* insert into empty bucket */
 				assert (noverwrites == 0);
-				METADATA_WORD(qf, runends, overwrite_index + total_remainders - 1) |=
+				METADATA_WORD( runends, overwrite_index + total_remainders - 1) |=
 					1ULL << (((overwrite_index + total_remainders - 1) %
 										SLOTS_PER_BLOCK) % 64);
 				break;
 			case 1: /* append to bucket */
-				METADATA_WORD(qf, runends, overwrite_index + noverwrites - 1)      &=
+				METADATA_WORD( runends, overwrite_index + noverwrites - 1)      &=
 					~(1ULL << (((overwrite_index + noverwrites - 1) % SLOTS_PER_BLOCK) %
 										 64));
-				METADATA_WORD(qf, runends, overwrite_index + total_remainders - 1) |=
+				METADATA_WORD( runends, overwrite_index + total_remainders - 1) |=
 					1ULL << (((overwrite_index + total_remainders - 1) %
 										SLOTS_PER_BLOCK) % 64);
 				break;
 			case 2: /* insert into bucket */
-				METADATA_WORD(qf, runends, overwrite_index + total_remainders - 1) &=
+				METADATA_WORD( runends, overwrite_index + total_remainders - 1) &=
 					~(1ULL << (((overwrite_index + total_remainders - 1) %
 											SLOTS_PER_BLOCK) % 64));
 				break;
@@ -1036,18 +1071,18 @@ static inline void insert_replace_slots_and_shift_remainders_and_runends_and_off
 		}
 	}
 	for (i = 0; i < total_remainders; i++){
-		//set_slot(qf, overwrite_index + i, remainders[i]);
-		//set_fixed_counter(qf,overwrite_index +i,fixed_size_counters[i]);
-		super_get(qf,overwrite_index+i,remainders[i],fixed_size_counters[i]);
+		//set_slot( overwrite_index + i, remainders[i]);
+		//set_fixed_counter(overwrite_index +i,fixed_size_counters[i]);
+		super_set(overwrite_index+i,remainders[i],fixed_size_counters[i]);
 //		printf("fixed counter = %lu\n",fixed_size_counters[i] );
 	}
 
-	modify_metadata(qf, &qf->metadata->noccupied_slots, ninserts);
+	modify_metadata( &qf->metadata->noccupied_slots, ninserts);
 }
 
 
-static inline void remove_replace_slots_and_shift_remainders_and_runends_and_offsets(onDiskMQF *qf,
-																																										 int		 operation,
+template<uint64_t bitsPerSlot>
+  inline void _onDiskMQF<bitsPerSlot>::remove_replace_slots_and_shift_remainders_and_runends_and_offsets(int		 operation,
 																																										 uint64_t		 bucket_index,
 																																										 uint64_t		 overwrite_index,
 																																										 const uint64_t	*remainders,
@@ -1055,27 +1090,28 @@ static inline void remove_replace_slots_and_shift_remainders_and_runends_and_off
 																																										 uint64_t		 total_remainders,
 																																										 uint64_t		 old_length)
 {
+	_onDiskMQF<bitsPerSlot> *qf=this;
 	uint64_t i;
 
 	// Update the slots
 	for (i = 0; i < total_remainders; i++){
-		set_slot(qf, overwrite_index + i, remainders[i]);
-		set_fixed_counter(qf, overwrite_index + i, fcounters[i]);
+		set_slot( overwrite_index + i, remainders[i]);
+		set_fixed_counter( overwrite_index + i, fcounters[i]);
 		if(qf->metadata->tag_bits>0)
-			set_tag(qf, overwrite_index + i, 0);
+			set_tag( overwrite_index + i, 0);
 	}
 
 
 	// If this is the last thing in its run, then we may need to set a new runend bit
-	if (is_runend(qf, overwrite_index + old_length - 1)) {
+	if (is_runend( overwrite_index + old_length - 1)) {
 	  if (total_remainders > 0) {
 	    // If we're not deleting this entry entirely, then it will still the last entry in this run
-	    METADATA_WORD(qf, runends, overwrite_index + total_remainders - 1) |= 1ULL << ((overwrite_index + total_remainders - 1) % 64);
+	    METADATA_WORD( runends, overwrite_index + total_remainders - 1) |= 1ULL << ((overwrite_index + total_remainders - 1) % 64);
 	  } else if (overwrite_index > bucket_index &&
-		     !is_runend(qf, overwrite_index - 1)) {
+		     !is_runend( overwrite_index - 1)) {
 	    // If we're deleting this entry entirely, but it is not the first entry in this run,
 	    // then set the preceding entry to be the runend
-	    METADATA_WORD(qf, runends, overwrite_index - 1) |= 1ULL << ((overwrite_index - 1) % 64);
+	    METADATA_WORD( runends, overwrite_index - 1) |= 1ULL << ((overwrite_index - 1) % 64);
 	  }
 	}
 
@@ -1086,32 +1122,32 @@ static inline void remove_replace_slots_and_shift_remainders_and_runends_and_off
 	uint64_t current_distance = old_length - total_remainders;
 
 	while (current_distance > 0) {
-		if (is_runend(qf, current_slot + current_distance - 1)) {
+		if (is_runend( current_slot + current_distance - 1)) {
 			do {
 				current_bucket++;
 			} while (current_bucket < current_slot + current_distance &&
-							 !is_occupied(qf, current_bucket));
+							 !is_occupied( current_bucket));
 		}
 
 		if (current_bucket <= current_slot) {
-			set_slot(qf, current_slot, get_slot(qf, current_slot + current_distance));
-			set_fixed_counter(qf, current_slot, get_fixed_counter(qf, current_slot + current_distance));
+			set_slot( current_slot, get_slot( current_slot + current_distance));
+			set_fixed_counter( current_slot, get_fixed_counter( current_slot + current_distance));
 			if(qf->metadata->tag_bits>0)
-				set_tag(qf, current_slot, _get_tag(qf, current_slot + current_distance));
+				set_tag( current_slot, _get_tag( current_slot + current_distance));
 
-			if (is_runend(qf, current_slot) !=
-					is_runend(qf, current_slot + current_distance))
-				METADATA_WORD(qf, runends, current_slot) ^= 1ULL << (current_slot % 64);
+			if (is_runend( current_slot) !=
+					is_runend( current_slot + current_distance))
+				METADATA_WORD( runends, current_slot) ^= 1ULL << (current_slot % 64);
 			current_slot++;
 
 		} else if (current_bucket <= current_slot + current_distance) {
 			uint64_t i;
 			for (i = current_slot; i < current_slot + current_distance; i++) {
-				set_slot(qf, i, 0);
-				set_fixed_counter(qf,i,0);
+				set_slot( i, 0);
+				set_fixed_counter(i,0);
 				if(qf->metadata->tag_bits>0)
-					set_tag(qf,i,0);
-				METADATA_WORD(qf, runends, i) &= ~(1ULL << (i % 64));
+					set_tag(i,0);
+				METADATA_WORD( runends, i) &= ~(1ULL << (i % 64));
 			}
 
 			current_distance = current_slot + current_distance - current_bucket;
@@ -1124,7 +1160,7 @@ static inline void remove_replace_slots_and_shift_remainders_and_runends_and_off
 	// reset the occupied bit of the hash bucket index if the hash is the
 	// only item in the run and is removed completely.
 	if (operation && !total_remainders)
-		METADATA_WORD(qf, occupieds, bucket_index) &= ~(1ULL << (bucket_index % 64));
+		METADATA_WORD( occupieds, bucket_index) &= ~(1ULL << (bucket_index % 64));
 
 	// update the offset bits.
 	// find the number of occupied slots in the original_bucket block.
@@ -1141,7 +1177,7 @@ static inline void remove_replace_slots_and_shift_remainders_and_runends_and_off
 			qf->get_block( original_block + 1)->offset = 0;
 		} else {
 			uint64_t last_occupieds_hash_index = SLOTS_PER_BLOCK * original_block + last_occupieds_bit;
-			uint64_t runend_index = run_end(qf, last_occupieds_hash_index);
+			uint64_t runend_index = run_end( last_occupieds_hash_index);
 			// runend spans across the block
 			// update the offset of the next block
 			if (runend_index / SLOTS_PER_BLOCK == original_block) { // if the run ends in the same block
@@ -1165,10 +1201,10 @@ static inline void remove_replace_slots_and_shift_remainders_and_runends_and_off
 	}
 
 	int num_slots_freed = old_length - total_remainders;
-	modify_metadata(qf, &qf->metadata->noccupied_slots, -num_slots_freed);
+	modify_metadata( &qf->metadata->noccupied_slots, -num_slots_freed);
 	/*qf->metadata->noccupied_slots -= (old_length - total_remainders);*/
 	if (!total_remainders) {
-		modify_metadata(qf, &qf->metadata->ndistinct_elts, -1);
+		modify_metadata( &qf->metadata->ndistinct_elts, -1);
 		/*qf->metadata->ndistinct_elts--;*/
 	}
 }
@@ -1188,10 +1224,11 @@ static inline void remove_replace_slots_and_shift_remainders_and_runends_and_off
 	 Fixed counters :  [Maximum]     [Maximum]   [Maximum]      ... [up to Maximum -1]
 
  */
-
-static inline uint64_t *encode_counter(onDiskMQF *qf, uint64_t remainder, uint64_t
+template<uint64_t bitsPerSlot>
+  inline uint64_t *_onDiskMQF<bitsPerSlot>::encode_counter(uint64_t remainder, uint64_t
 																			 counter, uint64_t *slots, uint64_t *fixed_size_counters)
 {
+	_onDiskMQF<bitsPerSlot> *qf=this;
 	//printf("inserting %lu repeated %lu\n",remainder,counter);
 	const uint64_t slots_base = (1ULL << qf->metadata->key_remainder_bits) ;
 	uint64_t *p  = slots;
@@ -1227,15 +1264,16 @@ static inline uint64_t *encode_counter(onDiskMQF *qf, uint64_t remainder, uint64
 
 /* Returns the length of the encoding.
 REQUIRES: index points to first slot of a counter. */
-
-static inline uint64_t decode_counter(onDiskMQF *qf, uint64_t index, uint64_t
+template<uint64_t bitsPerSlot>
+  inline uint64_t _onDiskMQF<bitsPerSlot>::decode_counter(uint64_t index, uint64_t
 																			*remainder, uint64_t *count)
 {
 
-	// *remainder  = get_slot(qf, index);
-	// uint64_t fcount=get_fixed_counter(qf,index);
+	_onDiskMQF<bitsPerSlot> *qf=this;
+	// *remainder  = get_slot( index);
+	// uint64_t fcount=get_fixed_counter(index);
 	uint64_t fcount;
-	super_get(qf,index,remainder,&fcount);
+	super_get(index,remainder,&fcount);
 	uint64_t tmp_count= fcount+1;
 	*count=0;
 	uint64_t tmp_slot;
@@ -1248,9 +1286,9 @@ static inline uint64_t decode_counter(onDiskMQF *qf, uint64_t index, uint64_t
 				no_digits++;
 				*count <<= qf->metadata->key_remainder_bits;
 
-				//fcount= get_fixed_counter(qf,index);
-				//*count += get_slot(qf, index);
-				super_get(qf,index,&tmp_slot,&fcount);
+				//fcount= get_fixed_counter(index);
+				//*count += get_slot( index);
+				super_get(index,&tmp_slot,&fcount);
 				*count+=tmp_slot;
 
 
@@ -1266,63 +1304,68 @@ static inline uint64_t decode_counter(onDiskMQF *qf, uint64_t index, uint64_t
 /* return the next slot which corresponds to a
  * different element
  * */
-// static inline uint64_t next_slot(onDiskMQF *qf, uint64_t current)
+//   inline uint64_t next_slot(onDiskMQF *qf, uint64_t current)
 // {
-// 	uint64_t rem = get_slot(qf, current);
+// 	uint64_t rem = get_slot( current);
 // 	current++;
 //
-// 	while (get_slot(qf, current) == rem && current <= qf->metadata->nslots) {
+// 	while (get_slot( current) == rem && current <= qf->metadata->nslots) {
 // 		current++;
 // 	}
 // 	return current;
 // }
-
-static inline bool insert1(onDiskMQF *qf, __uint128_t hash, bool lock, bool spin)
+template<uint64_t bitsPerSlot>
+  inline bool _onDiskMQF<bitsPerSlot>::insert1(__uint128_t hash, bool lock, bool spin)
 {
+	_onDiskMQF<bitsPerSlot> *qf=this;
 	uint64_t hash_remainder           = hash & BITMASK(qf->metadata->key_remainder_bits);
 	uint64_t hash_bucket_index        = hash >> qf->metadata->key_remainder_bits;
 	uint64_t hash_bucket_block_offset = hash_bucket_index % SLOTS_PER_BLOCK;
 
 	uint64_t fixed_count_max=((1ULL)<<qf->metadata->fixed_counter_size)-1;
 
+	uint64_t blockId=hash_bucket_index/64;
+  // cout<<"before "<<(uint64_t)hash<<endl;
+	// dump_block(blockId);
 
 
 	if (lock) {
 		if(qf->mem->general_lock)
 			return false;
-		if (!onDiskMQF_lock(qf, hash_bucket_index, spin, true))
+		if (!spin_lock( hash_bucket_index, spin, true))
 			return false;
 	}
-	 /* might_be_empty(qf, hash_bucket_index) && runend_index == hash_bucket_index */
-	if (is_empty2(qf, hash_bucket_index)) {
-		METADATA_WORD(qf, runends, hash_bucket_index) |= 1ULL <<
+	 /* might_be_empty( hash_bucket_index) && runend_index == hash_bucket_index */
+	if (is_empty2( hash_bucket_index)) {
+		METADATA_WORD( runends, hash_bucket_index) |= 1ULL <<
 			(hash_bucket_block_offset % 64);
-		// set_slot(qf, hash_bucket_index, hash_remainder);
-		// set_fixed_counter(qf, hash_bucket_index, 0);
-		super_get(qf,hash_bucket_index,hash_remainder,0);
-		METADATA_WORD(qf, occupieds, hash_bucket_index) |= 1ULL <<
+		// set_slot( hash_bucket_index, hash_remainder);
+		// set_fixed_counter( hash_bucket_index, 0);
+
+		super_set(hash_bucket_index,hash_remainder,0);
+		METADATA_WORD( occupieds, hash_bucket_index) |= 1ULL <<
 			(hash_bucket_block_offset % 64);
 
-		modify_metadata(qf, &qf->metadata->ndistinct_elts, 1);
-		modify_metadata(qf, &qf->metadata->noccupied_slots, 1);
-		/*modify_metadata(qf, &qf->metadata->nelts, 1);*/
+		modify_metadata( &qf->metadata->ndistinct_elts, 1);
+		modify_metadata( &qf->metadata->noccupied_slots, 1);
+		/*modify_metadata( &qf->metadata->nelts, 1);*/
 	} else {
-		uint64_t runend_index= run_end(qf, hash_bucket_index);
+		uint64_t runend_index= run_end( hash_bucket_index);
 		int operation = 0; /* Insert into empty bucket */
 		uint64_t insert_index = runend_index + 1;
 		uint64_t new_value = hash_remainder;
 		uint64_t new_fixedCounter=0;
 		/* printf("RUNSTART: %02lx RUNEND: %02lx\n", runstart_index, runend_index); */
 
-		uint64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(qf,
+		uint64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(
 																																	 hash_bucket_index
 																																	 - 1) + 1;
 
-		if (is_occupied(qf, hash_bucket_index)) {
+		if (is_occupied( hash_bucket_index)) {
 
 			/* Find the counter for this remainder if it exists. */
 			uint64_t current_remainder,current_fixed_counter;
-			super_get(qf, runstart_index,&current_remainder,&current_fixed_counter);
+			super_get( runstart_index,&current_remainder,&current_fixed_counter);
 			uint64_t zero_terminator = runstart_index;
 
 
@@ -1332,25 +1375,25 @@ static inline bool insert1(onDiskMQF *qf, __uint128_t hash, bool lock, bool spin
 
 			 while (runstart_index < runend_index &&
 			 							 current_fixed_counter == fixed_count_max){
-											 current_fixed_counter=get_fixed_counter(qf, ++runstart_index);
+											 current_fixed_counter=get_fixed_counter( ++runstart_index);
 										 }
         runstart_index++;
 
 				/* This may read past the end of the run, but the while loop
 					 condition will prevent us from using the invalid result in
 					 that case. */
-
-				super_get(qf,runstart_index,&current_remainder,&current_fixed_counter);
+					 super_get(runstart_index,&current_remainder,&current_fixed_counter);
 			}
 
 			/* If this is the first time we've inserted the new remainder,
+
 				 and it is larger than any remainder in the run. */
 			if (runstart_index > runend_index) {
 				operation = 1;
 				insert_index = runstart_index;
 				new_value = hash_remainder;
 				new_fixedCounter=0;
-				/*modify_metadata(qf, &qf->metadata->ndistinct_elts, 1);*/
+				/*modify_metadata( &qf->metadata->ndistinct_elts, 1);*/
 
 				/* This is the first time we're inserting this remainder, but
 					 there are larger remainders already in the run. */
@@ -1359,12 +1402,12 @@ static inline bool insert1(onDiskMQF *qf, __uint128_t hash, bool lock, bool spin
 				insert_index = runstart_index;
 				new_value = hash_remainder;
 				new_fixedCounter=0;
-				/*modify_metadata(qf, &qf->metadata->ndistinct_elts, 1);*/
+				/*modify_metadata( &qf->metadata->ndistinct_elts, 1);*/
 
 
 				/* If there's exactly one instance of this remainder. */
 			} else if (current_fixed_counter<fixed_count_max) {
-				set_fixed_counter(qf,runstart_index,current_fixed_counter+1);
+				set_fixed_counter(runstart_index,current_fixed_counter+1);
 				if(current_fixed_counter+1<fixed_count_max){
 					operation=-1;
 				}
@@ -1382,9 +1425,9 @@ static inline bool insert1(onDiskMQF *qf, __uint128_t hash, bool lock, bool spin
 				 operation=-1;
 				/* Move to the LSD of the counter. */
 				insert_index = runstart_index + 1;
-				super_get(qf,insert_index,&current_remainder,&current_fixed_counter);
+				super_get(insert_index,&current_remainder,&current_fixed_counter);
 				while (current_fixed_counter==fixed_count_max)
-						super_get(qf,++insert_index,&current_remainder,&current_fixed_counter);
+						super_get(++insert_index,&current_remainder,&current_fixed_counter);
 
 
 				uint64_t endCounterIndex=insert_index;
@@ -1397,61 +1440,62 @@ static inline bool insert1(onDiskMQF *qf, __uint128_t hash, bool lock, bool spin
 					// Increment the digit
 					digit = (digit + 1) & BITMASK(qf->metadata->key_remainder_bits);
 					carry=(digit==0);
-					set_slot(qf, insert_index, digit);
+					set_slot( insert_index, digit);
 					insert_index--;
-					super_get(qf,insert_index,&current_remainder,&current_fixed_counter);
+					super_get(insert_index,&current_remainder,&current_fixed_counter);
 					digit=current_remainder;
 				} while(insert_index > runstart_index && carry);
 
 				if(insert_index==runstart_index &&carry>0){
-					current_fixed_counter=get_fixed_counter(qf,endCounterIndex);
-					set_fixed_counter(qf,endCounterIndex,current_fixed_counter+1);
+					current_fixed_counter=get_fixed_counter(endCounterIndex);
+					set_fixed_counter(endCounterIndex,current_fixed_counter+1);
 					if(current_fixed_counter+1<fixed_count_max){
-					for(int i=runstart_index+1;i<=endCounterIndex;i++)
-						set_slot(qf,i,0);
+					for(uint32_t i=runstart_index+1;i<=endCounterIndex;i++)
+						set_slot(i,0);
 					}
 					else{
 						operation=2;
 						insert_index=runstart_index+1;
 						new_value=fixed_count_max;
 						new_fixedCounter=fixed_count_max;
-						set_fixed_counter(qf,endCounterIndex,0);
-						//set_slot(qf,runstart_index+1,1);
+						set_fixed_counter(endCounterIndex,0);
+						//set_slot(runstart_index+1,1);
 					}
 				}
 			}
 		}
 
 		if (operation >= 0) {
-			uint64_t empty_slot_index = find_first_empty_slot(qf, runend_index+1);
+			uint64_t empty_slot_index = find_first_empty_slot( runend_index+1);
 
-			shift_slots(qf, insert_index, empty_slot_index-1,1);
+			shift_slots( insert_index, empty_slot_index-1,1);
 
 
-			set_slot(qf, insert_index, new_value);
-			set_fixed_counter(qf,insert_index,new_fixedCounter);
+			set_slot( insert_index, new_value);
+			set_fixed_counter(insert_index,new_fixedCounter);
 
-			shift_runends(qf, insert_index, empty_slot_index-1, 1);
+			shift_runends( insert_index, empty_slot_index-1, 1);
 
 			switch (operation) {
 				case 0:
-					METADATA_WORD(qf, runends, insert_index)   |= 1ULL << ((insert_index
+					METADATA_WORD( runends, insert_index)   |= 1ULL << ((insert_index
 																																	%
 																																	SLOTS_PER_BLOCK)
 																																 % 64);
 					break;
 				case 1:
-					METADATA_WORD(qf, runends, insert_index-1) &= ~(1ULL <<
+					METADATA_WORD( runends, insert_index-1) &= ~(1ULL <<
 																													(((insert_index-1) %
 																														SLOTS_PER_BLOCK) %
 																													 64));
-					METADATA_WORD(qf, runends, insert_index)   |= 1ULL << ((insert_index
+
+					METADATA_WORD( runends, insert_index)   |= 1ULL << ((insert_index
 																																	%
 																																	SLOTS_PER_BLOCK)
 																																 % 64);
 					break;
 				case 2:
-					METADATA_WORD(qf, runends, insert_index)   &= ~(1ULL <<
+					METADATA_WORD( runends, insert_index)   &= ~(1ULL <<
 																													((insert_index %
 																														SLOTS_PER_BLOCK) %
 																													 64));
@@ -1471,24 +1515,27 @@ static inline bool insert1(onDiskMQF *qf, __uint128_t hash, bool lock, bool spin
 					qf->get_block( i)->offset++;
 				assert(qf->get_block( i)->offset != 0);
 			}
-			modify_metadata(qf, &qf->metadata->noccupied_slots, 1);
+			modify_metadata( &qf->metadata->noccupied_slots, 1);
 		}
-		/*modify_metadata(qf, &qf->metadata->nelts, 1);*/
-		METADATA_WORD(qf, occupieds, hash_bucket_index) |= 1ULL <<
+		/*modify_metadata( &qf->metadata->nelts, 1);*/
+		METADATA_WORD( occupieds, hash_bucket_index) |= 1ULL <<
 			(hash_bucket_block_offset % 64);
 	}
 
 
+
 	if (lock) {
-		onDiskMQF_unlock(qf, hash_bucket_index, true);
+		unlock( hash_bucket_index, true);
 	}
 
 	return true;
 }
 
-static inline bool _insert(onDiskMQF *qf, __uint128_t hash, uint64_t count, bool lock=false,
+template<uint64_t bitsPerSlot>
+  inline bool _onDiskMQF<bitsPerSlot>::_insert( __uint128_t hash, uint64_t count, bool lock=false,
 													bool spin=false)
 {
+	_onDiskMQF<bitsPerSlot> *qf=this;
 	if(qf->metadata->maximum_count!=0){
 		count=std::min(count,qf->metadata->maximum_count);
 	}
@@ -1503,42 +1550,43 @@ static inline bool _insert(onDiskMQF *qf, __uint128_t hash, uint64_t count, bool
 	if (lock) {
 		if(qf->mem->general_lock)
 			return false;
-		if (!onDiskMQF_lock(qf, hash_bucket_index, spin, false))
+		if (!spin_lock( hash_bucket_index, spin, false))
 			return false;
 	}
 
-	uint64_t runend_index             = run_end(qf, hash_bucket_index);
+	uint64_t runend_index             = run_end( hash_bucket_index);
 
 	/* Empty slot */
-	if (might_be_empty(qf, hash_bucket_index) && runend_index ==
+	if (might_be_empty( hash_bucket_index) && runend_index ==
 			hash_bucket_index) {
-		METADATA_WORD(qf, runends, hash_bucket_index) |= 1ULL <<
+		METADATA_WORD( runends, hash_bucket_index) |= 1ULL <<
 			(hash_bucket_block_offset % 64);
-		//set_slot(qf, hash_bucket_index, hash_remainder);
-		//set_fixed_counter(qf, hash_bucket_index, 0);
-		super_get(qf,hash_bucket_index,hash_remainder,0);
-		METADATA_WORD(qf, occupieds, hash_bucket_index) |= 1ULL <<
+		//set_slot( hash_bucket_index, hash_remainder);
+		//set_fixed_counter( hash_bucket_index, 0);
+
+		super_set(hash_bucket_index,hash_remainder,0);
+		METADATA_WORD( occupieds, hash_bucket_index) |= 1ULL <<
 			(hash_bucket_block_offset % 64);
 
-		modify_metadata(qf, &qf->metadata->ndistinct_elts, 1);
-		modify_metadata(qf, &qf->metadata->noccupied_slots, 1);
-		/*modify_metadata(qf, &qf->metadata->nelts, 1);*/
+		modify_metadata( &qf->metadata->ndistinct_elts, 1);
+		modify_metadata( &qf->metadata->noccupied_slots, 1);
+		/*modify_metadata( &qf->metadata->nelts, 1);*/
 		/* This trick will, I hope, keep the fast case fast. */
 		if (count > 1) {
-			_insert(qf, hash, count - 1, false, false);
+			_insert( hash, count - 1, false, false);
 		}
 	} else { /* Non-empty slot */
 		uint64_t new_values[67];
 		uint64_t new_fcounters[67];
 		uint64_t total_remainders;
-		int64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(qf,
+		int64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(
 																																	hash_bucket_index
 																																	- 1) + 1;
 
-		if (!is_occupied(qf, hash_bucket_index)) { /* Empty bucket, but its slot is occupied. */
-			uint64_t *p = encode_counter(qf, hash_remainder, count, &new_values[67],&new_fcounters[67]);
+		if (!is_occupied( hash_bucket_index)) { /* Empty bucket, but its slot is occupied. */
+			uint64_t *p = encode_counter( hash_remainder, count, &new_values[67],&new_fcounters[67]);
 			total_remainders=&new_values[67] - p;
-			insert_replace_slots_and_shift_remainders_and_runends_and_offsets(qf,
+			insert_replace_slots_and_shift_remainders_and_runends_and_offsets(
 																																				0,
 																																				hash_bucket_index,
 																																				runstart_index,
@@ -1546,26 +1594,26 @@ static inline bool _insert(onDiskMQF *qf, __uint128_t hash, uint64_t count, bool
 																																				&new_fcounters[67]-total_remainders,
 																																				&new_values[67] - p,
 																																				0);
-			modify_metadata(qf, &qf->metadata->ndistinct_elts, 1);
+			modify_metadata( &qf->metadata->ndistinct_elts, 1);
 		} else { /* Non-empty bucket */
 
 			uint64_t current_remainder, current_count, current_end;
 
 			/* Find the counter for this remainder, if one exists. */
-			current_end = decode_counter(qf, runstart_index, &current_remainder,
+			current_end = decode_counter( runstart_index, &current_remainder,
 																	 &current_count);
 			while (current_remainder < hash_remainder && current_end!=runend_index) {
 				runstart_index = current_end + 1;
-				current_end = decode_counter(qf, runstart_index, &current_remainder,
+				current_end = decode_counter( runstart_index, &current_remainder,
 																		 &current_count);
 			}
 
 			/* If we reached the end of the run w/o finding a counter for this remainder,
 				 then append a counter for this remainder to the run. */
 			if (current_remainder < hash_remainder) {
-				uint64_t *p = encode_counter(qf, hash_remainder, count, &new_values[67],&new_fcounters[67]);
+				uint64_t *p = encode_counter( hash_remainder, count, &new_values[67],&new_fcounters[67]);
 				total_remainders=&new_values[67] - p;
-				insert_replace_slots_and_shift_remainders_and_runends_and_offsets(qf,
+				insert_replace_slots_and_shift_remainders_and_runends_and_offsets(
 																																					1, /* Append to bucket */
 																																					hash_bucket_index,
 																																					current_end + 1,
@@ -1573,7 +1621,7 @@ static inline bool _insert(onDiskMQF *qf, __uint128_t hash, uint64_t count, bool
 																																					&new_fcounters[67]-total_remainders,
 																																					&new_values[67] - p,
 																																					0);
-				modify_metadata(qf, &qf->metadata->ndistinct_elts, 1);
+				modify_metadata( &qf->metadata->ndistinct_elts, 1);
 				/* Found a counter for this remainder.  Add in the new count. */
 			} else if (current_remainder == hash_remainder) {
 				uint64_t tmp= current_count + count;
@@ -1581,9 +1629,9 @@ static inline bool _insert(onDiskMQF *qf, __uint128_t hash, uint64_t count, bool
 					tmp=std::min(tmp,qf->metadata->maximum_count);
 				}
 
-				uint64_t *p = encode_counter(qf, hash_remainder, tmp, &new_values[67],&new_fcounters[67]);
+				uint64_t *p = encode_counter( hash_remainder, tmp, &new_values[67],&new_fcounters[67]);
 				total_remainders=&new_values[67] - p;
-				insert_replace_slots_and_shift_remainders_and_runends_and_offsets(qf,
+				insert_replace_slots_and_shift_remainders_and_runends_and_offsets(
 																																					current_end==runend_index ? 1 : 2,
 																																					hash_bucket_index,
 																																					runstart_index,
@@ -1594,9 +1642,9 @@ static inline bool _insert(onDiskMQF *qf, __uint128_t hash, uint64_t count, bool
 				/* No counter for this remainder, but there are larger
 					 remainders, so we're not appending to the bucket. */
 			} else {
-				uint64_t *p = encode_counter(qf, hash_remainder, count, &new_values[67],&new_fcounters[67]);
+				uint64_t *p = encode_counter( hash_remainder, count, &new_values[67],&new_fcounters[67]);
 				total_remainders=&new_values[67] - p;
-				insert_replace_slots_and_shift_remainders_and_runends_and_offsets(qf,
+				insert_replace_slots_and_shift_remainders_and_runends_and_offsets(
 																																					2, /* Insert to bucket */
 																																					hash_bucket_index,
 																																					runstart_index,
@@ -1604,16 +1652,16 @@ static inline bool _insert(onDiskMQF *qf, __uint128_t hash, uint64_t count, bool
 																																					&new_fcounters[67]-total_remainders,
 																																					&new_values[67] - p,
 																																					0);
-				modify_metadata(qf, &qf->metadata->ndistinct_elts, 1);
+				modify_metadata( &qf->metadata->ndistinct_elts, 1);
 			}
 		}
-		METADATA_WORD(qf, occupieds, hash_bucket_index) |= 1ULL << (hash_bucket_block_offset % 64);
+		METADATA_WORD( occupieds, hash_bucket_index) |= 1ULL << (hash_bucket_block_offset % 64);
 
-		/*modify_metadata(qf, &qf->metadata->nelts, count);*/
+		/*modify_metadata( &qf->metadata->nelts, count);*/
 	}
 
 	if (lock) {
-		onDiskMQF_unlock(qf, hash_bucket_index, false);
+		unlock( hash_bucket_index, false);
 	}
 
 	return true;
@@ -1635,31 +1683,31 @@ bool _onDiskMQF<bitsPerSlot>::remove(uint64_t hash, uint64_t count , bool lock, 
 
 
 	/* Empty bucket */
-	if (!is_occupied(qf, hash_bucket_index)){
+	if (!is_occupied( hash_bucket_index)){
 		return true;
 	}
 
-	uint64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(qf, hash_bucket_index - 1) + 1;
+	uint64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end( hash_bucket_index - 1) + 1;
 	uint64_t original_runstart_index = runstart_index;
 	int only_item_in_the_run = 0;
 
 	/*Find the counter for this remainder, if one exists.*/
-	current_end = decode_counter(qf, runstart_index, &current_remainder, &current_count);
-	while (current_remainder < hash_remainder && !is_runend(qf, current_end)) {
+	current_end = decode_counter( runstart_index, &current_remainder, &current_count);
+	while (current_remainder < hash_remainder && !is_runend( current_end)) {
 		runstart_index = current_end + 1;
-		current_end = decode_counter(qf, runstart_index, &current_remainder, &current_count);
+		current_end = decode_counter( runstart_index, &current_remainder, &current_count);
 	}
 	/* remainder not found in the given run */
 	if (current_remainder != hash_remainder){
 		return true;
 	}
 
-	if (original_runstart_index == runstart_index && is_runend(qf, current_end))
+	if (original_runstart_index == runstart_index && is_runend( current_end))
 		only_item_in_the_run = 1;
 
 
 	/* endode the new counter */
-	uint64_t *p = encode_counter(qf, hash_remainder,
+	uint64_t *p = encode_counter( hash_remainder,
 															 count>current_count? 0 : current_count-count,
 															 &new_values[67],&new_fcounters[67]);
 
@@ -1671,11 +1719,11 @@ bool _onDiskMQF<bitsPerSlot>::remove(uint64_t hash, uint64_t count , bool lock, 
 	if (lock) {
 		if(qf->mem->general_lock)
 			return false;
-		if (!onDiskMQF_lock(qf, hash_bucket_index, spin, false))
+		if (!spin_lock( hash_bucket_index, spin, false))
 		return false;
 	}
 
-	remove_replace_slots_and_shift_remainders_and_runends_and_offsets(qf,
+	remove_replace_slots_and_shift_remainders_and_runends_and_offsets(
 																																		only_item_in_the_run,
 																																		hash_bucket_index,
 																																		runstart_index,
@@ -1686,19 +1734,19 @@ bool _onDiskMQF<bitsPerSlot>::remove(uint64_t hash, uint64_t count , bool lock, 
 
 
   if (lock) {
-  onDiskMQF_unlock(qf, hash_bucket_index, true);
+  unlock( hash_bucket_index, true);
   }
 
 	return true;
 	// update the nelements.
-	/*modify_metadata(qf, &qf->metadata->nelts, -count);*/
+	/*modify_metadata( &qf->metadata->nelts, -count);*/
 	/*qf->metadata->nelts -= count;*/
 }
 
 /***********************************************************************
  * Code that uses the above to implement key-value-counter operations. *
  ***********************************************************************/
- void onDiskMQF::init( onDiskMQF * qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_counter_size ,const char * path){
+ void onDiskMQF::init( onDiskMQF *&qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_counter_size ,const char * path){
 	 uint64_t qbits=(uint64_t)log2((double)nslots);
 	 uint64_t tmpslotsSize=key_bits-qbits+fixed_counter_size;
 	 switch (tmpslotsSize) {
@@ -1730,7 +1778,7 @@ bool _onDiskMQF<bitsPerSlot>::remove(uint64_t hash, uint64_t count , bool lock, 
 			 qf=new  onDiskMQF_Namespace::_onDiskMQF<9>(nslots,key_bits,tag_bits,fixed_counter_size,path);
 			 break;
 		 case 10:
-			 qf=(onDiskMQF_Namespace::onDiskMQF*)new  onDiskMQF_Namespace::_onDiskMQF<10>(nslots,key_bits,tag_bits,fixed_counter_size,path);
+			 qf=new  onDiskMQF_Namespace::_onDiskMQF<10>(nslots,key_bits,tag_bits,fixed_counter_size,path);
 			 break;
 		 case 11:
 			 qf=new  onDiskMQF_Namespace::_onDiskMQF<11>(nslots,key_bits,tag_bits,fixed_counter_size,path);
@@ -1896,7 +1944,8 @@ bool _onDiskMQF<bitsPerSlot>::remove(uint64_t hash, uint64_t count , bool lock, 
 			 break;
 
 	 }
-	 qf->insert(100,1,false,false);
+	 //qf->insert(100,1,false,false);
+	 //cout<<qf->count_key(100)<<endl;
  }
 
 template<uint64_t bitsPerSlot>
@@ -1924,7 +1973,9 @@ _onDiskMQF<bitsPerSlot>::_onDiskMQF( uint64_t nslots, uint64_t key_bits, uint64_
 	}
 
 	bits_per_slot = key_remainder_bits+fixed_counter_size+tag_bits ;
-
+  if(bits_per_slot!=bitsPerSlot){
+    cout<<"OnDisk MQF created wrong.bits per slot calculated form the parameters is not the same as the template parameter."<<endl;
+  }
 	size = nblocks * (sizeof(qfblock) + (8 * bits_per_slot )) ;
 	stxxlBufferSize= (uint64_t)((double)(size)*0.2/(1024.0*1024.0));
 	stxxlBufferSize=max(stxxlBufferSize,(uint64_t)16);
@@ -1965,8 +2016,8 @@ _onDiskMQF<bitsPerSlot>::_onDiskMQF( uint64_t nslots, uint64_t key_bits, uint64_
 
 
 	blocks=stxxl::vector<onDisk_qfblock<bitsPerSlot> >(metadata->nblocks,stxxlBufferSize/16);
-	for(int i=0;i<metadata->nblocks;i++)
-		blocks[i]=onDisk_qfblock<bitsPerSlot>();
+	// for(uint64_t i=0;i<metadata->nblocks;i++)
+	// 	blocks[i]=onDisk_qfblock<bitsPerSlot>();
   //
 	// qf->diskParams=new diskParameters();
 	// diskParameters* diskParams=qf->diskParams;
@@ -2208,11 +2259,11 @@ uint64_t _onDiskMQF<bitsPerSlot>::add_tag(uint64_t key, uint64_t tag, bool lock,
 	int64_t hash_bucket_index = hash >> qf->metadata->key_remainder_bits;
 
 
-	if (!is_occupied(qf, hash_bucket_index)){
+	if (!is_occupied( hash_bucket_index)){
 		return 0;
 	}
 
-	int64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(qf,
+	int64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(
 																																hash_bucket_index-1)
 		+ 1;
 
@@ -2223,26 +2274,26 @@ uint64_t _onDiskMQF<bitsPerSlot>::add_tag(uint64_t key, uint64_t tag, bool lock,
 
 	uint64_t current_remainder, current_count, current_end;
 	do {
-		current_end = decode_counter(qf, runstart_index, &current_remainder,
+		current_end = decode_counter( runstart_index, &current_remainder,
 																 &current_count);
 		if (current_remainder == hash_remainder){
 			if (lock) {
 				if(qf->mem->general_lock)
 					return false;
-				if (!onDiskMQF_lock(qf, runstart_index, spin, false))
+				if (!spin_lock( runstart_index, spin, false))
 				return 0;
 			}
 
-			set_tag(qf,runstart_index,tag);
+			set_tag(runstart_index,tag);
 			if (lock) {
-				onDiskMQF_unlock(qf, runstart_index, true);
+				unlock( runstart_index, true);
 			}
 
 
 			return 1;
 		}
 		runstart_index = current_end + 1;
-	} while (!is_runend(qf, current_end));
+	} while (!is_runend( current_end));
 
 
 	return 0;
@@ -2258,15 +2309,15 @@ _onDiskMQF<bitsPerSlot>* qf=this;
 
 	__uint128_t hash = key;
 	uint64_t hash_remainder   = hash & BITMASK(qf->metadata->key_remainder_bits);
-	int64_t hash_bucket_index = hash >> qf->metadata->key_remainder_bits;
+	uint64_t hash_bucket_index = hash >> qf->metadata->key_remainder_bits;
 	if(hash_bucket_index > qf->metadata->xnslots){
 			throw std::out_of_range("onDiskMQF_remove_tag is called with hash index out of range");
 		}
 
-	if (!is_occupied(qf, hash_bucket_index)){
+	if (!is_occupied( hash_bucket_index)){
 		return 0;
 	}
-	int64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(qf,
+	uint64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(
 																																hash_bucket_index-1)
 		+ 1;
 	if (runstart_index < hash_bucket_index)
@@ -2276,22 +2327,22 @@ _onDiskMQF<bitsPerSlot>* qf=this;
 
 	uint64_t current_remainder, current_count, current_end;
 	do {
-		current_end = decode_counter(qf, runstart_index, &current_remainder,
+		current_end = decode_counter( runstart_index, &current_remainder,
 																 &current_count);
 		if (current_remainder == hash_remainder){
 			if (lock) {
 				if(qf->mem->general_lock)
 					return false;
-				if (!onDiskMQF_lock(qf, runstart_index, spin, false))
+				if (!spin_lock( runstart_index, spin, false))
 					return false;
 				}
-			set_tag(qf,runstart_index,0);
+			set_tag(runstart_index,0);
 			if (lock)
-				onDiskMQF_unlock(qf, runstart_index, true);
+				unlock( runstart_index, true);
 			return 1;
 		}
 		runstart_index = current_end + 1;
-	} while (!is_runend(qf, current_end));
+	} while (!is_runend( current_end));
 
 
 	return 0;
@@ -2305,14 +2356,14 @@ uint64_t _onDiskMQF<bitsPerSlot>::get_tag(uint64_t key)
 	}
 	__uint128_t hash = key;
 	uint64_t hash_remainder   = hash & BITMASK(qf->metadata->key_remainder_bits);
-	int64_t hash_bucket_index = hash >> qf->metadata->key_remainder_bits;
+	uint64_t hash_bucket_index = hash >> qf->metadata->key_remainder_bits;
 	if(hash_bucket_index > qf->metadata->xnslots){
 			throw std::out_of_range("onDiskMQF_get_tag is called with hash index out of range");
 		}
-	if (!is_occupied(qf, hash_bucket_index))
+	if (!is_occupied( hash_bucket_index))
 		return 0;
 
-	int64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(qf,
+	uint64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(
 																																hash_bucket_index-1)
 		+ 1;
 	if (runstart_index < hash_bucket_index)
@@ -2322,13 +2373,13 @@ uint64_t _onDiskMQF<bitsPerSlot>::get_tag(uint64_t key)
 
 	uint64_t current_remainder, current_count, current_end;
 	do {
-		current_end = decode_counter(qf, runstart_index, &current_remainder,
+		current_end = decode_counter( runstart_index, &current_remainder,
 																 &current_count);
 		if (current_remainder == hash_remainder){
-			return _get_tag(qf,runstart_index);
+			return _get_tag(runstart_index);
 		}
 		runstart_index = current_end + 1;
-	} while (!is_runend(qf, current_end));
+	} while (!is_runend( current_end));
 
 	return 0;
 }
@@ -2344,9 +2395,9 @@ bool _onDiskMQF<bitsPerSlot>::insert(uint64_t key, uint64_t count, bool
 	}
 	/*uint64_t hash = (key << qf->metadata->tag_bits) | (value & BITMASK(qf->metadata->tag_bits));*/
 	if (count == 1)
-	 return insert1(qf, key, lock, spin);
+	 return insert1( key, lock, spin);
 	else
-	 return _insert(qf, key, count, lock, spin);
+	 return _insert( key, count, lock, spin);
 }
 
 template<uint64_t bitsPerSlot>
@@ -2357,10 +2408,10 @@ uint64_t _onDiskMQF<bitsPerSlot>::count_key(uint64_t key)
 	uint64_t hash_remainder   = hash & BITMASK(qf->metadata->key_remainder_bits);
 	int64_t hash_bucket_index = hash >> qf->metadata->key_remainder_bits;
 
-	if (!is_occupied(qf, hash_bucket_index))
+	if (!is_occupied( hash_bucket_index))
 		return 0;
 
-	int64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(qf,
+	int64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(
 																																hash_bucket_index-1)
 		+ 1;
 	if (runstart_index < hash_bucket_index)
@@ -2370,14 +2421,14 @@ uint64_t _onDiskMQF<bitsPerSlot>::count_key(uint64_t key)
 
 	uint64_t current_remainder, current_count, current_end;
 	do {
-		current_end = decode_counter(qf, runstart_index, &current_remainder,
+		current_end = decode_counter( runstart_index, &current_remainder,
 																 &current_count);
 		if (current_remainder == hash_remainder){
 			return current_count;
 		}
 
 		runstart_index = current_end + 1;
-	} while (!is_runend(qf, current_end));
+	} while (!is_runend( current_end));
 	return 0;
 }
 
@@ -2394,7 +2445,7 @@ bool _onDiskMQF<bitsPerSlot>::getIterator(onDiskMQFIterator<bitsPerSlot> *qfi, u
 	if(position > qf->metadata->xnslots){
 		throw std::out_of_range("onDiskMQF_iterator is called with position out of range");
 	}
-	if (!is_occupied(qf, position)) {
+	if (!is_occupied( position)) {
 		uint64_t block_index = position;
 		uint64_t idx = bitselect(qf->get_block( block_index)->occupieds[0], 0);
 		if (idx == 64) {
@@ -2991,9 +3042,9 @@ void subtractFn(uint64_t  key_a, uint64_t  tag_a,uint64_t  count_a,
 //
 // 	if(originalFilename)
 // 	{
-// 		onDiskMQF_serialize(qf,originalFilename);
+// 		onDiskMQF_serialize(originalFilename);
 // 		onDiskMQF_destroy(qf);
-// 		onDiskMQF_read(qf,originalFilename);
+// 		onDiskMQF_read(originalFilename);
 // 	}
 // 	onDiskMQF* newQF=(onDiskMQF *)calloc(sizeof(QF), 1);
 // 	if(newFilename)
@@ -3004,7 +3055,7 @@ void subtractFn(uint64_t  key_a, uint64_t  tag_a,uint64_t  count_a,
 // 		//onDiskMQF_init(newQF, (1ULL<<newQ),qf->metadata->key_bits, qf->metadata->tag_bits,qf->metadata->fixed_counter_size, true, "" , 2038074761);
 // 	}
 // 	onDiskMQFIterator qfi;
-// 	onDiskMQF_iterator(qf, &qfi, 0);
+// 	onDiskMQF_iterator( &qfi, 0);
 //
 //
 // 	uint64_t keya, valuea, counta;
@@ -3078,7 +3129,7 @@ void subtractFn(uint64_t  key_a, uint64_t  tag_a,uint64_t  count_a,
 // /* magnitude of a QF. */
 // uint64_t onDiskMQF_magnitude(onDiskMQF *qf)
 // {
-// 	return sqrt(onDiskMQF_inner_product(qf, qf));
+// 	return sqrt(onDiskMQF_inner_product( qf));
 // }
 //
 template<uint64_t bitsPerSlot>
