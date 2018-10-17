@@ -15,5 +15,7 @@ docs/
 
 libgqf\.so
 
+libgqf\.so
+
 ThirdParty/stxxl/build/*
 

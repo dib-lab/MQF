@@ -21,7 +21,7 @@ ifdef P
 endif
 
 CXX = g++ -std=c++11
-CC = g++ -std=c++11
+CC = gcc -std=c++11
 LD= g++ -std=c++11
 
 INCLUDE= -I ThirdParty/stxxl/include/ -I ThirdParty/stxxl/build/include/
