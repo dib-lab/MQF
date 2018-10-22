@@ -61,7 +61,7 @@ main.o: gqf.h
 gqf.o: gqf.c gqf.h
 
 
-
+bufferedMQF.o: bufferedMQF.cpp bufferedMQF.h
 
 
 
