@@ -260,10 +260,10 @@ static void modify_metadata(QF *cf, uint64_t *metadata, int cnt)
 #ifdef LOG_WAIT_TIME
 	qf_spin_lock(cf, &cf->mem->metadata_lock,cf->num_locks, true);
 #else
-	qf_spin_lock(&cf->mem->metadata_lock, true);
+	//qf_spin_lock(&cf->mem->metadata_lock, true);
 #endif
 	*metadata = *metadata + cnt;
-	qf_spin_unlock(&cf->mem->metadata_lock);
+	//qf_spin_unlock(&cf->mem->metadata_lock);
 	return;
 }
 
@@ -1958,7 +1958,7 @@ void qf_copy(QF *dest, QF *src)
 void qf_destroy(QF *qf)
 {
 	assert(qf->blocks != NULL);
-	
+
 	qf->metadata->noccupied_slots=0;
 	if(qf->metadata->tags_map!=NULL){
 		delete qf->metadata->tags_map;
@@ -2278,6 +2278,15 @@ uint64_t qf_count_key(const QF *qf, uint64_t key)
 	return 0;
 }
 
+void qf_setCounter(QF* qf,uint64_t key, uint64_t count, bool lock, bool spin )
+{
+	uint64_t currentCounter=qf_count_key(qf,key);
+	if(currentCounter<count)
+		qf_insert(qf,key,count-currentCounter,lock,spin);
+	else if(currentCounter > count )
+		qf_remove(qf,key,currentCounter-count,lock,spin);
+}
+
 
 
 
@@ -2402,6 +2411,23 @@ int qfi_next(QFi *qfi)
 			return 0;
 		}
 	}
+}
+
+double slotsUsedInCounting(QF* qf){
+	QFi *qfi=new QFi();
+	qf_iterator(qf,qfi,0);
+	//qfi_next(qfi);
+	uint64_t current_remainder,current_count;
+	uint64_t res=0;
+	uint64_t distictItems=0;
+	while(!qfi_end(qfi)){
+		uint64_t end=decode_counter(qfi->qf, qfi->current, &current_remainder, &current_count);
+		uint64_t usedSlots=end-qfi->current;
+		res+=usedSlots+1;
+		distictItems+=1;
+		qfi_next(qfi);
+	}
+	return (double)res;
 }
 
 inline int qfi_end(QFi *qfi)
@@ -3018,6 +3044,18 @@ void qf_migrate(QF* source, QF* dest){
 			qfi_get(&source_i, &key, &value, &count);
 			qf_insert(dest, key, count, true, true);
 			qf_add_tag(dest,key,value);
+		} while (!qfi_next(&source_i));
+	}
+}
+
+void qf_BatchQuery( QF* qf,QF* Batch){
+	QFi source_i;
+	if (qf_iterator(Batch, &source_i, 0)) {
+		do {
+			uint64_t key = 0, value = 0, count = 0;
+			qfi_get(&source_i, &key, &value, &count);
+			uint64_t memCount=qf_count_key(qf,key);
+			qf_setCounter(Batch,key,memCount);
 		} while (!qfi_next(&source_i));
 	}
 }

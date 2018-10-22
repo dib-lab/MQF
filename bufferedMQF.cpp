@@ -15,29 +15,31 @@ void bufferedMQF_init(bufferedMQF *qf, uint64_t nslots_buffer ,uint64_t nslots
 		}
 
 		qf_init(qf->memoryBuffer,nslots_buffer,key_bits,value_bits,fixed_counter_size,true,"",2038074761);
-		onDiskMQF_init(qf->disk,nslots,key_bits,value_bits,fixed_counter_size,memSize,path);
+
+		onDiskMQF_Namespace::onDiskMQF::init(qf->disk,nslots,key_bits,value_bits,fixed_counter_size,path);
 }
 
 void bufferedMQF_reset(bufferedMQF *qf){
 	qf_reset(qf->memoryBuffer);
-	onDiskMQF_reset(qf->disk);
+	//onDiskMQF_reset(qf->disk);
+	qf->disk->reset();
 }
 
 void bufferedMQF_destroy(bufferedMQF *qf){
 	qf_destroy(qf->memoryBuffer);
-	onDiskMQF_destroy(qf->disk);
+	delete qf->disk;
 }
 
 void bufferedMQF_copy(bufferedMQF *dest, bufferedMQF *src){
 	qf_copy(dest->memoryBuffer,src->memoryBuffer);
-	onDiskMQF_copy(dest->disk,src->disk);
+	src->disk->copy(dest->disk);
 }
 
 /* Increment the counter for this key/value pair by count. */
 
 bool bufferedMQF_insert(bufferedMQF *qf, uint64_t key, uint64_t count,
 							 bool lock, bool spin){
-
+  key=key%qf->memoryBuffer->metadata->range;
 	qf_insert(qf->memoryBuffer,key,count,lock,spin);
 	if(qf_space(qf->memoryBuffer)>90)
 	{
@@ -53,7 +55,7 @@ bool bufferedMQF_insert(bufferedMQF *qf, uint64_t key, uint64_t count,
 bool bufferedMQF_remove(bufferedMQF *qf, uint64_t hash, uint64_t count,  bool lock, bool spin){
 	bool res=false;
 	res|=qf_remove(qf->memoryBuffer,hash,count,lock,spin);
-	res|=onDiskMQF_remove(qf->disk,hash,count,lock,spin);
+	res|=qf->disk->remove(hash,count,lock,spin);
 	return res;
 }
 
@@ -63,7 +65,7 @@ bool bufferedMQF_remove(bufferedMQF *qf, uint64_t hash, uint64_t count,  bool lo
 /* Return the number of times key has been inserted, with any value,
 	 into qf. */
 uint64_t bufferedMQF_count_key(const bufferedMQF *qf, uint64_t key){
-	return onDiskMQF_count_key(qf->disk,key)+qf_count_key(qf->memoryBuffer,key);
+	return qf->disk->count_key(key)+qf_count_key(qf->memoryBuffer,key);
 }
 
 int bufferedMQF_space(bufferedMQF *qf){
@@ -74,9 +76,24 @@ int bufferedMQF_space(bufferedMQF *qf){
 
 }
 void bufferedMQF_syncBuffer(bufferedMQF *qf){
-	onDiskMQF_migrate(qf->memoryBuffer,qf->disk);
+	qf->disk->migrateFromQF(qf->memoryBuffer);
 	qf_reset(qf->memoryBuffer);
 }
+
+void bufferedMQF_BatchQuery( bufferedMQF* qf,QF* Batch){
+	QFi source_i;
+	if (qf_iterator(Batch, &source_i, 0)) {
+		do {
+			uint64_t key = 0, value = 0, count = 0;
+			qfi_get(&source_i, &key, &value, &count);
+			uint64_t diskCount=qf->disk->count_key(key);
+			uint64_t memCount=qf_count_key(qf->memoryBuffer,key);
+			qf_setCounter(Batch,key,diskCount+memCount);
+		} while (!qfi_next(&source_i));
+	}
+}
+
+
 //
 // /* Initialize an iterator */
 // bool bufferedMQF_iterator(bufferedMQF *qf, bufferedMQFIterator* qfi, uint64_t position){
