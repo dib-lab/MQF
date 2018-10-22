@@ -1,4 +1,4 @@
-TARGETS= load_test_mqf insertionPerSecond speedPerformance compareLoadingFactor sizeTest
+TARGETS= insertionPerSecond speedPerformance compareLoadingFactor sizeTest
 TESTFILES = tests/CountingTests.o tests/HighLevelFunctionsTests.o tests/IOTests.o tests/tagTests.o tests/LayeredCountingTests.o tests/bufferedCountingTests.o tests/onDiskCountingTests.o
 OBJS= gqf.o LayeredMQF.o bufferedMQF.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
 ifdef D

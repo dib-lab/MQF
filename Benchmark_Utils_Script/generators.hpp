@@ -1,3 +1,5 @@
+#ifndef _generator_H
+#define _generator_H
 #include <stdio.h>      /* printf, scanf, puts, NULL */
 #include <stdlib.h>
 #include<iostream>
@@ -10,6 +12,9 @@
 #include <algorithm>
 #include "seqio.h"
 #include "../kmer.h"
+#include "../gqf.h"
+#include "countingStructure.hpp"
+
 using namespace std;
 
 #define BITMASK(nbits) ((nbits) == 64 ? 0xffffffffffffffff : (1ULL << (nbits)) \
@@ -142,7 +147,7 @@ public:
   set<uint64_t> uniq;
   generator(){num_elements=0;generated_elements=0;}
   virtual bool getElement(uint64_t& res){return false;}
-  virtual bool hasMore(){cout<<"Here"<<endl;return num_elements==0 || generated_elements<num_elements;}
+  virtual bool hasMore(){cout<<"Here in the base"<<endl;return num_elements==0 || generated_elements<num_elements;}
   uint64_t get_generated_elements(){return generated_elements;}
 };
 
@@ -275,6 +280,7 @@ private:
   vector<klibpp::KSeq> buffRecords;
   uint32_t buffTop;
   uint64_t mask;
+	countingStructure* uniqItems;
 
 public:
   kmersGenerator(uint64_t num_elements,string fastaFilePath, uint64_t kSize)
@@ -310,13 +316,18 @@ public:
         newItems.insert(tmp);
 
     }
+		uint64_t estimatedQ=log2((double)num_elements*1.1)+2;
+
+		uniqItems=new MQF(estimatedQ,2*kSize-estimatedQ,2);
+		
 
 
     generated_elements=0;
   }
+
   bool hasMore() override
   {
-    return generated_elements <num_elements && !end;
+    return nunique_items <num_elements && !end;
   }
 
   bool generateElement(uint64_t& res)
@@ -357,12 +368,17 @@ public:
       };
     }while(newItems.find(curr_element)!=newItems.end());
 
-    if(!generateElement(curr_element)){
-      return false;
-    };
+    // if(!generateElement(curr_element)){
+    //   return false;
+    // };
     res=curr_element;
     generated_elements++;
-    nunique_items++;
+		if(uniqItems->query(curr_element)==0)
+		{
+			nunique_items++;
+			uniqItems->insert(curr_element,1);
+		}
+  //  nunique_items++;
     return true;
   }
 };
@@ -375,29 +391,104 @@ private:
 
   mt19937_64 mt_rand64;
   uint64_t freq;
+
+	vector<uint64_t> buffer;
+  uint64_t bufferTop;
+
 public:
   uniformGenerator(uint64_t num_elements,uint64_t range,uint64_t freq)
   {
+		name="UniForm Distribution";
+    parameters="Freq = "+to_string(freq);
+
     this->num_elements=num_elements;
     this->range=range;
     curr_count=0;
     this->freq=freq;
     mt_rand64=mt19937_64(time(0));
-  }
 
-  bool getElement(uint64_t& res) override
+		uint64_t bufferSize=num_elements/20;
+		if(bufferSize==0)
+			bufferSize=10000000;
+		buffer=vector<uint64_t>(bufferSize);
+		newItems=set<uint64_t>();
+		for(int i=0;newItems.size()<100000;i++)
+		{
+				newItems.insert((uint64_t)mt_rand64());
+		}
+		bufferTop=0;
+    nunique_items=0;
+    curr_count=0;
+  //  curr_item=0;
+    fillBuffer();
+    generated_elements=0;
+
+  }
+	bool hasMore() override
+	{
+		if(bufferTop==buffer.size() &&!fillBuffer())
+		{
+			return false;
+		}
+		return true;
+	}
+
+	bool fillBuffer(){
+		if(nunique_items>=num_elements)
+		{
+			return false;
+		}
+		for(int i=0;i<buffer.size();i++)
+		{
+			uint64_t tmp=2;
+			if(!generateElement(tmp))
+				return false;
+			buffer[i]=tmp;
+		}
+		random_shuffle(buffer.begin(),buffer.end());
+		bufferTop=0;
+		return true;
+	}
+	bool generateElement(uint64_t& res)
+	{
+
+		if(curr_count==0)
+		{
+			if(nunique_items==num_elements)
+			{
+				return false;
+			}
+			curr_count=freq;
+
+			do{
+				do{
+					curr_element=(uint64_t)mt_rand64();
+				}while(newItems.find(curr_element)!=newItems.end());
+			}while(uniq.find(curr_element)!=uniq.end());
+	//    uniq.insert(curr_element);
+			nunique_items++;
+		}
+		res=curr_element;
+		curr_count--;
+
+		return true;
+	}
+
+
+	bool getElement(uint64_t& res) override
   {
-    if(!this->hasMore()){
+    // if(!this->hasMore()){
+    //   return false;
+    // }
+    if(bufferTop==buffer.size() &&!fillBuffer())
+    {
       return false;
     }
-    if(curr_count==0)
-    {
-      curr_count=freq;
-      curr_element=(uint64_t)mt_rand64()%(range);
-    }
-    res=curr_element;
-    curr_count--;
+    res=buffer[bufferTop++];
     generated_elements++;
     return true;
   }
 };
+
+
+#endif /* _utils_H */

@@ -1,3 +1,6 @@
+#ifndef _COUNTING_H
+#define _COUNTING_H
+
 #include <stdio.h>      /* printf, scanf, puts, NULL */
 #include <stdlib.h>
 #include<iostream>
@@ -323,3 +326,5 @@ public:
 //   }
 //
 // };
+
+#endif

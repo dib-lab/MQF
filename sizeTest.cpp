@@ -89,6 +89,8 @@ int main(int argc, char const *argv[]) {
   vector<countingStructure*> dataStructures;
 
   dataStructures.push_back(new MQF(estimatedQ+1,p-estimatedQ-1,1));
+  dataStructures.push_back(new MQF(estimatedQ,p-estimatedQ,3));
+  dataStructures.push_back(new MQF(estimatedQ,p-estimatedQ,2));
   dataStructures.push_back(new MQF(estimatedQ,p-estimatedQ,1));
   dataStructures.push_back(new MQF(estimatedQ-1,p-estimatedQ+1,4));
   dataStructures.push_back(new MQF(estimatedQ-1,p-estimatedQ+1,3));
@@ -104,7 +106,7 @@ int main(int argc, char const *argv[]) {
   //dataStructures.push_back(new LMQF(estimatedQ-1,estimatedQ-3,p-estimatedQ+1,2));
 
   uint64_t BufferSize=num_elements/25;
-  uint64_t num_queries=num_elements/8;
+  uint64_t num_queries=100;
 
 
   int countMinDepth=log(1.0/(fpr))+1;
@@ -219,85 +221,85 @@ int main(int argc, char const *argv[]) {
        structure->insertionTime+=microseconds;
      }
   }
-  cerr<<"Final Number of unique items generated="<<g->nunique_items<<endl;
+  cout<<"Final Number of unique items generated="<<g->nunique_items<<endl;
 
-  for(auto structure: dataStructures){
-    if(structure->failed)
-    {
-      structure->fpr=1;
-      structure->fpr5=1;
-      structure->fpr10=1;
-      structure->fpr20=1;
-      structure->fpr30=1;
-      continue;
-
-    }
-    cerr<<"Querying  from "<<structure->name<<endl;
-    prev=std::chrono::high_resolution_clock::now();
-
-    for(auto a :g->newItems)
-    {
-       uint64_t tmpCount=structure->query(a);
-
-       if(tmpCount>0)
-         structure->fpr++;
-       if(tmpCount>5)
-         structure->fpr5++;
-       if(tmpCount>10)
-         structure->fpr10++;
-       if(tmpCount>20)
-          structure->fpr20++;
-       if(tmpCount>30)
-          structure->fpr30++;
-    }
-    uint64_t numQueries5=0,
-             numQueries10=0,
-             numQueries20=0,
-             numQueries30=0;
-
-    // for(auto it=gold.begin();it!=gold.end();it++)
-    // {
-    //   uint64_t tmpCount=structure->query(it->first);
-    //   if(it->second<5){
-    //     numQueries5++;
-    //     if(tmpCount>5)
-    //       structure->fpr5++;
-    //   }
-    //   if(it->second<10){
-    //     numQueries10++;
-    //     if(tmpCount>10)
-    //       structure->fpr10++;
-    //   }
-    //   if(it->second<20){
-    //     numQueries20++;
-    //     if(tmpCount>20)
-    //       structure->fpr20++;
-    //   }
-    //   if(it->second<30){
-    //     numQueries30++;
-    //     if(tmpCount>30)
-    //       structure->fpr30++;
-    //   }
-    //
-    // }
-    // now=std::chrono::high_resolution_clock::now();
-    // structure->fpr/=double(g->newItems.size());
-    // structure->fpr5/=double(g->newItems.size()+numQueries5);
-    // structure->fpr10/=double(g->newItems.size()+numQueries10);
-    // structure->fpr20/=double(g->newItems.size()+numQueries20);
-    // structure->fpr30/=double(g->newItems.size()+numQueries30);
-
-    microseconds = (chrono::duration_cast<chrono::microseconds>(now-prev)).count();
-    microseconds/=1000;
-    structure->queryTime+=microseconds;
-
-
-  }
+  // for(auto structure: dataStructures){
+  //   if(structure->failed)
+  //   {
+  //     structure->fpr=1;
+  //     structure->fpr5=1;
+  //     structure->fpr10=1;
+  //     structure->fpr20=1;
+  //     structure->fpr30=1;
+  //     continue;
+  //
+  //   }
+  //   cerr<<"Querying  from "<<structure->name<<endl;
+  //   prev=std::chrono::high_resolution_clock::now();
+  //
+  //   for(auto a :g->newItems)
+  //   {
+  //      uint64_t tmpCount=structure->query(a);
+  //
+  //      if(tmpCount>0)
+  //        structure->fpr++;
+  //      if(tmpCount>5)
+  //        structure->fpr5++;
+  //      if(tmpCount>10)
+  //        structure->fpr10++;
+  //      if(tmpCount>20)
+  //         structure->fpr20++;
+  //      if(tmpCount>30)
+  //         structure->fpr30++;
+  //   }
+  //   uint64_t numQueries5=0,
+  //            numQueries10=0,
+  //            numQueries20=0,
+  //            numQueries30=0;
+  //
+  //   // for(auto it=gold.begin();it!=gold.end();it++)
+  //   // {
+  //   //   uint64_t tmpCount=structure->query(it->first);
+  //   //   if(it->second<5){
+  //   //     numQueries5++;
+  //   //     if(tmpCount>5)
+  //   //       structure->fpr5++;
+  //   //   }
+  //   //   if(it->second<10){
+  //   //     numQueries10++;
+  //   //     if(tmpCount>10)
+  //   //       structure->fpr10++;
+  //   //   }
+  //   //   if(it->second<20){
+  //   //     numQueries20++;
+  //   //     if(tmpCount>20)
+  //   //       structure->fpr20++;
+  //   //   }
+  //   //   if(it->second<30){
+  //   //     numQueries30++;
+  //   //     if(tmpCount>30)
+  //   //       structure->fpr30++;
+  //   //   }
+  //   //
+  //   // }
+  //   // now=std::chrono::high_resolution_clock::now();
+  //   // structure->fpr/=double(g->newItems.size());
+  //   // structure->fpr5/=double(g->newItems.size()+numQueries5);
+  //   // structure->fpr10/=double(g->newItems.size()+numQueries10);
+  //   // structure->fpr20/=double(g->newItems.size()+numQueries20);
+  //   // structure->fpr30/=double(g->newItems.size()+numQueries30);
+  //
+  //   microseconds = (chrono::duration_cast<chrono::microseconds>(now-prev)).count();
+  //   microseconds/=1000;
+  //   structure->queryTime+=microseconds;
+  //
+  //
+  // }
 
 
   cout<<"Number of insertions = "<<countedKmers<<endl;
-  cout<<"Number of succesfull lookups = "<<num_queries<<endl;
-  cout<<"Number of non succesfull lookups = "<<num_queries<<endl;
+//  cout<<"Number of succesfull lookups = "<<num_queries<<endl;
+//  cout<<"Number of non succesfull lookups = "<<num_queries<<endl;
 
 
   cout<<"Name"<<"\t"

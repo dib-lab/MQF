@@ -35,6 +35,7 @@ int main(int argc, char const *argv[]) {
   uint64_t kSize=25;
   uint64_t num_elements=0;
   string fqPath;
+  uint64_t fixedCounterSize=2;
 
   app.add_option("-d,--distribution",distribution,
   "Distributions which items will be drew from. options are uniform,kmers,zipfian. Default is zipfian");
@@ -53,13 +54,15 @@ int main(int argc, char const *argv[]) {
 
   app.add_option("-k",fqPath,"Fastq file to draw the kmers");
 
+  app.add_option("-f,--fixed-counter-size",fixedCounterSize
+  ,"Fixed Counter Size used by MQF. default is 2")
+  ->group("CQF/MQF options");
 
 
 
 
 
 
-  uint64_t fixedCounterSize=2;
 
 
   CLI11_PARSE(app, argc, (char**)argv);
@@ -181,15 +184,20 @@ int main(int argc, char const *argv[]) {
 
 
        cerr<<"Inserting "<<BufferSize<<" to "<<structure->name<<"("<<structure->space()<<"%)"<<endl;
-       for(int j=0;j<BufferSize;j++){
+       int j=0;
+       for(;j<BufferSize;j++){
          if(structure->space()>90)
             break;
           structure->insert(insertions[j],1);
         }
         if(structure->space()<90)
           moreWork=true;
-
-        structure->loadingFactors.push_back(structure->space());
+        if(j==BufferSize){
+          structure->loadingFactors.push_back(structure->space());
+        }
+        else{
+          structure->loadingFactors.push_back(0);
+        }
      }
 
   }
