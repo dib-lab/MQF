@@ -9,7 +9,7 @@ using namespace std;
 
 
 
-TEST_CASE( "simple counting test" ) {
+TEST_CASE( "simple counting test" ,"[mqf]") {
   //except first item is inserted 5 times to full test _insert1
   QF qf;
   int counter_size=2;
@@ -53,7 +53,7 @@ TEST_CASE( "simple counting test" ) {
 
 }
 
-TEST_CASE( "Maximum count" ) {
+TEST_CASE( "Maximum count"  ,"[mqf]") {
   QF qf;
   int counter_size=4;
   srand (1);
@@ -74,7 +74,7 @@ TEST_CASE( "Maximum count" ) {
 
 }
 
-TEST_CASE( "Big count" ) {
+TEST_CASE( "Big count" ,"[mqf]" ) {
   QF qf;
   int counter_size=4;
   srand (1);
@@ -87,9 +87,21 @@ TEST_CASE( "Big count" ) {
   uint64_t count = qf_count_key(&qf, 100);
 
   CHECK(count==100000);
+  
+  qf_insert(&qf,150,100000000,false,false);
+  count = qf_count_key(&qf, 150);
+
+  CHECK(count==100000000);
+  
+  qf_insert(&qf,200,553567,false,false);
+  count = qf_count_key(&qf, 200);
+
+  CHECK(count==553567);
+  
+  
 
 }
-TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
+TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ,"[mqf]" ) {
   //except first item is inserted 5 times to full test _insert1
   QF qf;
   int counter_size=2;
@@ -164,7 +176,7 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
 }
 
 
-TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )" ) {
+TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )"  ,"[mqf]") {
   QF qf;
   int counter_size=4;
   uint64_t qbits=15;
@@ -211,7 +223,7 @@ TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )" ) {
 }
 
 
-TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )" ) {
+TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )" ,"[mqf]" ) {
   QF qf;
   int counter_size=4;
   srand (1);
@@ -277,7 +289,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )" ) 
 
 }
 
-TEST_CASE( "Migrate" ) {
+TEST_CASE( "Migrate"  ,"[mqf]") {
   QF qf,qf2;
   int counter_size=4;
   srand (1);
@@ -344,7 +356,7 @@ TEST_CASE( "Migrate" ) {
 
 }
 
-TEST_CASE( "Counting Big counters" ){
+TEST_CASE( "Counting Big counters"  ,"[mqf]"){
   QF qf;
   int counter_size=2;
   srand (1);
@@ -379,7 +391,7 @@ TEST_CASE( "Counting Big counters" ){
     //qf_dump(&qf);
     INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
     count = qf_count_key(&qf, vals[insertedItems]);
-    CHECK(count >= nRepetitions[insertedItems]);
+    REQUIRE(count >= nRepetitions[insertedItems]);
     insertedItems++;
     loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
 
@@ -398,7 +410,7 @@ TEST_CASE( "Counting Big counters" ){
 
 }
 
-TEST_CASE( "Removing items from cqf(90% load factor )") {
+TEST_CASE( "Removing items from cqf(90% load factor )" ,"[mqf]") {
   QF qf;
   int counter_size=2;
   uint64_t qbits=16;

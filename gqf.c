@@ -1317,12 +1317,30 @@ static inline uint64_t *encode_counter(QF *qf, uint64_t remainder, uint64_t
 	//printf("first fixed counter =%lu\n", fcounter_first);
 	if(fcounter_first==fixed_counter_max){
 		uint64_t max_count_in_fixed_counter=fixed_counter_max-1;// the fixed size count in the end of the counter should'nt be full
-		do{
+		//uint8_t nbitsRequired=LOG2(counter)+1;
+		//nbitsRequired-=qf->metadata->fixed_counter_size;
+	//	uint8_t nslotsRequired=(uint8_t)ceil((double)nbitsRequired/(double)qf->metadata->key_remainder_bits);
+	  uint8_t nslotsRequired=1;
+		uint64_t currMAX=(1ULL<<(nslotsRequired)*qf->metadata->key_remainder_bits);
+		currMAX*=((1ULL)<<(qf->metadata->fixed_counter_size)-2);
+		while(counter>currMAX)
+		{
+			nslotsRequired++;
+			currMAX=(1ULL<<(nslotsRequired)*qf->metadata->key_remainder_bits);
+			currMAX*=((1ULL)<<(qf->metadata->fixed_counter_size)-2);
+		}
+		uint64_t prevMax=0;
+		if(nslotsRequired>1){
+				prevMax=(1ULL<<(nslotsRequired-1)*qf->metadata->key_remainder_bits);
+				prevMax*=((1ULL)<<(qf->metadata->fixed_counter_size)-2);
+			}
+		counter-=prevMax;
+		//max count to be stored in N-1 Slots
+		for(int i=0;i<nslotsRequired;i++){
 			*--p=counter%slots_base;
 			*--pf=fixed_counter_max;
-			//printf("vcount = %lu\n",counter%slots_base );
 			counter >>= qf->metadata->key_remainder_bits;
-		}	while(counter>max_count_in_fixed_counter);
+		}
 		*(fixed_size_counters-1)=counter;// set the last counter
 		//printf("last fixed counter = %lu\n",counter);
 	}
@@ -1364,6 +1382,12 @@ static inline uint64_t decode_counter(const QF *qf, uint64_t index, uint64_t
 
 		}while(fcount == fixed_count_max);
 		*count += fcount<<(no_digits*qf->metadata->key_remainder_bits);
+		uint64_t prevMax=0;
+		if(no_digits>1){
+				prevMax=(1ULL<<(no_digits-1)*qf->metadata->key_remainder_bits);
+				prevMax*=((1ULL)<<(qf->metadata->fixed_counter_size)-2);
+			}
+		*count+=prevMax;
 		//printf("fixed vcount= %lu\n", fcount<<(no_digits*qf->metadata->bits_per_slot + qf->metadata->fixed_counter_size));
 	}
 	*count += tmp_count;
@@ -2242,7 +2266,7 @@ bool qf_insert(QF *qf, uint64_t key, uint64_t count, bool
 		return true;
 	}
 	/*uint64_t hash = (key << qf->metadata->tag_bits) | (value & BITMASK(qf->metadata->tag_bits));*/
-	if (count == 1)
+	if (0 && count == 1)
 	 return insert1(qf, key, lock, spin);
 	else
 	 return insert(qf, key, count, lock, spin);
