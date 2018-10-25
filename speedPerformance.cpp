@@ -224,6 +224,7 @@ int main(int argc, char const *argv[]) {
 
 
   cout<<"Number of insertions = "<<countedKmers<<endl;
+  cout<<"Number of unique items = "<<g->nunique_items<<endl;
   cout<<"Number of succesfull lookups = "<<num_queries<<endl;
   cout<<"Number of non succesfull lookups = "<<num_queries<<endl;
 
