@@ -183,7 +183,7 @@ int main(int argc, char const *argv[]) {
 // check the size of cqf
    while(g->hasMore())
    {
-     cerr<<"Number of unique items generated so far ="<<g->nunique_items<<endl;
+     //     cerr<<"Number of unique items generated so far ="<<g->nunique_items<<endl;
      uint64_t tmp_inserted=0;
      for(int j=0;j<BufferSize;j++){
        if(!g->getElement(curr_item))
@@ -195,7 +195,7 @@ int main(int argc, char const *argv[]) {
        // if(queryTop<num_queries)
        //    succesfullQueries[queryTop++]=curr_item;
      }
-     cerr<<"Finished generation"<<endl;
+     //    cerr<<"Finished generation"<<endl;
      countedKmers+=BufferSize;
      for(auto structure: dataStructures){
        if(structure->space()>=95)
@@ -203,7 +203,7 @@ int main(int argc, char const *argv[]) {
          structure->failed=true;
          continue;
        }
-       cerr<<"Inserting "<<BufferSize<<" to "<<structure->name<<"("<<structure->space()<<")"<<endl;
+       //  cerr<<"Inserting "<<BufferSize<<" to "<<structure->name<<"("<<structure->space()<<")"<<endl;
        prev=std::chrono::high_resolution_clock::now();
 
        for(int j=0;j<tmp_inserted;j++){
