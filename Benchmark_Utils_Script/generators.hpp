@@ -319,8 +319,9 @@ public:
 		uint64_t estimatedQ=log2((double)num_elements*1.1)+2;
 
 		uniqItems=new MQF(estimatedQ,2*kSize-estimatedQ,2);
-		
 
+		nunique_items=0;
+		end=false;
 
     generated_elements=0;
   }

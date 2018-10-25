@@ -30,10 +30,11 @@ int main(int argc, char const *argv[]) {
   string dataStrucureInput="mqf";
 
 
-  uint64_t qbits=25;
-  uint64_t kSize=25;
-  string fqPath="";
+  uint64_t fixedCounterSize=2;
 
+  uint64_t qbits=25;
+  uint64_t kSize=20;
+  string fqPath="";
   uint64_t num_elements=0;
 
 
@@ -58,16 +59,15 @@ int main(int argc, char const *argv[]) {
 
 
 
-  uint64_t fixedCounterSize=2;
-
 
   CLI11_PARSE(app, argc, (char**)argv);
+  uint64_t slot_size=40-qbits;
 
-  uint64_t slot_size=39-qbits;
-  if(distribution=="kmers")
-  {
-    slot_size=kSize*2-qbits;
-  }
+
+  // if(distribution=="kmers")
+  // {
+  //   slot_size=kSize*2-qbits;
+  // }
   num_elements=(1ULL<<qbits)*1.5;
   uint64_t BufferSize=num_elements/10;
   uint64_t num_queries=num_elements/8;
