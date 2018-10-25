@@ -33,7 +33,7 @@ STXXL= ThirdParty/stxxl/build/lib/libstxxl.a
 
 LDFLAGS = -fopenmp $(DEBUG) $(PROFILE) $(OPT) -lz -lbz2 -lpthread
 
-madoka = madoka/lib/sketch.o madoka/lib/approx.o  madoka/lib/file.o
+
 #
 # declaration of dependencies
 #
@@ -52,19 +52,19 @@ OBJS= gqf.o	utils.o LayeredMQF.o bufferedMQF.o  onDiskMQF.o
 load_test_mqf:	load_test_mqf.o gqf.o hashutil.o utils.o
 	$(LD) $^ $(LDFLAGS) -o $@
 insertionPerSecond:	insertionPerSecond.o  LayeredMQF.o onDiskMQF.o bufferedMQF.o  gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
-	$(LD) $^ $(madoka)  $(LDFLAGS) -o $@ $(STXXL)
+	$(LD) $^   $(LDFLAGS) -o $@ $(STXXL)
 libgqf.so: gqf.o utils.o
 	$(LD) $^ $(LDFLAGS) --shared -o $@
 
 speedPerformance: speedPerformance.o LayeredMQF.o onDiskMQF.o bufferedMQF.o  gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
-	$(LD) $^ $(madoka)  $(LDFLAGS) -o $@ $(STXXL)
+	$(LD) $^   $(LDFLAGS) -o $@ $(STXXL)
 
 compareLoadingFactor: compareLoadingFactor.o LayeredMQF.o onDiskMQF.o bufferedMQF.o  gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
-		$(LD) $^ $(madoka)  $(LDFLAGS) -o $@ $(STXXL)
+		$(LD) $^   $(LDFLAGS) -o $@ $(STXXL)
 
 
 sizeTest: sizeTest.o LayeredMQF.o onDiskMQF.o bufferedMQF.o  gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
-				$(LD) $^ $(madoka)  $(LDFLAGS) -o $@ $(STXXL)
+				$(LD) $^  $(LDFLAGS) -o $@ $(STXXL)
 
 
 test:  $(TESTFILES) gqf.cpp test.o utils.o
