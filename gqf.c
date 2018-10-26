@@ -1942,6 +1942,40 @@ char* qf_getBlockTag_pointer_byBlock(const QF *qf, uint64_t index){
 	return (char*)&get_block(qf, index )->slots+(8 * qf->metadata->bits_per_slot );
 }
 
+bool qf_getBlockTag_pointer_byItem(const QF *qf, uint64_t key,char *&res){
+	__uint128_t hash = key;
+	uint64_t hash_remainder   = hash & BITMASK(qf->metadata->key_remainder_bits);
+	int64_t hash_bucket_index = hash >> qf->metadata->key_remainder_bits;
+	if(hash_bucket_index > qf->metadata->xnslots){
+			throw std::out_of_range("qf_getBlockTag_pointer_byItem is called with hash index out of range");
+		}
+	if (!is_occupied(qf, hash_bucket_index))
+		return false;
+
+	int64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(qf,
+																																hash_bucket_index-1)
+		+ 1;
+	if (runstart_index < hash_bucket_index)
+		runstart_index = hash_bucket_index;
+
+	/* printf("MC RUNSTART: %02lx RUNEND: %02lx\n", runstart_index, runend_index); */
+
+	uint64_t current_remainder, current_count, current_end;
+	do {
+		current_end = decode_counter(qf, runstart_index, &current_remainder,
+																 &current_count);
+		if (current_remainder == hash_remainder){
+			res=qf_getBlockTag_pointer_byBlock(qf,runstart_index/64);
+			return true;
+		}
+		runstart_index = current_end + 1;
+	} while (!is_runend(qf, current_end));
+
+	return false;
+
+}
+
+
 /* The caller should call qf_init on the dest QF before calling this function.
  */
 void qf_copy(QF *dest, QF *src)

@@ -193,7 +193,8 @@ extern "C" {
 	uint64_t qf_get_tag(const QF *qf, uint64_t key);
 	
 	
-	char* qf_getBlockTag_pointer_byBlock(const QF *qf, uint64_t key);
+	char* qf_getBlockTag_pointer_byBlock(const QF *qf, uint64_t index);
+	bool qf_getBlockTag_pointer_byItem(const QF *qf, uint64_t key,char *&res);
 	/*!
 	@breif delete the tag associated with a given item.
 
