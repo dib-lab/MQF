@@ -47,9 +47,11 @@ extern "C" {
 		uint64_t xnslots;
 		uint64_t key_bits;
 		uint64_t tag_bits;
+		uint64_t BlockTag_bits;
 		uint64_t fixed_counter_size;
 		uint64_t key_remainder_bits;
 		uint64_t bits_per_slot;
+		uint64_t blockSize;
 		__uint128_t range;
 		uint64_t nblocks;
 		uint64_t nelts;
@@ -101,7 +103,7 @@ extern "C" {
 	@param const char * path: In case of mmap. Path of the file used to pack the filter.
 	@param uint32_t seed: useless value. To be removed
 		  */
-	void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_counter_size, bool mem, const char *path, uint32_t seed);
+	void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_counter_size,uint64_t blocksTagSize, bool mem, const char *path, uint32_t seed);
 
 	void qf_reset(QF *qf);
 
@@ -189,6 +191,10 @@ extern "C" {
 	@return uint64_t the tag associated with the input key.
 			*/
 	uint64_t qf_get_tag(const QF *qf, uint64_t key);
+	
+	
+	char* qf_getBlockTag_pointer_byBlock(const QF *qf, uint64_t index);
+	bool qf_getBlockTag_pointer_byItem(const QF *qf, uint64_t key,char *&res);
 	/*!
 	@breif delete the tag associated with a given item.
 
