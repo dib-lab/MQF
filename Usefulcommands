@@ -1,3 +1,8 @@
 parallel --gnu -k 'cat size.z3.n{}M |grep "CQF"|awk "{if(\$5==1){res=\$0}} END {print res}" ' ::: 50 55 60 65 70 75 80 85 90 95 100 105 110 |cut -f3 |tr -d "MB"
 
 parallel --gnu -j1  './sizeTest -z 3 -n {}000000 > size.z3.n{}M'  ::: 60
+
+
+parallel --gnu -k "grep 'Number of insertions' speed.{}.s27  |cut -f2 -d=  " ::: z2 z3 z5 kmers
+
+parallel --gnu -k "grep  -P '^CountMin\t' speed.{}.s27  |cut -f5,6  " ::: z2 z3 z5 kmers 
