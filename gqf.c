@@ -1937,6 +1937,10 @@ qf->mem = (qfmem *)calloc(sizeof(qfmem), 1);
 																						sizeof(wait_time_data));
 #endif
 }
+char* qf_getBlockTag_pointer_byBlock(const QF *qf, uint64_t index){
+	
+	return (char*)&get_block(qf, index )->slots+(8 * qf->metadata->bits_per_slot );
+}
 
 /* The caller should call qf_init on the dest QF before calling this function.
  */

@@ -51,7 +51,114 @@ TEST_CASE( "Add tags to items") {
 }
 
 
+TEST_CASE( "Add tags to Blocks") {
+  QF qf;
+  for(uint64_t tag_size=1;tag_size<=128;tag_size*=2){
+    uint64_t qbits=16;
+    uint64_t num_hash_bits=qbits+8;
+    uint64_t maximum_count=(1ULL<<tag_size)-1;
+    INFO("Tag size = "<<tag_size<<" max count= "<<maximum_count);
+    qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,3,tag_size, true, "", 2038074761);
 
+    qf_insert(&qf,150,50,false,false);
+    CHECK( qf_count_key(&qf,150)==50);
+    char* ptr=qf_getBlockTag_pointer_byBlock(&qf,0);
+    for(int i=0;i<tag_size;i++)
+      ptr[i]=(char)((int)'a'+i);
+    //qf_add_tag(&qf,150,maximum_count,false,false);
+    //qf_dump(&qf);
+    //REQUIRE( qf_get_tag(&qf,150)==maximum_count);
+    char* ptr2=qf_getBlockTag_pointer_byBlock(&qf,0);
+    for(int i=0;i<tag_size;i++)
+      REQUIRE(ptr2[i]==(char)((int)'a'+i));
+    CHECK(qf_count_key(&qf,150)==50);
+    //
+
+
+
+    qf_destroy(&qf);
+  }
+}
+
+
+
+TEST_CASE( "Inserting items( repeated 50 times)  and set block tags in cqf(90% load factor )") {
+  QF qf;
+  int tag_size=8;
+  uint64_t qbits=15;
+  uint64_t num_hash_bits=qbits+8;
+  uint64_t maximum_count=(1ULL<<tag_size)-1;
+  INFO("Counter size = "<<tag_size<<" max count= "<<maximum_count);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,3,tag_size, true, "", 2038074761);
+
+  uint64_t nvals = (1ULL<<qbits);
+  uint64_t *vals;
+  vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
+  for(uint64_t i=0;i<nvals;i++)
+  {
+    vals[i]=rand();
+    vals[i]=(vals[i]<<32)|rand();
+    vals[i]=vals[i]%(qf.metadata->range);
+  }
+  double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
+  uint64_t insertedItems=0;
+  uint64_t count;
+  while(loadFactor<0.9){
+
+    qf_insert(&qf,vals[insertedItems],50,false,false);
+  //  qf_add_tag(&qf,vals[insertedItems],vals[insertedItems]%(maximum_count+1));
+
+  //  count = qf_get_tag(&qf,vals[insertedItems]);
+  //  CHECK(count == vals[insertedItems]%(maximum_count+1));
+    insertedItems++;
+    loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
+
+  }
+  for(int i=0;i<qf.metadata->nblocks;i++)
+  {
+    char* blockTag=qf_getBlockTag_pointer_byBlock(&qf,i);
+    for(int j=0;j<tag_size;j++){
+      char newChar=(char)((int)'a'+i+j);
+      if(newChar>'z')
+        newChar='a';
+    //  cout<<newChar;
+      blockTag[j]=newChar;
+    }
+  //  cout<<endl;
+  }
+//  cout<<endl;
+  for(uint64_t i=0;i<insertedItems;i++)
+  {
+    count = qf_count_key(&qf, vals[i]);
+    CHECK(count >= 50);
+  }
+  QFi qfi;
+  qf_iterator(&qf, &qfi, 0);
+  do {
+    uint64_t key, value, count;
+    qfi_get(&qfi, &key, &value, &count);
+    count=qf_count_key(&qf, key);
+    // CHECK(count >= 50);
+    // count = qf_get_tag(&qf,key);
+    // CHECK(count == key%(maximum_count+1));
+  } while(!qfi_next(&qfi));
+
+  for(int i=0;i<qf.metadata->nblocks;i++)
+  {
+    char* blockTag=qf_getBlockTag_pointer_byBlock(&qf,i);
+    for(int j=0;j<tag_size;j++){
+      char newChar=(char)((int)'a'+i+j);
+      if(newChar>'z')
+        newChar='a';
+      //cout<<newChar;
+      REQUIRE(blockTag[j]==newChar);
+    }
+    //cout<<endl;
+  }
+  
+  qf_destroy(&qf);
+
+}
 
 TEST_CASE( "Inserting items( repeated 50 times)  and set tags in cqf(90% load factor )") {
   QF qf;

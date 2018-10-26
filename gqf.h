@@ -191,6 +191,9 @@ extern "C" {
 	@return uint64_t the tag associated with the input key.
 			*/
 	uint64_t qf_get_tag(const QF *qf, uint64_t key);
+	
+	
+	char* qf_getBlockTag_pointer_byBlock(const QF *qf, uint64_t key);
 	/*!
 	@breif delete the tag associated with a given item.
 
