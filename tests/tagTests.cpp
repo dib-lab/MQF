@@ -12,7 +12,7 @@ TEST_CASE( "Add tags to items") {
     uint64_t num_hash_bits=qbits+8;
     uint64_t maximum_count=(1ULL<<tag_size)-1;
     INFO("Tag size = "<<tag_size<<" max count= "<<maximum_count);
-    qf_init(&qf, (1ULL<<qbits), num_hash_bits, tag_size,3, true, "", 2038074761);
+    qf_init(&qf, (1ULL<<qbits), num_hash_bits, tag_size,3,0, true, "", 2038074761);
 
     qf_insert(&qf,150,50,false,false);
     CHECK( qf_count_key(&qf,150)==50);
@@ -60,7 +60,7 @@ TEST_CASE( "Inserting items( repeated 50 times)  and set tags in cqf(90% load fa
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<tag_size)-1;
   INFO("Counter size = "<<tag_size<<" max count= "<<maximum_count);
-  qf_init(&qf, (1ULL<<qbits), num_hash_bits, tag_size,3, true, "", 2038074761);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, tag_size,3,0, true, "", 2038074761);
 
   uint64_t nvals = (1ULL<<qbits);
   uint64_t *vals;
@@ -122,7 +122,7 @@ TEST_CASE( "Removing tags from items(90% load factor )") {
   uint64_t qbits=16;
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
-  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 3,counter_size, true, "", 2038074761);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 3,counter_size,0, true, "", 2038074761);
 
   uint64_t nvals = (1ULL<<qbits);
   uint64_t *vals;
@@ -200,7 +200,7 @@ TEST_CASE( "Removing items from cqf with tags(90% load factor )") {
   uint64_t qbits=16;
   uint64_t num_hash_bits=qbits+11;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
-  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 3,counter_size, true, "", 2038074761);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 3,counter_size,0, true, "", 2038074761);
 
   uint64_t nvals = (1ULL<<qbits);
   uint64_t *vals;

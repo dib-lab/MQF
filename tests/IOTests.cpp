@@ -12,7 +12,7 @@ TEST_CASE( "Writing and Reading to/from Disk") {
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 3,counter_size, true, "", 2038074761);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 3,counter_size,0, true, "", 2038074761);
 
   uint64_t nvals = (1ULL<<qbits);
   //uint64_t nvals = 3;
@@ -97,7 +97,7 @@ TEST_CASE( "MMap test") {
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 3,counter_size, false, "tmp.ser", 2038074761);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 3,counter_size,0, false, "tmp.ser", 2038074761);
 
   uint64_t nvals = (1ULL<<qbits);
   //uint64_t nvals = 3;

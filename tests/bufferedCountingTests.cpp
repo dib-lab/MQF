@@ -227,8 +227,8 @@ TEST_CASE( "batch query(singletons)" ,"[buffered]") {
   QF *inputBuffer,*outputBuffer;
   inputBuffer=new QF();
   outputBuffer=new QF();
-  qf_init(inputBuffer, (1ULL<<qbits), num_hash_bits, 0,2, true, "", 2038074761);
-  qf_init(outputBuffer, (1ULL<<qbits), num_hash_bits, 0,2, true, "", 2038074761);
+  qf_init(inputBuffer, (1ULL<<qbits), num_hash_bits, 0,2, 0,true, "", 2038074761);
+  qf_init(outputBuffer, (1ULL<<qbits), num_hash_bits, 0,2,0,true, "", 2038074761);
   uint64_t i=1;
   uint64_t start=1;
   for(;i<insertedItems;i++)
@@ -447,7 +447,7 @@ TEST_CASE( "batch query" ,"[buffered]"){
 
   QF *inputBuffer;
   inputBuffer=new QF();
-  qf_init(inputBuffer, (1ULL<<qbits+1), num_hash_bits, 0,2, true, "", 2038074761);
+  qf_init(inputBuffer, (1ULL<<qbits+1), num_hash_bits, 0,2, 0,true, "", 2038074761);
 
 
 

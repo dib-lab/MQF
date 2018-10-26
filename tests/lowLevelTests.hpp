@@ -8,7 +8,7 @@ TEST_CASE( "get/set fixed counters" ) {
     uint64_t num_hash_bits=qbits+8;
     uint64_t maximum_count=(1ULL<<counter_size)-1;
     INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-    qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
+    qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size,0, true, "", 2038074761);
     uint64_t c;
     // test many set and get
     uint64_t last=0;
@@ -70,7 +70,7 @@ TEST_CASE( "get/set slots" ) {
   uint64_t num_hash_bits=qbits+8;
     uint64_t maximum_count=(1ULL<<counter_size)-1;
     INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-    qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
+    qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size,0, true, "", 2038074761);
     uint64_t c;
     // test many set and get
     uint64_t last=0;
@@ -133,7 +133,7 @@ TEST_CASE( "get/set slots" ) {
 //     uint64_t num_hash_bits=qbits+8;
 //     uint64_t maximum_count=(1ULL<<counter_size)-1;
 //     INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-//     qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
+//     qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size,0, true, "", 2038074761);
 //     uint64_t c;
 //     // test  shift one item
 //     uint64_t last=0;
@@ -183,7 +183,7 @@ TEST_CASE( "get/set Tags" ) {
     uint64_t num_hash_bits=qbits+8;
     uint64_t maximum_count=(1ULL<<tag_size)-1;
     INFO("Tag size = "<<tag_size);
-    qf_init(&qf, (1ULL<<qbits), num_hash_bits, tag_size,3, true, "", 2038074761);
+    qf_init(&qf, (1ULL<<qbits), num_hash_bits, tag_size,3,0, true, "", 2038074761);
     uint64_t c;
     // test many set and get
     uint64_t last=0;
@@ -243,7 +243,7 @@ TEST_CASE("general lock")
   uint64_t num_hash_bits=qbits+9;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size,0, true, "", 2038074761);
   bool added=qf_insert(&qf,100,1,true,false);
   REQUIRE(added==true);
   qf_general_lock(&qf,true);

@@ -11,7 +11,7 @@ using namespace std;
   uint64_t qbits=16;
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
-  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size,0, true, "", 2038074761);
 
   uint64_t nvals = (1ULL<<qbits);
   //uint64_t nvals = 3;
