@@ -1,5 +1,5 @@
-#ifndef QF_H
-#define QF_H
+#ifndef MQF_H
+#define MQF_H
 
 #include <inttypes.h>
 #include <stdbool.h>
@@ -191,8 +191,8 @@ extern "C" {
 	@return uint64_t the tag associated with the input key.
 			*/
 	uint64_t qf_get_tag(const QF *qf, uint64_t key);
-	
-	
+
+
 	char* qf_getBlockTag_pointer_byBlock(const QF *qf, uint64_t index);
 	bool qf_getBlockTag_pointer_byItem(const QF *qf, uint64_t key,char *&res);
 	/*!
