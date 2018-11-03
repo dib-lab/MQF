@@ -209,6 +209,7 @@ extern "C" {
 	void qf_setCounter(QF* qf,uint64_t key, uint64_t count, bool lock=false, bool spin=false);
 	/* Initialize an iterator */
 	bool qf_iterator(QF *qf, QFi *qfi, uint64_t position);
+	bool qfi_find(QF *qf,QFi *qfi, uint64_t key);
 
 	/* Returns 0 if the iterator is still valid (i.e. has not reached the
 		 end of the QF. */

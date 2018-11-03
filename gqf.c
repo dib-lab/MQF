@@ -2368,6 +2368,48 @@ bool qf_iterator(QF *qf, QFi *qfi, uint64_t position)
 	return true;
 }
 
+bool qfi_find(QF *qf,QFi *qfi, uint64_t key)
+{
+	__uint128_t hash = key;
+	uint64_t hash_remainder   = hash & BITMASK(qf->metadata->key_remainder_bits);
+	int64_t hash_bucket_index = hash >> qf->metadata->key_remainder_bits;
+
+	if (!is_occupied(qf, hash_bucket_index))
+		return 0;
+
+	int64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(qf,
+																																hash_bucket_index-1)
+		+ 1;
+	if (runstart_index < hash_bucket_index)
+		runstart_index = hash_bucket_index;
+
+	/* printf("MC RUNSTART: %02lx RUNEND: %02lx\n", runstart_index, runend_index); */
+
+	uint64_t current_remainder, current_count, current_end;
+	do {
+		current_end = decode_counter(qf, runstart_index, &current_remainder,
+																 &current_count);
+		if (current_remainder == hash_remainder){
+			// qf_iterator(qf,qfi,runstart_index/64);
+			// uint64_t ckey,count,value;
+			// qfi_get(qfi,&ckey,&value,&count);
+			// while(ckey!=key){
+			// 	qfi_next(qfi);
+			// 	qfi_get(qfi,&ckey,&value,&count);
+			// }
+			uint64_t position=runstart_index;
+			qfi->qf = qf;
+			qfi->num_clusters = 0;
+			qfi->run = hash_bucket_index;
+			qfi->current=runstart_index;
+			return true;
+		}
+
+		runstart_index = current_end + 1;
+	} while (!is_runend(qf, current_end));
+	return false;
+}
+
 int qfi_get(QFi *qfi, uint64_t *key, uint64_t *value, uint64_t *count)
 {
 
