@@ -2,6 +2,7 @@
 #include <stdio.h>      /* printf, scanf, puts, NULL */
 #include <stdlib.h>
 #include<iostream>
+#include <unordered_map>
 #include "../catch.hpp"
 using namespace std;
 
@@ -277,7 +278,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )" ) 
 
 }
 
-TEST_CASE( "test get_iterator" ) {
+TEST_CASE( "test kmers order" ) {
   QF qf;
   int counter_size=4;
   srand (1);
@@ -288,7 +289,7 @@ TEST_CASE( "test get_iterator" ) {
   qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size,0, true, "", 2038074761);
 
   uint64_t nvals = (1ULL<<qbits);
-//  nvals = 10;
+  //nvals = 10000;
   uint64_t *vals;
   uint64_t *nRepetitions;
   vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
@@ -327,24 +328,157 @@ TEST_CASE( "test get_iterator" ) {
     count = qf_count_key(&qf, vals[insertedItems]);
   //  CHECK(count == nRepetitions[insertedItems]);
     insertedItems++;
-    loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
+    loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->xnslots;
+
+  }
+  INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
+
+  QFi it,itBlock;
+  qf_iterator(&qf,&it,0);
+  uint64_t key,value,newkey;
+  uint64_t currBlock=0;
+  uint64_t currCount=0;
+  unordered_map<uint64_t,uint64_t> kmerOrders;
+  while(!qfi_end(&it))
+  {
+    qfi_get(&it,&key,&value,&count);
+    if(it.current/64 == currBlock)
+    {
+      kmerOrders[key]=currCount;
+      currCount++;
+    }
+    else{
+      currCount=0;
+      currBlock=it.current/64;
+      kmerOrders[key]=currCount;
+      currCount++;
+    }
+    qfi_next(&it);
+  }
+  for(uint64_t i=0;i<insertedItems;i++)
+  {
+
+    bool res = qfi_find(&qf,&it, vals[i]);
+    qfi_get(&it,&key,&value,&count);
+    INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
+    CHECK(count == nRepetitions[i]);
+
+    uint64_t blockId=(it.current/64)*64;
+    qfi_firstInBlock(&qf,&it,&itBlock);
+    qfi_get(&itBlock,&newkey,&value,&count);
+//    cout<<"search for "<<key<<" at "<<it.current<<"\n";
+    uint64_t order=0;
+    while(newkey!=vals[i])
+    {
+      qfi_next(&itBlock);
+      qfi_get(&itBlock,&newkey,&value,&count);
+      //cout<<newkey<<"\n";
+      order++;
+      if(order>64){
+        cout<<"Block "<<blockId<<endl;
+        break;
+      }
+    }
+    if(kmerOrders[vals[i]]!=order)
+    {
+      cout<<it.current<<endl;
+    }
+    CHECK(kmerOrders[vals[i]]==order);
+  }
+
+  qf_destroy(&qf);
+
+}
+
+TEST_CASE( "test get_iterator" ) {
+  QF qf;
+  int counter_size=4;
+  srand (1);
+  uint64_t qbits=16;
+  uint64_t num_hash_bits=qbits+8;
+  uint64_t maximum_count=(1ULL<<counter_size)-1;
+  INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size,0, true, "", 2038074761);
+
+  uint64_t nvals = (1ULL<<qbits);
+  //nvals = 5000;
+  uint64_t *vals;
+  uint64_t *nRepetitions;
+  vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
+  nRepetitions= (uint64_t*)malloc(nvals*sizeof(nRepetitions[0]));
+  uint64_t count;
+
+  for(uint64_t i=0;i<nvals;i++)
+  {
+    uint64_t newvalue=0;
+    while(newvalue==0){
+      newvalue=rand();
+      newvalue=(newvalue<<32)|rand();
+      newvalue=newvalue%(qf.metadata->range);
+      for(uint64_t j=0;j<i;j++)
+      {
+        if(vals[j]==newvalue)
+        {
+          newvalue=0;
+          break;
+        }
+      }
+    }
+    vals[i]=newvalue;
+
+
+    nRepetitions[i]=(rand()%1000)+1;
+  }
+  double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
+  uint64_t insertedItems=0;
+  while(insertedItems<nvals && loadFactor<0.9){
+  //  printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
+    INFO("Inserting "<< vals[insertedItems] << " Repeated "<<nRepetitions[insertedItems]);
+    qf_insert(&qf,vals[insertedItems],nRepetitions[insertedItems],false,false);
+    //qf_dump(&qf);
+    INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
+    count = qf_count_key(&qf, vals[insertedItems]);
+  //  CHECK(count == nRepetitions[insertedItems]);
+    insertedItems++;
+    loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->xnslots;
 
   }
   INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
 
   for(uint64_t i=0;i<insertedItems;i++)
   {
-    QFi it;
+    QFi it,itBlock;
     bool res = qfi_find(&qf,&it, vals[i]);
-    uint64_t key,value,count;
+    uint64_t key,value,count,newkey;
     qfi_get(&it,&key,&value,&count);
+
+
     INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
     CHECK(count == nRepetitions[i]);
+
+    uint64_t blockId=(it.current/64)*64;
+    qfi_firstInBlock(&qf,&it,&itBlock);
+    qfi_get(&itBlock,&newkey,&value,&count);
+//    cout<<"search for "<<key<<" at "<<it.current<<"\n";
+    uint64_t tmp=0;
+    while(newkey!=key)
+    {
+      qfi_next(&itBlock);
+      qfi_get(&itBlock,&newkey,&value,&count);
+      //cout<<newkey<<"\n";
+      tmp++;
+      if(tmp>64){
+        cout<<"Block "<<blockId<<endl;
+        break;
+      }
+    }
+    CHECK(tmp<64);
   }
 
   qf_destroy(&qf);
 
 }
+
 
 TEST_CASE( "Migrate" ) {
   QF qf,qf2;

@@ -211,6 +211,7 @@ extern "C" {
 	bool qf_iterator(QF *qf, QFi *qfi, uint64_t position);
 	bool qfi_find(QF *qf,QFi *qfi, uint64_t key);
 
+	bool qfi_firstInBlock(QF* qf,QFi *qfi, QFi * res);
 	/* Returns 0 if the iterator is still valid (i.e. has not reached the
 		 end of the QF. */
 	int qfi_get(QFi *qfi, uint64_t *key, uint64_t *value, uint64_t *count);

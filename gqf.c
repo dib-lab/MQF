@@ -1938,7 +1938,7 @@ qf->mem = (qfmem *)calloc(sizeof(qfmem), 1);
 #endif
 }
 char* qf_getBlockTag_pointer_byBlock(const QF *qf, uint64_t index){
-	
+
 	return (char*)&get_block(qf, index )->slots+(8 * qf->metadata->bits_per_slot );
 }
 
@@ -2328,7 +2328,10 @@ void qf_setCounter(QF* qf,uint64_t key, uint64_t count, bool lock, bool spin )
 }
 
 
+bool qf_iterator_firstInBlock(QF *qf, QFi *qfi, uint64_t block_id)
+{
 
+}
 
 /* initialize the iterator at the run corresponding
  * to the position index
@@ -2338,16 +2341,46 @@ bool qf_iterator(QF *qf, QFi *qfi, uint64_t position)
 	if(position > qf->metadata->xnslots){
 		throw std::out_of_range("qf_iterator is called with position out of range");
 	}
+	// if(position==62016)
+	// {
+	// 	cout<<"Ready to debug"<<endl;
+	// 	qf_dump_block(qf,(position/64)-1);
+	// 	qf_dump_block(qf,position/64);
+  //
+  //
+	// }
+
 	if (!is_occupied(qf, position)) {
-		uint64_t block_index = position;
-		uint64_t idx = bitselect(get_block(qf, block_index)->occupieds[0], 0);
-		if (idx == 64) {
-			while(idx == 64 && block_index < qf->metadata->nblocks) {
-				block_index++;
-				idx = bitselect(get_block(qf, block_index)->occupieds[0], 0);
+
+		int offset=offset_lower_bound(qf, position);
+		if(0 && offset>0)
+		{
+			const uint64_t fixed_count_max=(1ULL << qf->metadata->fixed_counter_size)-1;
+			position--;
+			uint64_t fixedCounter=get_fixed_counter(qf,position);
+			bool in=false;
+			while(fixedCounter==fixed_count_max)
+			{
+				in=true;
+				position++;
+				fixedCounter=get_fixed_counter(qf,position);
 			}
+
+			position++;
+		//	cout<<position<<endl;
 		}
-		position = block_index * SLOTS_PER_BLOCK + idx;
+		else{
+			uint64_t block_index = position/64;
+			uint64_t idx = bitselect(get_block(qf, block_index)->occupieds[0], 0);
+			if (idx == 64) {
+				while(idx == 64 && block_index < qf->metadata->nblocks) {
+					block_index++;
+					idx = bitselect(get_block(qf, block_index)->occupieds[0], 0);
+				}
+			}
+			//cout<<"Here "<<idx<<endl;
+			position = block_index * SLOTS_PER_BLOCK + idx;
+		}
 	}
 
 	qfi->qf = qf;
@@ -2366,6 +2399,21 @@ bool qf_iterator(QF *qf, QFi *qfi, uint64_t position)
 	if (qfi->current >= qf->metadata->nslots)
 		return false;
 	return true;
+}
+
+bool qfi_firstInBlock(QF* qf,QFi *it, QFi * res){
+	uint64_t current=(it->current/64)*64;
+	uint64_t startSearch = current == 0 ? 0 : current-1;
+	qf_iterator(qf,res,startSearch);
+	uint64_t tmp=0;
+	while(res->current>current){
+		tmp++;
+		if(it->current<tmp)
+			break;
+		qf_iterator(qf,res,it->current-tmp);
+	}
+	while(res->current < current)
+		qfi_next(res);	
 }
 
 bool qfi_find(QF *qf,QFi *qfi, uint64_t key)
@@ -2397,7 +2445,7 @@ bool qfi_find(QF *qf,QFi *qfi, uint64_t key)
 			// 	qfi_next(qfi);
 			// 	qfi_get(qfi,&ckey,&value,&count);
 			// }
-			uint64_t position=runstart_index;
+		//	uint64_t position=runstart_index;
 			qfi->qf = qf;
 			qfi->num_clusters = 0;
 			qfi->run = hash_bucket_index;
