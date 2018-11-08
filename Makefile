@@ -1,5 +1,5 @@
-TARGETS=main
-TESTFILES = tests/CountingTests.o tests/HighLevelFunctionsTests.o tests/IOTests.o tests/tagTests.o tests/LayeredCountingTests.o tests/bufferedCountingTests.o tests/onDiskCountingTests.o
+TARGETS=main libMQF.a
+TESTFILES = tests/CountingTests.o tests/HighLevelFunctionsTests.o tests/IOTests.o tests/tagTests.o  tests/bufferedCountingTests.o tests/onDiskCountingTests.o
 
 ifdef D
 	DEBUG=-g
@@ -38,12 +38,12 @@ LDFLAGS = -fopenmp $(DEBUG) $(PROFILE) $(OPT)
 
 all: $(TARGETS)
 
-OBJS= gqf.o	utils.o LayeredMQF.o bufferedMQF.o  onDiskMQF.o
+OBJS= gqf.o	utils.o bufferedMQF.o  onDiskMQF.o
 
 
 # dependencies between programs and .o files
 
-main:	main.o $(OBJS)
+main:	main.o $(STXXL) $(OBJS)
 	$(LD) $^ $(LDFLAGS) -o $@ $(STXXL)
 # dependencies between .o files and .h files
 
@@ -55,7 +55,14 @@ test:  $(TESTFILES) gqf.c test.o utils.o
 
 main.o: gqf.h
 
+libMQF.a: $(STXXL) $(OBJS)
+	ar rcs libMQF.a  $(OBJS) $(STXXL)
 # dependencies between .o files and .cc (or .c) files
+
+$(STXXL):
+	mkdir -p ThirdParty/stxxl/build
+	cd ThirdParty/stxxl/build && cmake DBUILD_STATIC_LIBS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./ ..
+	cd ThirdParty/stxxl/build && make all install
 
 
 gqf.o: gqf.c gqf.h

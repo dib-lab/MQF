@@ -2328,10 +2328,7 @@ void qf_setCounter(QF* qf,uint64_t key, uint64_t count, bool lock, bool spin )
 }
 
 
-bool qf_iterator_firstInBlock(QF *qf, QFi *qfi, uint64_t block_id)
-{
 
-}
 
 /* initialize the iterator at the run corresponding
  * to the position index
