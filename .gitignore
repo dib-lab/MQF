@@ -14,8 +14,6 @@ main
 docs/
 
 libgqf\.so
-
-libgqf\.so
-
 ThirdParty/stxxl/build/*
-res/*
+
+libMQF.a

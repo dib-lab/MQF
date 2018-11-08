@@ -1,6 +1,6 @@
 TARGETS= insertionPerSecond speedPerformance compareLoadingFactor sizeTest
 TESTFILES = tests/CountingTests.o tests/HighLevelFunctionsTests.o tests/IOTests.o tests/tagTests.o tests/LayeredCountingTests.o tests/bufferedCountingTests.o tests/onDiskCountingTests.o
-OBJS= gqf.o LayeredMQF.o bufferedMQF.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
+OBJS= $(STXXL) gqf.o LayeredMQF.o bufferedMQF.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
 ifdef D
 	DEBUG=-g
 	OPT=
@@ -40,40 +40,46 @@ LDFLAGS = -fopenmp $(DEBUG) $(PROFILE) $(OPT) -lz -lbz2 -lpthread
 
 all: $(TARGETS)
 
-OBJS= gqf.o	utils.o LayeredMQF.o bufferedMQF.o  onDiskMQF.o
+OBJS= gqf.o	utils.o bufferedMQF.o  onDiskMQF.o
 
 
 # dependencies between programs and .o files
 
-# main:	main.o $(OBJS)
-# 	$(LD) $^ $(LDFLAGS) -o $@ $(STXXL)
+main:	main.o $(STXXL) $(OBJS)
+	$(LD) $^ $(LDFLAGS) -o $@ $(STXXL)
 # dependencies between .o files and .h files
 
-load_test_mqf:	load_test_mqf.o gqf.o hashutil.o utils.o
+load_test_mqf:	$(STXXL) load_test_mqf.o gqf.o hashutil.o utils.o $(STXXL)
 	$(LD) $^ $(LDFLAGS) -o $@
-insertionPerSecond:	insertionPerSecond.o  LayeredMQF.o onDiskMQF.o bufferedMQF.o  gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
+insertionPerSecond:	 $(STXXL) insertionPerSecond.o  LayeredMQF.o onDiskMQF.o bufferedMQF.o  gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o $(STXXL)
 	$(LD) $^   $(LDFLAGS) -o $@ $(STXXL)
-libgqf.so: gqf.o utils.o
+libgqf.so: gqf.o utils.o $(STXXL)
 	$(LD) $^ $(LDFLAGS) --shared -o $@
 
-speedPerformance: speedPerformance.o LayeredMQF.o onDiskMQF.o bufferedMQF.o  gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
+speedPerformance:  $(STXXL) speedPerformance.o LayeredMQF.o onDiskMQF.o bufferedMQF.o  gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o $(STXXL)
 	$(LD) $^   $(LDFLAGS) -o $@ $(STXXL)
 
-compareLoadingFactor: compareLoadingFactor.o LayeredMQF.o onDiskMQF.o bufferedMQF.o  gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
+compareLoadingFactor: $(STXXL) compareLoadingFactor.o LayeredMQF.o onDiskMQF.o bufferedMQF.o  gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o $(STXXL)
 		$(LD) $^   $(LDFLAGS) -o $@ $(STXXL)
 
+libMQF.a: $(STXXL) $(OBJS)
+	ar rcs libMQF.a  $(OBJS) $(STXXL)
 
-sizeTest: sizeTest.o LayeredMQF.o onDiskMQF.o bufferedMQF.o  gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
+sizeTest:  $(STXXL) sizeTest.o LayeredMQF.o onDiskMQF.o bufferedMQF.o  gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o $(STXXL)
 				$(LD) $^  $(LDFLAGS) -o $@ $(STXXL)
 
 
-test:  $(TESTFILES) gqf.cpp test.o utils.o
+test:  $(TESTFILES) gqf.cpp test.o utils.o $(STXXL)
 	$(LD) $(LDFLAGS) -DTEST -o mqf_test test.o LayeredMQF.o bufferedMQF.o onDiskMQF.o utils.o $(TESTFILES) gqf.cpp $(STXXL)
 
 # main.o: hashutil.o gqf.h
 
 # dependencies between .o files and .cc (or .c) files
 
+$(STXXL):
+	mkdir -p ThirdParty/stxxl/build
+	cd ThirdParty/stxxl/build && cmake DBUILD_STATIC_LIBS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./ ..
+	cd ThirdParty/stxxl/build && make all install
 
 gqf.o: gqf.cpp gqf.h
 
@@ -86,13 +92,13 @@ gqf.o: gqf.cpp gqf.h
 
 
 
-%.o: %.cc
+%.o: %.cc $(STXXL)
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $< -c -o $@
 
-%.o: %.c %.h
+%.o: %.c %.h $(STXXL)
 	$(CC) $(CXXFLAGS) $(INCLUDE) $< -c -o $@
 
-%.o: %.cpp  %.hpp
+%.o: %.cpp  %.hpp $(STXXL)
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $< -c -o $@
 
 
