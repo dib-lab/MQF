@@ -36,8 +36,8 @@ int main(int argc, char const *argv[]) {
   uint64_t kSize=20;
   string fqPath="";
   uint64_t num_elements=0;
-
-
+  double fp_rate=0.0001;
+  int numberOfTables=4;
   app.add_option("-d,--distribution",distribution,
   "Distributions which items will be drew from. options are uniform,zipfian. Default is zipfian");
   // app.add_option("-n,--num_elements",num_elements,
@@ -53,15 +53,21 @@ int main(int argc, char const *argv[]) {
   app.add_option("-s,--size",qbits
   ,"No slots equals to 2^(s). default is 25")
   ->group("Counting Strucutre Options");
-
-
+  app.add_option("-f,--fp-rate",fp_rate
+  ,"False Positive rate. default is 0.0001")
+  ->group("Counting Strucutre Options");
+  app.add_option("-t,--num-tables",numberOfTables
+  ,"Number of tables in countmin sketch. default is 4")
+  ->group("Counting Strucutre Options");
 
 
 
 
 
   CLI11_PARSE(app, argc, (char**)argv);
-  uint64_t slot_size=40-qbits;
+
+
+
 
 
   // if(distribution=="kmers")
@@ -69,11 +75,14 @@ int main(int argc, char const *argv[]) {
   //   slot_size=kSize*2-qbits;
   // }
   num_elements=(1ULL<<qbits)*1.5;
+  int p=int(ceil(log2((float)(num_elements)/fp_rate)));
+  cout<<"P = "<<p<<endl;
+  uint64_t slot_size=p-qbits;
   uint64_t BufferSize=num_elements/10;
   uint64_t num_queries=num_elements/8;
 
   vector<countingStructure*> dataStructures;
-  double p=(double)(slot_size+qbits);
+  //double p=(double)(slot_size+qbits);
   dataStructures.push_back(new MQF(qbits,slot_size,fixedCounterSize));
   dataStructures.push_back(new CQF(qbits,slot_size));
   cout<<"Number of elements = "<<num_elements<<endl;
@@ -85,16 +94,32 @@ int main(int argc, char const *argv[]) {
   uint64_t countMinWidth = dataStructures[0]->size / countMinDepth;
   double e=2.71828;
 //  uint64_t countMinWidth=(e*99824410)+1;
-  cout<<"Count Min Sketch Width= "<<countMinWidth<<endl;
-  cout<<"Count Min Sketch Depth= "<<countMinDepth<<endl;
-  uint64_t range=(1ULL<<(int)p);
+  cout<<"Count Min Sketch1 Width= "<<countMinWidth<<endl;
+  cout<<"Count Min Sketch1 Depth= "<<countMinDepth<<endl;
 
   dataStructures.push_back(new countmin(countMinWidth,countMinDepth));
   dataStructures.push_back(new countminKhmer(countMinWidth,countMinDepth));
+  countMinWidth=(e*10066328);
+  countMinDepth=numberOfTables;
+  double new_fp_rate = pow(1 - exp(-double(num_elements) / double(countMinWidth)) , countMinDepth);
+  // while(new_fp_rate>fp_rate){
+  //   new_fp_rate = pow(1 - exp(-double(num_elements) / double(countMinWidth)) , countMinDepth);
+  //   countMinWidth+=1000;
+  // //  cout<<new_fp_rate<<endl;
+  // }
+  cout<<new_fp_rate<<endl;
+  cout<<"Count Min Sketch2 Width= "<<countMinWidth<<endl;
+  cout<<"Count Min Sketch2 Depth= "<<countMinDepth<<endl;
+  dataStructures.push_back(new countmin(countMinWidth,countMinDepth));
+  dataStructures.push_back(new countminKhmer(countMinWidth,countMinDepth));
+
+
+
   //dataStructure.push_back(new LMQF(singleQbits,qbits,slot_size,fixedCounterSize));
   dataStructures.push_back(new BMQF(qbits,qbits-2,slot_size,fixedCounterSize));
   cout<<"Buffered MQF buffer Q = "<<qbits-2<<endl;
   cout<<"STXXL buffer size= "<<((BMQF*)dataStructures.back())->bsize<<"MB"<<endl;
+  uint64_t range=(1ULL<<(int)p);
 
 
   srand (1);
@@ -208,7 +233,7 @@ int main(int argc, char const *argv[]) {
       for(auto a :g->newItems)
       {
          uint64_t tmpCount=structure->query(a);
-         if(tmpCount>0)
+         if(tmpCount>1)
          {
            structure->fpr++;
          }

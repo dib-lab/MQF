@@ -238,12 +238,12 @@ public:
   }
   bool insert(uint64_t item,uint64_t count)override{
 
-    CM_Update(counts,item% counts->width,count);
+    CM_Update(counts,item,count);
     return true;
     //return cqf::qf_insert(&ccqf,item,0,count,false,false);
     ;}
   uint64_t query(uint64_t item)override{
-    return (uint64_t)CM_PointEst(counts,item% counts->width);
+    return (uint64_t)CM_PointEst(counts,item);
     //return cqf::qf_count_key_value(&ccqf,item,0);
     }
   uint64_t space()override{
@@ -279,12 +279,12 @@ public:
                ",Height="+to_string(height);
   }
   bool insert(uint64_t item,uint64_t count)override{
-    counts->add(item% width);
+    counts->add(item);
     return true;
     //return cqf::qf_insert(&ccqf,item,0,count,false,false);
     ;}
   uint64_t query(uint64_t item)override{
-    return counts->get_count(item% width);
+    return counts->get_count(item);
     //return cqf::qf_count_key_value(&ccqf,item,0);
     }
   uint64_t space()override{
