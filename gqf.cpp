@@ -2557,7 +2557,7 @@ double slotsUsedInCounting(QF* qf){
 	return (double)res;
 }
 
-inline int qfi_end(QFi *qfi)
+int qfi_end(QFi *qfi)
 {
 	if (qfi->current >= qfi->qf->metadata->xnslots /*&& is_runend(qfi->qf, qfi->current)*/)
 		return 1;

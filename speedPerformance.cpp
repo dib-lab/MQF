@@ -79,7 +79,7 @@ int main(int argc, char const *argv[]) {
   int p=int(ceil(log2((float)(num_elements)/fp_rate)));
   cout<<"P = "<<p<<endl;
   uint64_t slot_size=p-qbits;
-  uint64_t BufferSize=num_elements/10;
+  uint64_t BufferSize=num_elements/40;
   uint64_t num_queries=num_elements/8;
 
   vector<countingStructure*> dataStructures;
@@ -118,7 +118,7 @@ int main(int argc, char const *argv[]) {
 
 
   //dataStructure.push_back(new LMQF(singleQbits,qbits,slot_size,fixedCounterSize));
-  dataStructures.push_back(new BMQF(qbits,qbits-2,slot_size,fixedCounterSize));
+    dataStructures.push_back(new BMQF(qbits,qbits-2,slot_size,fixedCounterSize));
   cout<<"Buffered MQF buffer Q = "<<qbits-2<<endl;
   cout<<"STXXL buffer size= "<<((BMQF*)dataStructures.back())->bsize<<"MB"<<endl;
   uint64_t range=(1ULL<<(int)p);
@@ -183,7 +183,7 @@ int main(int argc, char const *argv[]) {
   uint64_t curr_item;
 
 // check the size of cqf
-   while(dataStructures[1]->space()<85)
+  while(dataStructures[1]->space()<85 && g->hasMore())
    {
      prev=std::chrono::high_resolution_clock::now();
      for(int j=0;j<BufferSize;j++){
