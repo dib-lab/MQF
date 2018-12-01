@@ -40,8 +40,8 @@ int main(int argc, char const *argv[]) {
   int numberOfTables=4;
   app.add_option("-d,--distribution",distribution,
   "Distributions which items will be drew from. options are uniform,zipfian. Default is zipfian");
-  // app.add_option("-n,--num_elements",num_elements,
-  // "Number of elements to generate(0 means infinity). Default is 0");
+   app.add_option("-n,--num_elements",num_elements,
+   "Number of elements to generate(0 means infinity)");
   app.add_option("-z",zipifian_coefficient,"Zipifian Coeffiecient. Default =3")->group("Zipfian Distribution Options");
   app.add_option("-u",uniform_coefficient,
   "Frequency of items in the uinform distribution. Default =5")
@@ -74,7 +74,8 @@ int main(int argc, char const *argv[]) {
   // {
   //   slot_size=kSize*2-qbits;
   // }
-  num_elements=(1ULL<<qbits)*1.5;
+  //num_elements=(1ULL<<qbits)*1.5;
+  //num_elements=6053636;
   int p=int(ceil(log2((float)(num_elements)/fp_rate)));
   cout<<"P = "<<p<<endl;
   uint64_t slot_size=p-qbits;
@@ -90,7 +91,8 @@ int main(int argc, char const *argv[]) {
   cout<<"CQF/MQF slot size= "<<slot_size<<endl;
   cout<<"CQF/MQF num hashbits= "<<p<<endl;
 
-  int countMinDepth=(p*log(2.0)-log((double)num_elements))+1;
+  //int countMinDepth=(p*log(2.0)-log((double)num_elements))+1;
+  int countMinDepth=int(ceil(log(1.0/fp_rate)));
   uint64_t countMinWidth = dataStructures[0]->size / countMinDepth;
   double e=2.71828;
 //  uint64_t countMinWidth=(e*99824410)+1;
@@ -99,20 +101,20 @@ int main(int argc, char const *argv[]) {
 
   dataStructures.push_back(new countmin(countMinWidth,countMinDepth));
   dataStructures.push_back(new countminKhmer(countMinWidth,countMinDepth));
-  countMinWidth=(e*10066328);
-  countMinDepth=numberOfTables;
-  double new_fp_rate = pow(1 - exp(-double(num_elements) / double(countMinWidth)) , countMinDepth);
-  // while(new_fp_rate>fp_rate){
-  //   new_fp_rate = pow(1 - exp(-double(num_elements) / double(countMinWidth)) , countMinDepth);
-  //   countMinWidth+=1000;
-  // //  cout<<new_fp_rate<<endl;
-  // }
-  cout<<new_fp_rate<<endl;
-  cout<<"Count Min Sketch2 Width= "<<countMinWidth<<endl;
-  cout<<"Count Min Sketch2 Depth= "<<countMinDepth<<endl;
-  dataStructures.push_back(new countmin(countMinWidth,countMinDepth));
-  dataStructures.push_back(new countminKhmer(countMinWidth,countMinDepth));
-
+  // countMinWidth=(e*num_elements);
+  // countMinDepth=numberOfTables;
+  // double new_fp_rate = pow(1 - exp(-double(num_elements) / double(countMinWidth)) , countMinDepth);
+  // // while(new_fp_rate>fp_rate){
+  // //   new_fp_rate = pow(1 - exp(-double(num_elements) / double(countMinWidth)) , countMinDepth);
+  // //   countMinWidth+=1000;
+  // // //  cout<<new_fp_rate<<endl;
+  // // }
+  // cout<<new_fp_rate<<endl;
+  // cout<<"Count Min Sketch2 Width= "<<countMinWidth<<endl;
+  // cout<<"Count Min Sketch2 Depth= "<<countMinDepth<<endl;
+  // dataStructures.push_back(new countmin(countMinWidth,countMinDepth));
+  // dataStructures.push_back(new countminKhmer(countMinWidth,countMinDepth));
+  //
 
 
   //dataStructure.push_back(new LMQF(singleQbits,qbits,slot_size,fixedCounterSize));
@@ -233,7 +235,7 @@ int main(int argc, char const *argv[]) {
       for(auto a :g->newItems)
       {
          uint64_t tmpCount=structure->query(a);
-         if(tmpCount>1)
+         if(tmpCount>9)
          {
            structure->fpr++;
          }
@@ -252,7 +254,7 @@ int main(int argc, char const *argv[]) {
   cout<<"Number of unique items = "<<g->nunique_items<<endl;
   cout<<"Number of succesfull lookups = "<<num_queries<<endl;
   cout<<"Number of non succesfull lookups = "<<num_queries<<endl;
-
+  cout<<"error margin in countmin = "<<(((double)countedKmers*e)/(countMinWidth))<<endl;
 
   cout<<"Name"<<"\t"<<"Size"<<"\t"<<"Loading Factor"<<"\t"<<"FPR"<<"\t"<<"Insertion Time"<<"\t"<<"QueryTime"<<endl;
   for(auto structure: dataStructures){
