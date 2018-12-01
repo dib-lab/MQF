@@ -70,7 +70,7 @@ public:
   :countingStructure()
   {
     name="MQF";
-    qf_init(&mqf, (1ULL<<qbits), qbits+slot_size, 0,fixedCounterSize, true, "", 2038074761);
+    qf_init(&mqf, (1ULL<<qbits), qbits+slot_size, 0,fixedCounterSize, 0,true, "", 2038074761);
     size=mqf.metadata->size;
     parameters="Q="+to_string(qbits)+
                ",hashBits="+to_string(qbits+slot_size)+
@@ -166,7 +166,7 @@ public:
     QF *inputBuffer;
     inputBuffer=new QF();
     uint64_t qbits=(uint64_t)log2((uint64_t)buffer.size());
-    qf_init(inputBuffer, (1ULL<<(qbits+1)), mqf.memoryBuffer->metadata->key_bits, 0,2, true, "", 2038074761);
+    qf_init(inputBuffer, (1ULL<<(qbits+1)), mqf.memoryBuffer->metadata->key_bits, 0,2,0, true, "", 2038074761);
 
     for(auto b:buffer)
     {
