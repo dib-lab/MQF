@@ -24,12 +24,12 @@ TEST_CASE( "Merging mqf") {
  /* Initialise the CQF */
 
  INFO("Initialize first cqf size ="<<nslots<<", hashbits="<<nhashbits);
- qf_init(&cf, nslots, nhashbits, 0,counter_size, true, "", 2038074761);
+ qf_init(&cf, nslots, nhashbits, 0,counter_size,0, true, "", 2038074761);
  INFO("Initialize second cqf size ="<<small_nslots<<", hashbits="<<small_nhashbits);
 
- qf_init(&cf1, small_nslots, small_nhashbits, 0,counter_size, true, "", 2038074761);
+ qf_init(&cf1, small_nslots, small_nhashbits, 0,counter_size,0, true, "", 2038074761);
  INFO("Initialize third cqf size ="<<small_nslots<<", hashbits="<<small_nhashbits);
- qf_init(&cf2, small_nslots, small_nhashbits, 0,counter_size, true, "", 2038074761);
+ qf_init(&cf2, small_nslots, small_nhashbits, 0,counter_size,0, true, "", 2038074761);
  /* Generate random values */
  vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
 
@@ -80,9 +80,9 @@ TEST_CASE( "Merging Exception") {
 
 
 
- qf_init(&cf, 256, 15, 0,1, true, "", 2038074761);
- qf_init(&cf1, 256, 16, 0,1, true, "", 2038074761);
- qf_init(&cf2, 512, 17, 0,1, true, "", 2038074761);
+ qf_init(&cf, 256, 15, 0,1,0, true, "", 2038074761);
+ qf_init(&cf1, 256, 16, 0,1,0, true, "", 2038074761);
+ qf_init(&cf2, 512, 17, 0,1,0, true, "", 2038074761);
  /* Generate random values */
  REQUIRE_THROWS(qf_merge(&cf,&cf1,&cf2));
 
@@ -94,7 +94,7 @@ TEST_CASE( "resize Exception") {
 
 
 
- qf_init(&cf, 256, 15, 0,1, true, "", 2038074761);
+ qf_init(&cf, 256, 15, 0,1,0, true, "", 2038074761);
  /* Generate random values */
  REQUIRE_THROWS(qf_resize(&cf,30));
 
@@ -108,7 +108,7 @@ TEST_CASE( "Resize test" ) {
   uint64_t num_hash_bits=qbits+9;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,counter_size,0, true, "", 2038074761);
 
   uint64_t nvals = (1ULL<<qbits);
   //uint64_t nvals = 3;
@@ -186,12 +186,12 @@ TEST_CASE( "comparing mqf") {
  /* Initialise the CQF */
 
  INFO("Initialize first cqf size ="<<nslots<<", hashbits="<<nhashbits);
- qf_init(&cf, nslots, nhashbits, 0,counter_size, true, "", 2038074761);
+ qf_init(&cf, nslots, nhashbits, 0,counter_size,0, true, "", 2038074761);
  INFO("Initialize second cqf size ="<<small_nslots<<", hashbits="<<small_nhashbits);
 
- qf_init(&cf1, small_nslots, small_nhashbits, 0,counter_size, true, "", 2038074761);
+ qf_init(&cf1, small_nslots, small_nhashbits, 0,counter_size,0, true, "", 2038074761);
  INFO("Initialize third cqf size ="<<small_nslots<<", hashbits="<<small_nhashbits);
- qf_init(&cf2, small_nslots, small_nhashbits, 0,counter_size, true, "", 2038074761);
+ qf_init(&cf2, small_nslots, small_nhashbits, 0,counter_size,0, true, "", 2038074761);
  /* Generate random values */
  vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
 
@@ -234,14 +234,14 @@ TEST_CASE( "intersect") {
  /* Initialise the CQF */
 
  INFO("Initialize first cqf size ="<<nslots<<", hashbits="<<nhashbits);
- qf_init(&cf, nslots, nhashbits, 0,counter_size, true, "", 2038074761);
+ qf_init(&cf, nslots, nhashbits, 0,counter_size,0, true, "", 2038074761);
  INFO("Initialize second cqf size ="<<small_nslots<<", hashbits="<<small_nhashbits);
 
- qf_init(&cf1, small_nslots, small_nhashbits, 0,counter_size, true, "", 2038074761);
+ qf_init(&cf1, small_nslots, small_nhashbits, 0,counter_size,0, true, "", 2038074761);
  INFO("Initialize third cqf size ="<<small_nslots<<", hashbits="<<small_nhashbits);
- qf_init(&cf2, small_nslots, small_nhashbits, 0,counter_size, true, "", 2038074761);
+ qf_init(&cf2, small_nslots, small_nhashbits, 0,counter_size,0, true, "", 2038074761);
 
- qf_init(&cf3, nslots, nhashbits, 0,counter_size, true, "", 2038074761);
+ qf_init(&cf3, nslots, nhashbits, 0,counter_size,0, true, "", 2038074761);
  /* Generate random values */
  vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
 
@@ -317,14 +317,14 @@ TEST_CASE( "subtract") {
  /* Initialise the CQF */
 
  INFO("Initialize first cqf size ="<<nslots<<", hashbits="<<nhashbits);
- qf_init(&cf, nslots, nhashbits, 0,counter_size, true, "", 2038074761);
+ qf_init(&cf, nslots, nhashbits, 0,counter_size,0, true, "", 2038074761);
  INFO("Initialize second cqf size ="<<small_nslots<<", hashbits="<<small_nhashbits);
 
- qf_init(&cf1, small_nslots, small_nhashbits, 0,counter_size, true, "", 2038074761);
+ qf_init(&cf1, small_nslots, small_nhashbits, 0,counter_size,0, true, "", 2038074761);
  INFO("Initialize third cqf size ="<<small_nslots<<", hashbits="<<small_nhashbits);
- qf_init(&cf2, small_nslots, small_nhashbits, 0,counter_size, true, "", 2038074761);
+ qf_init(&cf2, small_nslots, small_nhashbits, 0,counter_size,0, true, "", 2038074761);
 
- qf_init(&cf3, nslots, nhashbits, 0,counter_size, true, "", 2038074761);
+ qf_init(&cf3, nslots, nhashbits, 0,counter_size,0, true, "", 2038074761);
  /* Generate random values */
  vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
 
@@ -401,12 +401,12 @@ TEST_CASE( "Multi Merging mqf") {
  for(int i=0;i<nqf;i++)
  {
    cf[i]=new QF();
-   qf_init(cf[i], small_nslots, small_nhashbits, 0,counter_size, true, "", 2038074761);
+   qf_init(cf[i], small_nslots, small_nhashbits, 0,counter_size,0, true, "", 2038074761);
  }
 
  INFO("Initialize first cqf size ="<<nslots<<", hashbits="<<nhashbits);
- qf_init(&cf2, nslots, nhashbits, 0,counter_size, true, "", 2038074761);
- qf_init(&correctCF, nslots, nhashbits, 0,counter_size, true, "", 2038074761);
+ qf_init(&cf2, nslots, nhashbits, 0,counter_size,0, true, "", 2038074761);
+ qf_init(&correctCF, nslots, nhashbits, 0,counter_size,0, true, "", 2038074761);
  INFO("Initialize second cqf size ="<<small_nslots<<", hashbits="<<small_nhashbits);
 
  /* Generate random values */
@@ -470,11 +470,11 @@ TEST_CASE( "invertable merge") {
   for(int i=0;i<nqf;i++)
   {
     cf[i]=new QF();
-    qf_init(cf[i], small_nslots, small_nhashbits, 0,counter_size, true, "", 2038074761);
+    qf_init(cf[i], small_nslots, small_nhashbits, 0,counter_size,0, true, "", 2038074761);
   }
 
   INFO("Initialize first cqf size ="<<nslots<<", hashbits="<<nhashbits);
-  qf_init(&cf2, nslots, nhashbits, 8,counter_size, true, "", 2038074761);
+  qf_init(&cf2, nslots, nhashbits, 8,counter_size,0, true, "", 2038074761);
   INFO("Initialize second cqf size ="<<small_nslots<<", hashbits="<<small_nhashbits);
 
   /* Generate random values */
@@ -545,11 +545,11 @@ TEST_CASE( "invertable merge no count") {
   for(int i=0;i<nqf;i++)
   {
     cf[i]=new QF();
-    qf_init(cf[i], small_nslots, small_nhashbits, 0,counter_size, true, "", 2038074761);
+    qf_init(cf[i], small_nslots, small_nhashbits, 0,counter_size,0, true, "", 2038074761);
   }
 
   INFO("Initialize first cqf size ="<<nslots<<", hashbits="<<nhashbits);
-  qf_init(&cf2, nslots, nhashbits, 0,counter_size, true, "", 2038074761);
+  qf_init(&cf2, nslots, nhashbits, 0,counter_size,0, true, "", 2038074761);
   INFO("Initialize second cqf size ="<<small_nslots<<", hashbits="<<small_nhashbits);
 
   /* Generate random values */
@@ -625,11 +625,11 @@ TEST_CASE( "hierarchical merge") {
   for(int i=0;i<nqf;i++)
   {
     cf[i]=new QF();
-    qf_init(cf[i], nslots, nhashbits, 8,counter_size, true, "", 2038074761);
+    qf_init(cf[i], nslots, nhashbits, 8,counter_size,0, true, "", 2038074761);
   }
 
   INFO("Initialize first cqf size ="<<nslots<<", hashbits="<<nhashbits);
-  qf_init(&cf2, nslots, nhashbits, 8,counter_size, true, "", 2038074761);
+  qf_init(&cf2, nslots, nhashbits, 8,counter_size,0, true, "", 2038074761);
   INFO("Initialize second cqf size ="<<small_nslots<<", hashbits="<<small_nhashbits);
 
   /* Generate random values */

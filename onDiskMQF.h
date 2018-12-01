@@ -324,7 +324,7 @@ namespace onDiskMQF_Namespace{
 		uint64_t *encode_counter(uint64_t remainder, uint64_t counter, uint64_t *slots, uint64_t *fixed_size_counters);
 		uint64_t decode_counter(uint64_t index, uint64_t *remainder, uint64_t *count);
 		bool insert1(__uint128_t hash, bool lock, bool spin);
-		bool _insert(__uint128_t hash, uint64_t count, bool lock=false, bool spin=false);
+		bool _insert(__uint128_t hash, uint64_t count, bool lock, bool spin);
 
 	public:
 		stxxl::vector<onDisk_qfblock<bitsPerSlot> > blocks;

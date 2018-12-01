@@ -14,7 +14,7 @@ void bufferedMQF_init(bufferedMQF *qf, uint64_t nslots_buffer ,uint64_t nslots
 			qf= new bufferedMQF();
 		}
 
-		qf_init(qf->memoryBuffer,nslots_buffer,key_bits,value_bits,fixed_counter_size,true,"",2038074761);
+		qf_init(qf->memoryBuffer,nslots_buffer,key_bits,value_bits,fixed_counter_size,0,true,"",2038074761);
 
 		onDiskMQF_Namespace::onDiskMQF::init(qf->disk,nslots,key_bits,value_bits,fixed_counter_size,path);
 }

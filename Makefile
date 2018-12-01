@@ -84,6 +84,7 @@ $(STXXL):
 gqf.o: gqf.cpp gqf.h
 
 
+bufferedMQF.o: bufferedMQF.cpp bufferedMQF.h
 
 
 

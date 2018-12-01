@@ -426,7 +426,6 @@ inline void writeAndFreeBlocks(uint64_t memoryBufferIndex)
 template<uint64_t bitsPerSlot>
   inline int _onDiskMQF<bitsPerSlot>::is_runend(uint64_t index)
 {
-	_onDiskMQF<bitsPerSlot> *qf=this;
 	return (METADATA_WORD( runends, index) >> ((index % SLOTS_PER_BLOCK) %
 																								64)) & 1ULL;
 }
@@ -434,7 +433,6 @@ template<uint64_t bitsPerSlot>
 template<uint64_t bitsPerSlot>
  inline int _onDiskMQF<bitsPerSlot>::is_occupied(uint64_t index)
 {
-	_onDiskMQF<bitsPerSlot> *qf=this;
 	return (METADATA_WORD( occupieds, index) >> ((index % SLOTS_PER_BLOCK) %
 																									64)) & 1ULL;
 }
@@ -692,14 +690,12 @@ template<uint64_t bitsPerSlot>
 template<uint64_t bitsPerSlot>
   inline int _onDiskMQF<bitsPerSlot>::is_empty2(uint64_t slot_index)
 {
-	_onDiskMQF<bitsPerSlot> *qf=this;
 	return offset_lower_bound( slot_index) == 0;
 }
 
 template<uint64_t bitsPerSlot>
   inline int _onDiskMQF<bitsPerSlot>::might_be_empty(uint64_t slot_index)
 {
-	_onDiskMQF<bitsPerSlot> *qf=this;
 	return !is_occupied( slot_index)
 		&& !is_runend( slot_index);
 }
@@ -1324,7 +1320,7 @@ template<uint64_t bitsPerSlot>
 
 	uint64_t fixed_count_max=((1ULL)<<qf->metadata->fixed_counter_size)-1;
 
-	uint64_t blockId=hash_bucket_index/64;
+//	uint64_t blockId=hash_bucket_index/64;
   // cout<<"before "<<(uint64_t)hash<<endl;
 	// dump_block(blockId);
 
@@ -1366,7 +1362,7 @@ template<uint64_t bitsPerSlot>
 			/* Find the counter for this remainder if it exists. */
 			uint64_t current_remainder,current_fixed_counter;
 			super_get( runstart_index,&current_remainder,&current_fixed_counter);
-			uint64_t zero_terminator = runstart_index;
+			//uint64_t zero_terminator = runstart_index;
 
 
 			/* Skip over counters for other remainders. */
@@ -1532,8 +1528,7 @@ template<uint64_t bitsPerSlot>
 }
 
 template<uint64_t bitsPerSlot>
-  inline bool _onDiskMQF<bitsPerSlot>::_insert( __uint128_t hash, uint64_t count, bool lock=false,
-													bool spin=false)
+  inline bool _onDiskMQF<bitsPerSlot>::_insert( __uint128_t hash, uint64_t count, bool lock=false,bool spin=false)
 {
 	_onDiskMQF<bitsPerSlot> *qf=this;
 	if(qf->metadata->maximum_count!=0){

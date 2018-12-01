@@ -11,7 +11,7 @@ using namespace onDiskMQF_Namespace;
 
 const uint64_t MemSize=50;
 
-TEST_CASE( "simple counting test(onDisk)","[onDisk]" ) {
+TEST_CASE( "simple counting test(onDisk)","[onDisk][!hide] ") {
   //except first item is inserted 5 times to full test _insert1
   onDiskMQF* qf;
   int counter_size=2;
@@ -94,7 +94,7 @@ TEST_CASE( "Maximum count(onDisk)","[onDisk]" ) {
 //
 // }
 
-TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )(onDisk)" ,"[onDisk]") {
+TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )(onDisk)" ,"[onDisk][!hide] ") {
   //except first item is inserted 5 times to full test _insert1
   onDiskMQF* qf;
   int counter_size=2;
@@ -176,7 +176,7 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )(onDisk)" 
 }
 //
 //
-TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor ) (onDisk)" ,"[onDisk]" ) {
+TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor ) (onDisk)" ,"[onDisk][!hide] " ) {
   onDiskMQF* qf;
   int counter_size=4;
   uint64_t qbits=15;
@@ -223,7 +223,7 @@ TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor ) (onDisk
 }
 //
 //
-TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(onDisk)","[onDisk]" ) {
+TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(onDisk)","[onDisk][!hide] " ) {
   onDiskMQF* qf;
   int counter_size=4;
   srand (1);

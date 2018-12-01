@@ -15,8 +15,8 @@ void layeredMQF_init(layeredMQF *qf, uint64_t nslots_singletons ,uint64_t nslots
 			qf= new layeredMQF();
 		}
 
-		qf_init(qf->firstLayer_singletons,nslots_singletons,key_bits,value_bits,1,mem,path,seed);
-		qf_init(qf->secondLayer,nslots,key_bits,value_bits,fixed_counter_size,mem,path,seed);
+		qf_init(qf->firstLayer_singletons,nslots_singletons,key_bits,value_bits,1,0,mem,path,seed);
+		qf_init(qf->secondLayer,nslots,key_bits,value_bits,fixed_counter_size,0,mem,path,seed);
 }
 
 void layeredMQF_reset(layeredMQF *qf){
