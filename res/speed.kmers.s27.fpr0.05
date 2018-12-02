@@ -1,0 +1,13 @@
+P = 31
+Number of elements = 64849994
+CQF/MQFF Q = 27
+CQF/MQF slot size= 4
+CQF/MQF num hashbits= 31
+Count Min Sketch1 Width= 45477531
+Count Min Sketch1 Depth= 3
+
+[STXXL-MSG] STXXL v1.4.99 (prerelease/Release) (git 97bf99ddb9aefabb5efcc8b6b0be73c29a69f6d9) + gnu parallel(20180720)
+[STXXL-MSG] Disk '/mnt/bf35b56b-a919-4d0c-a3c0-f0247ea921a3/stxxl/tmp' is allocated, space: 3814 MiB, I/O implementation: syscall queue=0 devid=0 unlink_on_open
+Buffered MQF buffer Q = 25
+STXXL buffer size= 26MB
+Command = ./speedPerformance -s 27 -d kmers -k ../DataSets_SSD/ERR1050075_1.fastq -f 0.05 -n 64849994 

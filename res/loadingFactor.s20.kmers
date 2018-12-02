@@ -1,0 +1,21 @@
+Command = ./compareLoadingFactor -s 20 -d kmers -k ../DataSets_SSD/smallSample.fastq 
+CQF/MQFF Q = 20
+CQF/MQF slot size= 19
+CQF/MQF num hashbits= 39
+MQF Size= 3060640
+CQF Size= 2795936
+Distribution = Real Kmers
+File = ../DataSets_SSD/smallSample.fastq,Ksize = 25
+Number of insertions = 1384119
+No Elements	MQF	CQF
+125829	11	11
+251658	21	23
+377487	31	34
+503316	41	45
+629145	50	56
+754974	59	66
+880803	68	76
+1006632	77	86
+1132461	86	96
+1258290	95		
+1384119				
