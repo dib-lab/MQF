@@ -1,0 +1,15 @@
+Command = ./sizeTest -z 3 -n 65000000 
+Num Hashbits= 32
+Estimated Q= 27
+Number of insertions = 88400000
+Number of succesfull lookups = 8125000
+Number of non succesfull lookups = 8125000
+Name	Parametes	Size	Space	Succeded	fpr	fpr5	fpr10	fpr20	fpr30
+MQF	Q=28,hashBits=32,fixedCounter=1	228MB	27	1	1491	14	8	1	1
+MQF	Q=27,hashBits=32,fixedCounter=1	130MB	55	1	1491	14	8	1	1
+MQF	Q=26,hashBits=32,fixedCounter=4	97MB	94	1	1491	14	8	1	1
+MQF	Q=26,hashBits=32,fixedCounter=3	89MB	95	0	1	1	1	1	1
+MQF	Q=26,hashBits=32,fixedCounter=2	81MB	95	0	1	1	1	1	1
+CQF	Q=28,hashBits=32	196MB	29	1	1491	14	8	1	1
+CQF	Q=27,hashBits=32	114MB	59	1	1491	14	8	1	1
+CQF	Q=26,hashBits=32	65MB	95	0	1	1	1	1	1

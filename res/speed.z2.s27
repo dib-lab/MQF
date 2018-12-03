@@ -1,0 +1,21 @@
+Number of elements = 201326592
+CQF/MQFF Q = 27
+CQF/MQF slot size= 12
+CQF/MQF num hashbits= 39
+Count Min Sketch Width= 33845778
+Count Min Sketch Depth= 8
+
+[STXXL-MSG] STXXL v1.4.99 (prerelease/Release) (git 97bf99ddb9aefabb5efcc8b6b0be73c29a69f6d9) + gnu parallel(20180720)
+[STXXL-MSG] Disk '/mnt/bf35b56b-a919-4d0c-a3c0-f0247ea921a3/stxxl/tmp' is allocated, space: 3814 MiB, I/O implementation: syscall queue=0 devid=0 unlink_on_open
+Buffered MQF buffer Q = 25
+STXXL buffer size= 51MB
+Command = ./speedPerformance -z 2 -s 27 
+Number of insertions = 422785839
+Number of succesfull lookups = 25165824
+Number of non succesfull lookups = 25165824
+Name	Size	Loading Factor	FPR	Insertion Time	QueryTime
+MQF	258.223MB	61	0.0001	99030	5236
+CQF	226.195MB	86	0.0001	108256	5523
+CountMin	258.223MB	0	0.87776	214543	18462
+CountMinKhmer	258.224MB	0	0.878	181212	8039
+Buffered MQF	123.625MB	62	0	136280	9693

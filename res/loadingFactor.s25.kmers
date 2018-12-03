@@ -1,0 +1,8 @@
+Command = ./compareLoadingFactor -s 25 -d kmers -k ../DataSets_SSD/ERR1050075_1.fastq 
+CQF/MQFF Q = 25
+CQF/MQF slot size= 14
+CQF/MQF num hashbits= 39
+MQF Size= 76153130
+CQF Size= 67750026
+Distribution = Real Kmers
+File = ../DataSets_SSD/ERR1050075_1.fastq,Ksize = 25

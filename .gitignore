@@ -17,3 +17,9 @@ libgqf\.so
 ThirdParty/stxxl/build/*
 
 libMQF.a
+.stxxl
+compareLoadingFactor
+
+insertionPerSecond
+
+sizeTest
