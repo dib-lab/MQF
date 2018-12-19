@@ -2410,7 +2410,7 @@ bool qfi_firstInBlock(QF* qf,QFi *it, QFi * res){
 		qf_iterator(qf,res,it->current-tmp);
 	}
 	while(res->current < current)
-		qfi_next(res);	
+		qfi_next(res);
 }
 
 bool qfi_find(QF *qf,QFi *qfi, uint64_t key)
@@ -2557,7 +2557,7 @@ double slotsUsedInCounting(QF* qf){
 	return (double)res;
 }
 
-inline int qfi_end(QFi *qfi)
+int qfi_end(QFi *qfi)
 {
 	if (qfi->current >= qfi->qf->metadata->xnslots /*&& is_runend(qfi->qf, qfi->current)*/)
 		return 1;
@@ -3186,6 +3186,51 @@ void qf_BatchQuery( QF* qf,QF* Batch){
 		} while (!qfi_next(&source_i));
 	}
 }
+bool qf_ComputeItemsOrder(QF* qf){
+	if(qf->metadata->BlockTag_bits!=32)
+	{
+		return true;
+	}
+	QFi source_i;
+	uint32_t prevOrder=0;
+	uint64_t currBlockId=0;
+	if (qf_iterator(qf, &source_i, 0)) {
+		do {
+			uint64_t key = 0, value = 0, count = 0;
+			if(source_i.current/64!=currBlockId)
+			{
+				currBlockId=source_i.current/64;
+				char* blockTag=qf_getBlockTag_pointer_byBlock(qf,currBlockId);
+				uint32_t* tmp=(uint32_t*)blockTag;
+				*tmp=prevOrder;
+				//memcopy(blockTag,&prevOrder,4);
+			}
+			prevOrder++;
+		} while (!qfi_next(&source_i));
+	}
+}
+uint64_t itemOrder(QF* qf,uint64_t item){
+	if(qf->metadata->BlockTag_bits!=32)
+	{
+	//	cout<<"sasa "<<qf->metadata->tag_bits<<endl;
+		return 0;
+	}
+	char* blockTag;
+	qf_getBlockTag_pointer_byItem(qf,item,blockTag);
+	uint32_t order=0;
+	order=*((uint32_t*)blockTag);
+	QFi itemIt,blockIT;
+	qfi_find(qf,&itemIt,item);
+	qfi_firstInBlock(qf,&itemIt,&blockIT);
+	while(blockIT.current<itemIt.current)
+	{
+		order++;
+		qfi_next(&blockIT);
+	}
+	return order;
+
+}
+
 
 #ifdef TEST
 	#include "tests/lowLevelTests.hpp"
