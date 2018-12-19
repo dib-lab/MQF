@@ -6,3 +6,7 @@ parallel --gnu -j1  './sizeTest -z 3 -n {}000000 > size.z3.n{}M'  ::: 60
 parallel --gnu -k "grep 'Number of insertions' speed.{}.s27  |cut -f2 -d=  " ::: z2 z3 z5 kmers
 
 parallel --gnu -k "grep  -P '^CountMin\t' speed.{}.s27  |cut -f5,6  " ::: z2 z3 z5 kmers 
+
+## take average of three experiments
+parallel --gnu "grep  -P '^CountMin\t' speed.{}.s28.f0.0001.*  |cut -f5,6  |awk '{ins+=$ 1;query+=$ 2} END {print ins/3\" \"query/3}'" ::: z2 z3 z5 kmers
+
