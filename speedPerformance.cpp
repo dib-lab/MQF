@@ -74,14 +74,16 @@ int main(int argc, char const *argv[]) {
   // {
   //   slot_size=kSize*2-qbits;
   // }
-  //num_elements=(1ULL<<qbits)*1.5;
+  num_elements=(1ULL<<qbits)*1.2;
   //num_elements=6053636;
   int p=int(ceil(log2((float)(num_elements)/fp_rate)));
+  if(p>2*kSize)
+    p=2*kSize;
   cout<<"P = "<<p<<endl;
   uint64_t slot_size=p-qbits;
   uint64_t BufferSize=num_elements/40;
-  uint64_t num_queries=num_elements/8;
-
+  //  uint64_t num_queries=num_elements/8;
+  uint64_t num_queries=2500000;
   vector<countingStructure*> dataStructures;
   //double p=(double)(slot_size+qbits);
   dataStructures.push_back(new MQF(qbits,slot_size,fixedCounterSize));
@@ -98,7 +100,7 @@ int main(int argc, char const *argv[]) {
 //  uint64_t countMinWidth=(e*99824410)+1;
   cout<<"Count Min Sketch1 Width= "<<countMinWidth<<endl;
   cout<<"Count Min Sketch1 Depth= "<<countMinDepth<<endl;
-
+  //
   dataStructures.push_back(new countmin(countMinWidth,countMinDepth));
   dataStructures.push_back(new countminKhmer(countMinWidth,countMinDepth));
   // countMinWidth=(e*num_elements);
@@ -118,7 +120,7 @@ int main(int argc, char const *argv[]) {
 
 
   //dataStructure.push_back(new LMQF(singleQbits,qbits,slot_size,fixedCounterSize));
-    dataStructures.push_back(new BMQF(qbits,qbits-2,slot_size,fixedCounterSize));
+  dataStructures.push_back(new BMQF(qbits,qbits-2,slot_size,fixedCounterSize));
   cout<<"Buffered MQF buffer Q = "<<qbits-2<<endl;
   cout<<"STXXL buffer size= "<<((BMQF*)dataStructures.back())->bsize<<"MB"<<endl;
   uint64_t range=(1ULL<<(int)p);
@@ -181,7 +183,6 @@ int main(int argc, char const *argv[]) {
   auto prev=std::chrono::high_resolution_clock::now();
   auto microseconds = (chrono::duration_cast<chrono::microseconds>(now-prev)).count();
   uint64_t curr_item;
-
 // check the size of cqf
   while(dataStructures[1]->space()<85 && g->hasMore())
    {
@@ -216,10 +217,11 @@ int main(int argc, char const *argv[]) {
     cerr<<"Querying "<<succesfullQueries.size()+g->newItems.size()<<" from "<<structure->name<<endl;
     if(structure->name=="Buffered MQF")
     {
-      vector<uint64_t> tmp(g->newItems.size());
-      std::copy(g->newItems.begin(),g->newItems.end(),tmp.begin());
+      vector<uint64_t> tmp(g->newItems.size()+succesfullQueries.size());
+      auto tmpIT=std::copy(g->newItems.begin(),g->newItems.end(),tmp.begin());
+      std::copy(succesfullQueries.begin(),succesfullQueries.end(),tmpIT);
       prev=std::chrono::high_resolution_clock::now();
-      ((BMQF*)structure)->batchQuery(succesfullQueries);
+      //      ((BMQF*)structure)->batchQuery(succesfullQueries);
       ((BMQF*)structure)->batchQuery(tmp);
       now=std::chrono::high_resolution_clock::now();
       microseconds = (chrono::duration_cast<chrono::microseconds>(now-prev)).count();
