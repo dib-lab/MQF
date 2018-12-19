@@ -17,3 +17,5 @@ libgqf\.so
 ThirdParty/stxxl/build/*
 
 libMQF.a
+
+ThirdParty/stxxl
