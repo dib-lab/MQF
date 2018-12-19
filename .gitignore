@@ -6,3 +6,14 @@
 mqf_test
 
 tmp\.ser
+
+*.o
+
+main
+
+docs/
+
+libgqf\.so
+ThirdParty/stxxl/build/*
+
+libMQF.a

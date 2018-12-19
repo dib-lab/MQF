@@ -11,7 +11,7 @@ before_install:
   - sudo apt-get -qq update
   - sudo apt-get install -y make automake autotools-dev
 script:
-  - make test
+  - make all test NH=1
   - ./mqf_test
   - gcov -n -o . gqf.c > /dev/null;
 branches:
