@@ -24,5 +24,5 @@ The commands used in the bench-marking is found in runSpeedtest.sh
 Experiment 3 compares the optimal memory space required by CQF and MQF to count a items from different distributions.
 The commands used in the bench-marking is found in runSizeTest.sh
 
-# Experiments 4,5
+## Experiments 4,5
 Experiment 5 and 6 compare the MQF and countmin sketch performance in a real applications: Error Trimming and Digital Normalization. Both Experiments need Khmer software. Scripts runTrim.sh and runDiginorm.sh includes the installation of khmer and running the experiments. 
