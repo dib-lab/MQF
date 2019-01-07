@@ -19,3 +19,7 @@ Running Commands:
 ## Experiment 2
 Experiment 2 is measuring the insertion and query speed  MQF, CQF, buffered MQF,  khmer’s implementation countmin sketch , and original implementation of countmin sketch.
 The commands used in the bench-marking is found in runSpeedtest.sh
+
+## Experiment 3
+Experiment 3 compares the optimal memory space required by CQF and MQF to count a items from different distributions.
+The commands used in the bench-marking is found in runSizeTest.sh
