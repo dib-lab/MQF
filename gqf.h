@@ -284,6 +284,9 @@ extern "C" {
 
 	void qf_BatchQuery( QF* qf,QF* Batch);
 
+	bool qf_ComputeItemsOrder(QF* qf);
+	uint64_t itemOrder(QF* qf,uint64_t item);
+
 #ifdef __cplusplus
 }
 #endif
