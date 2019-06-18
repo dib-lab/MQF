@@ -1,4 +1,4 @@
-TARGETS= insertionPerSecond speedPerformance compareLoadingFactor sizeTest
+TARGETS= insertionPerSecond speedPerformance compareLoadingFactor sizeTest taggingTest
 TESTFILES = tests/CountingTests.o tests/HighLevelFunctionsTests.o tests/IOTests.o tests/tagTests.o tests/LayeredCountingTests.o tests/bufferedCountingTests.o tests/onDiskCountingTests.o
 OBJS= $(STXXL) gqf.o LayeredMQF.o bufferedMQF.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o
 ifdef D
@@ -67,7 +67,8 @@ libMQF.a: $(STXXL) $(OBJS)
 
 sizeTest:  $(STXXL) sizeTest.o LayeredMQF.o onDiskMQF.o bufferedMQF.o  gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o $(STXXL)
 				$(LD) $^  $(LDFLAGS) -o $@ $(STXXL)
-
+taggingTest:  $(STXXL) taggingTest.o LayeredMQF.o onDiskMQF.o bufferedMQF.o  gqf.o hashutil.o utils.o cqf/gqf.o  countmin/countmin.o countmin/massdal.o countmin/prng.o $(STXXL)
+								$(LD) $^  $(LDFLAGS) -o $@ $(STXXL)
 
 test:  $(TESTFILES) gqf.cpp test.o utils.o $(STXXL)
 	$(LD) $(LDFLAGS) -DTEST -o mqf_test test.o LayeredMQF.o bufferedMQF.o onDiskMQF.o utils.o $(TESTFILES) gqf.cpp $(STXXL)
