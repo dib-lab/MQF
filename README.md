@@ -29,9 +29,8 @@ In other words, Fixed-size counters is used in counting and marking the slots us
 
 ## Documentation
 ### Building
-MQF only requires make and g++ to be installed.
 ```bash
-apt-get install make g++
+apt-get install make g++ cmake zlib1g-dev libbz2-dev
 make NH=1
 make test NH=1
 ./mqf_test
