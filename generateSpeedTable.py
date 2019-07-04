@@ -8,7 +8,7 @@ queryOut=open(outPrefix+"."+"query",'w')
 
 distributions=['z2','z3','z5','kmers']
 fprs=['f0.1','f0.01','f0.001','f0.0001']
-trials=['1','2','3']
+trials=['1','2','3','4','5','6','7','8','9','10']
 datastructures=['MQF','CQF','Buffered MQF','CountMinKhmer','CountMin']
 insertion={}
 query={}
