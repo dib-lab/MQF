@@ -6,6 +6,7 @@
 #include "hashutil.h"
 #include "kmer.h"
 #include <vector>
+#include <deque>
 #include <chrono>
 #include<cmath>
 #include <random>
@@ -42,12 +43,12 @@ int main(int argc, char const *argv[]) {
   uint64_t countErrorMargin=5;
   uint64_t kSize=25;
   string fqPath="";
-
+  uint64_t Q=0;
   uint64_t qbits=25;
+  uint64_t loadFactor=60;
 
-
-  uint64_t num_elements=10000000;
-
+  uint64_t num_elements=100000000;
+  //uint64_t num_elements=0;
 
   app.add_option("-d,--distribution",distribution,
   "Distributions which items will be drew from. options are zipfian,kmers. Default is zipfian");
@@ -57,7 +58,8 @@ int main(int argc, char const *argv[]) {
   "Frequency of items in the uinform distribution. Default =5")
   ->group("Uniform Distribution Options");
   app.add_option("-k",fqPath,"Fastq file to draw the kmers");
-
+  app.add_option("-q",Q,"MQF Q");
+  app.add_option("-l",loadFactor,"MQF Load Factor");
   // app.add_option("-s,--datastructure",dataStrucureInput,
   // "Datastructure to be benchmarked. Options are mqf, lmqf, cqf, and countmin. Default is mqf");
 
@@ -69,8 +71,8 @@ int main(int argc, char const *argv[]) {
   ,"False positive rate. default is 0.01")
   ->group("Counting Strucutre Options");
 
-  app.add_option("-n,--num_elements",num_elements,
-  "Number of elements to generate. Default is 10M");
+  //app.add_option("-n,--num_elements",num_elements,
+  //"Number of elements to generate. Default is 10M");
 
   app.add_option("-c,--countsError",countErrorMargin
   ,"Counts error margin. default is 5")
@@ -82,15 +84,15 @@ int main(int argc, char const *argv[]) {
 
   CLI11_PARSE(app, argc, (char**)argv);
 
-  uint64_t p=(uint64_t)log2((double)num_elements/fpr);
-
+//  uint64_t p=(uint64_t)log2((double)num_elements*1.6/fpr);
+  uint64_t p=kSize*2;
   cout<<"Num Hashbits= "<<p<<endl;
-  uint64_t estimatedQ=log2((double)num_elements*1.1)+1;// worst case zipifian distribution
-  cout<<"Estimated Q= "<<estimatedQ<<endl;
-
-  vector<countingStructure*> dataStructures;
-
-  dataStructures.push_back(new MQF(estimatedQ-1,p-estimatedQ+1,2));
+//  uint64_t estimatedQ=log2((double)num_elements*1.2)+1;// worst case zipifian distribution
+//  if(Q==0)
+//    Q=estimatedQ;
+  //cout<<"Estimated Q= "<<estimatedQ<<endl;
+  cout<<"Used Q= "<<Q<<endl;
+  MQF* MQFCS= new MQF(Q,p-Q,2);
 
 
 
@@ -117,162 +119,92 @@ int main(int argc, char const *argv[]) {
     cout<<"Unknown Distribution"<<endl;
     return -1;
   }
-
+  uint64_t BufferSize=num_elements/25;
 
 
 
   //
   //
   uint64_t countedKmers=0;
-  vector<uint64_t> insertions(num_elements);
-  //set<uint64_t> succesfullQueries(num_queries);
-  uint64_t queryTop=0;
+  set<uint64_t> insertions;
+  //insertions.reserve(num_elements);
 
-  auto now=std::chrono::high_resolution_clock::now();
-  auto prev=std::chrono::high_resolution_clock::now();
-  auto microseconds = (chrono::duration_cast<chrono::microseconds>(now-prev)).count();
+  uint64_t tmp_inserted=0;
   uint64_t curr_item;
-
-// check the size of cqf
-
-   uint64_t tmp_inserted=0;
-   for(int j=0;j<num_elements;j++){
+  while(MQFCS->space()<loadFactor){
      if(!g->getElement(curr_item))
        break;
-     tmp_inserted++;
-  //   cout<<"sss"<<curr_item<<"\n";
-     insertions[j]=curr_item;
-  //   gold[curr_item]++;
-     // if(queryTop<num_queries)
-     //    succesfullQueries[queryTop++]=curr_item;
-   }
-   countedKmers+=num_elements;
-   for(auto structure: dataStructures){
-     if(structure->space()>=95)
+
+     MQFCS->insert(ihash(curr_item,mask),1);
+     if(MQFCS->space()>=95)
      {
-       structure->failed=true;
-       continue;
+       MQFCS->failed=true;
+       cout<<"Failed"<<endl;
+       break;
      }
+     insertions.insert(curr_item);
+     tmp_inserted++;
+  }
+  cout<<"Generating "<<insertions.size()<<" items"<<endl;
+  uint64_t queryTop=0;
+
+
+  countedKmers+=num_elements;
      //  cerr<<"Inserting "<<BufferSize<<" to "<<structure->name<<"("<<structure->space()<<")"<<endl;
-     prev=std::chrono::high_resolution_clock::now();
 
-     for(int j=0;j<tmp_inserted;j++){
+  auto prev=std::chrono::high_resolution_clock::now();
+  QF* mqf=MQFCS->get_MQF();
+  qf_ComputeItemsOrder(mqf);
+  auto now=std::chrono::high_resolution_clock::now();
+  auto microseconds = (chrono::duration_cast<chrono::microseconds>(now-prev)).count();
+  MQFCS->insertionTime=microseconds;
 
-        structure->insert(ihash(insertions[j],mask),1);
-        if(structure->space()>=95)
-        {
-          structure->failed=true;
-          break;
-        }
-
-      }
-     now=std::chrono::high_resolution_clock::now();
-     microseconds = (chrono::duration_cast<chrono::microseconds>(now-prev)).count();
-     microseconds/=1000;
-     structure->insertionTime+=microseconds;
-   }
   prev=std::chrono::high_resolution_clock::now();
-  set<uint64_t> deduplicated(insertions.begin(),insertions.end());
-  boophf_t * bphf = new boomphf::mphf<u_int64_t,hasher_t>(deduplicated.size(),deduplicated,1);
+  //set<uint64_t> dedpuplicated(insertions.begin(),insertions.end());
+  boophf_t * bphf = new boomphf::mphf<u_int64_t,hasher_t>(insertions.size(),insertions,1);
+  //boophf_t * bphf = new boomphf::mphf<u_int64_t,hasher_t>(dedpuplicated.size(),dedpuplicated,1);
+//  dedpuplicated.clear();
   now=std::chrono::high_resolution_clock::now();
   microseconds = (chrono::duration_cast<chrono::microseconds>(now-prev)).count();
-  cout<<"Final Number of unique items generated="<<g->nunique_items<<endl;
-  QF* mqf=((MQF*)dataStructures[0])->get_MQF();
-  qf_ComputeItemsOrder(mqf);
-  cout<<"MQF load Factor = "<<qf_space(mqf)<<endl;
+  cout<<"MPHF Construction Time = "<<microseconds<<"microsecons"<<endl;
 
+
+
+  cout<<"MQF load Factor = "<<qf_space(mqf)<<endl;
+  vector<uint64_t> queries(insertions.begin(),insertions.end());
+  insertions.clear();
   prev=std::chrono::high_resolution_clock::now();
-  for(auto i:insertions)
+  uint64_t numQueries=35000000;
+  for(uint64_t i=0;i<numQueries;i++)
   {
-    uint64_t res=bphf->lookup(i);
-    
+
+    uint64_t res=bphf->lookup(queries[i]);
   }
   now=std::chrono::high_resolution_clock::now();
   microseconds = (chrono::duration_cast<chrono::microseconds>(now-prev)).count();
   microseconds/=1000;
+  uint64_t mphf_bytes=bphf->totalBitSize()/8;
+  cout<<"MPHF Size="<<mphf_bytes/(1024*1024)<<"MB"<<endl;
   cout<<"MPHF Query Time="<<microseconds<<endl;
 
   prev=std::chrono::high_resolution_clock::now();
-  for(auto i:insertions)
+  for(uint64_t i=0;i<numQueries;i++)
   {
-    uint64_t res=itemOrder(mqf,ihash(i,mask));
+    uint64_t res=itemOrder(mqf,ihash(queries[i],mask));
   }
   now=std::chrono::high_resolution_clock::now();
   microseconds = (chrono::duration_cast<chrono::microseconds>(now-prev)).count();
   microseconds/=1000;
+  MQFCS->queryTime=microseconds;
+
+  cout<<"Name"<<"\t"
+      <<"Size"<<"\t"
+      <<"Space"<<"\t"
+      <<"fpr"<<"\t"
+      <<"Insertion Speed"<<"\t"
+      <<"Query Speed"<<endl;
+  MQFCS->print();
   cout<<"MQF Query Time="<<microseconds<<endl;
 
-  // for(auto structure: dataStructures){
-  //   if(structure->failed)
-  //   {
-  //     structure->fpr=1;
-  //     structure->fpr5=1;
-  //     structure->fpr10=1;
-  //     structure->fpr20=1;
-  //     structure->fpr30=1;
-  //     continue;
-  //
-  //   }
-  //   cerr<<"Querying  from "<<structure->name<<endl;
-  //   prev=std::chrono::high_resolution_clock::now();
-  //
-  //   for(auto a :g->newItems)
-  //   {
-  //      uint64_t tmpCount=structure->query(a);
-  //
-  //      if(tmpCount>0)
-  //        structure->fpr++;
-  //      if(tmpCount>5)
-  //        structure->fpr5++;
-  //      if(tmpCount>10)
-  //        structure->fpr10++;
-  //      if(tmpCount>20)
-  //         structure->fpr20++;
-  //      if(tmpCount>30)
-  //         structure->fpr30++;
-  //   }
-  //   uint64_t numQueries5=0,
-  //            numQueries10=0,
-  //            numQueries20=0,
-  //            numQueries30=0;
-  //
-  //   // for(auto it=gold.begin();it!=gold.end();it++)
-  //   // {
-  //   //   uint64_t tmpCount=structure->query(it->first);
-  //   //   if(it->second<5){
-  //   //     numQueries5++;
-  //   //     if(tmpCount>5)
-  //   //       structure->fpr5++;
-  //   //   }
-  //   //   if(it->second<10){
-  //   //     numQueries10++;
-  //   //     if(tmpCount>10)
-  //   //       structure->fpr10++;
-  //   //   }
-  //   //   if(it->second<20){
-  //   //     numQueries20++;
-  //   //     if(tmpCount>20)
-  //   //       structure->fpr20++;
-  //   //   }
-  //   //   if(it->second<30){
-  //   //     numQueries30++;
-  //   //     if(tmpCount>30)
-  //   //       structure->fpr30++;
-  //   //   }
-  //   //
-  //   // }
-  //   // now=std::chrono::high_resolution_clock::now();
-  //   // structure->fpr/=double(g->newItems.size());
-  //   // structure->fpr5/=double(g->newItems.size()+numQueries5);
-  //   // structure->fpr10/=double(g->newItems.size()+numQueries10);
-  //   // structure->fpr20/=double(g->newItems.size()+numQueries20);
-  //   // structure->fpr30/=double(g->newItems.size()+numQueries30);
-  //
-  //   microseconds = (chrono::duration_cast<chrono::microseconds>(now-prev)).count();
-  //   microseconds/=1000;
-  //   structure->queryTime+=microseconds;
-  //
-  //
-  // }
   return 0;
 }
