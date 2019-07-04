@@ -76,11 +76,11 @@ bmqf_bar_positions = mqf_bar_positions + 2*bar_width
 CountminKhmer_bar_positions = mqf_bar_positions + 3*bar_width
 Countmin_bar_positions = mqf_bar_positions + 4*bar_width
 
-mqfColor='#ED0020'
-cqfColor='#0000DD'
-CountminKhmerColor='#4286f4'
-bmqfColor='#ff0066'
-CountminColor='#00ff7f'
+mqfColor='#d73027'
+cqfColor='#fc8d59'
+bmqfColor='#fee090'
+CountminKhmerColor='#91bfdb'
+CountminColor='#4575b4'
 
 
 # make bar plots
