@@ -9,11 +9,12 @@ os:
 
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y make automake autotools-dev
+  - sudo apt-get install -y make automake autotools-dev cmake
 script:
-  - make all test NH=1
-  - ./mqf_test
-  - gcov -n -o . gqf.c > /dev/null;
+  - mkdir -p build
+  - cmake
+  - ctest
+  - gcov -n -o . src/gqf.cpp > /dev/null;
 branches:
   only:
   - mqfDevelopmenet
