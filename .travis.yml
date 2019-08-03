@@ -14,6 +14,7 @@ script:
   - mkdir -p build
   - cd build
   - cmake ..
+  - make
   - ctest
   - gcov -n -o . src/gqf.cpp > /dev/null;
 branches:
