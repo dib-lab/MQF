@@ -1,5 +1,5 @@
 
-#include "../catch.hpp"
+#include "catch.hpp"
 
 TEST_CASE( "get/set fixed counters" ) {
   QF qf;
@@ -252,5 +252,5 @@ TEST_CASE("general lock")
   qf_general_unlock(&qf);
   added=qf_insert(&qf,100,1,true,false);
   REQUIRE(added==true);
-  
+
 }

@@ -1,9 +1,9 @@
-#include "../gqf.h"
+#include "gqf.h"
 #include <stdio.h>      /* printf, scanf, puts, NULL */
 #include <stdlib.h>
 #include<iostream>
 #include <unordered_map>
-#include "../catch.hpp"
+#include "catch.hpp"
 using namespace std;
 
 TEST_CASE( "Add tags to items") {

@@ -1,8 +1,8 @@
-#include "../gqf.h"
+#include "gqf.h"
 #include <stdio.h>      /* printf, scanf, puts, NULL */
 #include <stdlib.h>
 #include<iostream>
-#include "../catch.hpp"
+#include "catch.hpp"
 #include <unordered_map>
 using namespace std;
 

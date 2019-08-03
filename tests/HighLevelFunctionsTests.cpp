@@ -1,11 +1,11 @@
-#include "../gqf.h"
+#include "gqf.h"
 #include <stdio.h>      /* printf, scanf, puts, NULL */
 #include <stdlib.h>
 #include <iostream>
-#include "../catch.hpp"
+#include "catch.hpp"
 #include <vector>
 #include <map>
-#include "../utils.h"
+#include "utils.h"
 using namespace std;
 
 
@@ -574,7 +574,7 @@ TEST_CASE( "invertable merge no count") {
 
 
   qf_invertable_merge_no_count(cf,nqf,&cf2);
-  
+
 
   uint64_t key, value, count;
   for(uint64_t i=1;i<nvals;i++)

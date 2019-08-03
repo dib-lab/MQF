@@ -1,9 +1,9 @@
-#include "../gqf.h"
-#include "../onDiskMQF.h"
+#include "gqf.h"
+#include "onDiskMQF.h"
 #include <stdio.h>      /* printf, scanf, puts, NULL */
 #include <stdlib.h>
 #include<iostream>
-#include "../catch.hpp"
+#include "catch.hpp"
 using namespace std;
 
 
