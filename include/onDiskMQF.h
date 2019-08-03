@@ -8,7 +8,7 @@
 #include <vector>
 #include "gqf.h"
 #include <fstream>
-#include <stxxl/vector>
+
 
 
 namespace onDiskMQF_Namespace{
