@@ -8,9 +8,6 @@ set(SOURCE_FILES
   utils.cpp
 )
 
-set(CMAKE_CXX_FLAGS "-fPIC -Wall ${DEBUG} ${PROFILE} ${OPT} -m64 -Wno-unused-result -Wno-strict-aliasing -Wno-unused-function -fopenmp  -fpermissive")
-
-add_definitions(${CMAKE_CXX_FLAGS})
 
 add_library(MQF SHARED STATIC ${SOURCE_FILES})
 target_link_libraries(MQF ${STXXL_LIBRARIES})

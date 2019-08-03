@@ -22,6 +22,7 @@
 #include <map>
 #include "utils.h"
 #include <type_traits>
+#include <stxxl/vector>
 
 namespace onDiskMQF_Namespace{
 /******************************************************************
@@ -52,34 +53,7 @@ uint64_t bitmaskLookup[]={0,1, 3, 7, 15, 31, 63, 127, 255, 511, 1023,
 2251799813685247, 4503599627370495, 9007199254740991, 18014398509481983, 36028797018963967, 72057594037927935, 144115188075855871, 288230376151711743, 576460752303423487, 1152921504606846975,
 2305843009213693951, 4611686018427387903, 9223372036854775807, 18446744073709551615};
 
-//#define BITMASK(nbits) ((nbits) == 64 ? 0xffffffffffffffff : (1ULL << (nbits)) \
-												- 1ULL)
-#define BITMASK(nbits) bitmaskLookup[nbits]
 
-#define MAX_VALUE(nbits) ((1ULL << (nbits)) - 1)
-#define BILLION 1000000000L
-
-
-typedef struct __attribute__ ((__packed__)) qfblock {
-	/* Code works with uint16_t, uint32_t, etc, but uint8_t seems just as fast as
-   * anything else */
-	uint8_t offset;
-	uint64_t occupieds[METADATA_WORDS_PER_BLOCK];
-	uint64_t runends[METADATA_WORDS_PER_BLOCK];
-#if BITS_PER_SLOT == 8
-	uint8_t  slots[SLOTS_PER_BLOCK];
-#elif BITS_PER_SLOT == 16
-	uint16_t  slots[SLOTS_PER_BLOCK];
-#elif BITS_PER_SLOT == 32
-	uint32_t  slots[SLOTS_PER_BLOCK];
-#elif BITS_PER_SLOT == 64
-	uint64_t  slots[SLOTS_PER_BLOCK];
-#elif BITS_PER_SLOT != 0
-	uint8_t   slots[SLOTS_PER_BLOCK * BITS_PER_SLOT / 8];
-#else
-	uint8_t   slots[];
-#endif
-} qfblock;
 
 template<uint64_t bitsPerSlot=64>
 class _onDiskMQF: public onDiskMQF {
@@ -313,7 +287,33 @@ void general_unlock()override;
 //void onDiskMQF_migrate(onDiskMQF* source, onDiskMQF* destination);
 void migrateFromQF(QF* source) override;
 };
+//#define BITMASK(nbits) ((nbits) == 64 ? 0xffffffffffffffff : (1ULL << (nbits)) \
+												- 1ULL)
+#define BITMASK(nbits) bitmaskLookup[nbits]
 
+#define MAX_VALUE(nbits) ((1ULL << (nbits)) - 1)
+#define BILLION 1000000000L
+
+typedef struct __attribute__ ((__packed__)) qfblock {
+	/* Code works with uint16_t, uint32_t, etc, but uint8_t seems just as fast as
+   * anything else */
+	uint8_t offset;
+	uint64_t occupieds[METADATA_WORDS_PER_BLOCK];
+	uint64_t runends[METADATA_WORDS_PER_BLOCK];
+#if BITS_PER_SLOT == 8
+	uint8_t  slots[SLOTS_PER_BLOCK];
+#elif BITS_PER_SLOT == 16
+	uint16_t  slots[SLOTS_PER_BLOCK];
+#elif BITS_PER_SLOT == 32
+	uint32_t  slots[SLOTS_PER_BLOCK];
+#elif BITS_PER_SLOT == 64
+	uint64_t  slots[SLOTS_PER_BLOCK];
+#elif BITS_PER_SLOT != 0
+	uint8_t   slots[SLOTS_PER_BLOCK * BITS_PER_SLOT / 8];
+#else
+	uint8_t   slots[];
+#endif
+} qfblock;
 
 static __inline__ unsigned long long rdtsc(void)
 {
@@ -2301,20 +2301,24 @@ _onDiskMQF<bitsPerSlot>::_onDiskMQF( uint64_t nslots, uint64_t key_bits, uint64_
 
 /* The caller should call onDiskMQF_init on the dest QF before calling this function.
  */
-template<uint64_t bitsPerSlot>
-void _onDiskMQF<bitsPerSlot>::copy(onDiskMQF *dest)
-{
-	// _onDiskMQF<bitsPerSlot>* qf=this;
-	throw std::logic_error("not implemented yet");
-	// memcpy(dest->mem, src->mem, sizeof(qfmem));
-	// memcpy(dest->metadata, src->metadata, sizeof(qfmetadata));
-	// //memcpy(dest->blocks, src->blocks, src->metadata->size);
-  //
-	// if(src->metadata->tags_map!=NULL){
-	// 	dest->metadata->tags_map=
-	// 	new std::map<uint64_t, std::vector<int> >(*src->metadata->tags_map);
-	// }
-}
+ template<uint64_t bitsPerSlot>
+ void _onDiskMQF<bitsPerSlot>::copy(onDiskMQF *dest)
+ {
+    // ( onDiskMQF *&qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_counter_size ,const char * path)
+ 	_onDiskMQF<bitsPerSlot>* src=this;
+   // dest = new _onDiskMQF(uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_counter_size,const char * path);
+   init(dest, src->metadata->nslots, src->metadata->key_bits, src->metadata->tag_bits, src->metadata->fixed_counter_size, "");
+   // throw std::logic_error("not implemented yet");
+ 	memcpy(dest->mem, src->mem, sizeof(qfmem));
+ 	memcpy(dest->metadata, src->metadata, sizeof(qfmetadata));
+ 	// memcpy(dest->blocks, src->blocks, src->metadata->size);
+
+ 	if(src->metadata->tags_map!=NULL){
+ 		dest->metadata->tags_map=
+ 		new std::map<uint64_t, std::vector<int> >(*src->metadata->tags_map);
+ 	}
+ }
+
 
 /* free up the memory if the QF is in memory.
  * else unmap the mapped memory from pagecache.

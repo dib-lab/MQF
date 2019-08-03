@@ -21,7 +21,11 @@ if("${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_BINARY_DIR}")
 endif("${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_BINARY_DIR}")
 
 # enable warnings (always good)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall")
+
+set(CMAKE_CXX_FLAGS "-fPIC -Wall  ${PROFILE} ${OPT} -m64 -Wno-unused-result -Wno-strict-aliasing -Wno-unused-function -fopenmp  -fpermissive")
+
+add_definitions(${CMAKE_CXX_FLAGS})
+
 
 # include the STXXL library in my-project
 add_subdirectory(ThirdParty/stxxl)

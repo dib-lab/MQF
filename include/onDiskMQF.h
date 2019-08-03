@@ -10,7 +10,6 @@
 #include <fstream>
 
 
-
 namespace onDiskMQF_Namespace{
 /* Can be
 	0 (choose size at run-time),
@@ -94,6 +93,7 @@ namespace onDiskMQF_Namespace{
 		int end();
 
 	};
+
 
 	class onDiskMQF {
 	public:
@@ -282,6 +282,7 @@ namespace onDiskMQF_Namespace{
 	//void onDiskMQF_migrate(onDiskMQF* source, onDiskMQF* destination);
 	virtual void migrateFromQF(QF* source)=0;
 	};
+
 
 
 }
