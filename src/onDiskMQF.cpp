@@ -3387,17 +3387,17 @@ void _onDiskMQF<bitsPerSlot>::general_unlock(){
 	_onDiskMQF<bitsPerSlot>* qf=this;
 	onDiskMQF_spin_unlock(&qf->mem->general_lock);
 }
-// void onDiskMQF_migrate(onDiskMQF* source, onDiskMQF* dest){
-// 	onDiskMQFIterator source_i;
-// 	if (onDiskMQF_iterator(source, &source_i, 0)) {
-// 		do {
-// 			uint64_t key = 0, value = 0, count = 0;
-// 			onDiskMQFIterator_get(&source_i, &key, &value, &count);
-// 			onDiskMQF_insert(dest, key, count, true, true);
-// 			onDiskMQF_add_tag(dest,key,value);
-// 		} while (!onDiskMQFIterator_next(&source_i));
-// 	}
-// }
+ void onDiskMQF::migrate(onDiskMQF* dest){
+ 	onDiskMQFIterator source_i;
+ 	if (getIterator(&source_i, 0)) {
+ 		do {
+ 			uint64_t key = 0, value = 0, count = 0;
+ 			source_i.get(&key, &value, &count);
+ 			dest->insert(key, count, true, true);
+ 			dest->add_tag(key,value);
+ 		} while (!source_i.next());
+ 	}
+ }
 
 template<uint64_t bitsPerSlot>
 void onDiskMQF_Namespace::_onDiskMQF<bitsPerSlot>::migrateFromQF(QF* source){

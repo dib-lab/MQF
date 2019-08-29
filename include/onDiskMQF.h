@@ -281,8 +281,11 @@ namespace onDiskMQF_Namespace{
 	//void onDiskMQF_migrate(onDiskMQF* source, onDiskMQF* destination);
 	virtual void migrateFromQF(QF* source)=0;
 
+	//void onDiskMQF_migrate(onDiskMQF* source, onDiskMQF* destination);
+    void migrate(onDiskMQF* dist);
 
-	virtual  bool getForIterator(onDiskMQFIterator* qfi,uint64_t *key, uint64_t *value, uint64_t *count)=0;
+
+    virtual  bool getForIterator(onDiskMQFIterator* qfi,uint64_t *key, uint64_t *value, uint64_t *count)=0;
 	virtual int nextForIterator(onDiskMQFIterator *qfi)=0;
 	};
 

@@ -362,73 +362,73 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(onD
 
 }
 
-//
-// TEST_CASE( "Migrate" ) {
-//   onDiskMQF qf,qf2;
-//   int counter_size=4;
-//   srand (1);
-//   uint64_t qbits=16;
-//   uint64_t num_hash_bits=qbits+8;
-//   uint64_t maximum_count=(1ULL<<counter_size)-1;
-//   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-//   onDiskMQF::init(qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
-//   onDiskMQF::init(qf2, (1ULL<<qbits), num_hash_bits, 0,counter_size, true, "", 2038074761);
-//
-//   uint64_t nvals = (1ULL<<qbits);
-//   //uint64_t nvals = 3;
-//   uint64_t *vals;
-//   uint64_t *nRepetitions;
-//   vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
-//   nRepetitions= (uint64_t*)malloc(nvals*sizeof(nRepetitions[0]));
-//   uint64_t count;
-//
-//   for(uint64_t i=0;i<nvals;i++)
-//   {
-//     uint64_t newvalue=0;
-//     while(newvalue==0){
-//       newvalue=rand();
-//       newvalue=(newvalue<<32)|rand();
-//       newvalue=newvalue%(qf->metadata->range);
-//       for(uint64_t j=0;j<i;j++)
-//       {
-//         if(vals[j]==newvalue)
-//         {
-//           newvalue=0;
-//           break;
-//         }
-//       }
-//     }
-//     vals[i]=newvalue;
-//
-//
-//     nRepetitions[i]=(rand()%1000)+1;
-//   }
-//   double loadFactor=(double)qf->metadata->noccupied_slots/(double)qf->metadata->nslots;
-//   uint64_t insertedItems=0;
-//   while(insertedItems<nvals && loadFactor<0.9){
-//   //  printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
-//     INFO("Inserting "<< vals[insertedItems] << " Repeated "<<nRepetitions[insertedItems]);
-//     qf->insert(2,vals[insertedItems],nRepetitions[insertedItems],false,false);
-//     //qf_dump(&qf);
-//     INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
-//     count = onDiskMQF_count_key(&qf2, vals[insertedItems]);
-//     CHECK(count == nRepetitions[insertedItems]);
-//     insertedItems++;
-//     loadFactor=(double)qf2.metadata->noccupied_slots/(double)qf->metadata->nslots;
-//
-//   }
-//   INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
-//   onDiskMQF_migrate(&qf2,&qf);
-//   for(uint64_t i=0;i<insertedItems;i++)
-//   {
-//     count = qf->count_key(vals[i]);
-//     INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
-//     CHECK(count == nRepetitions[i]);
-//   }
-//
-//   onDiskMQF_destroy(&qf);
-//
-// }
+
+ TEST_CASE( "Migrate(onDisk)","[onDisk] " ) {
+   onDiskMQF *qf,*qf2;
+   int counter_size=4;
+   srand (1);
+   uint64_t qbits=16;
+   uint64_t num_hash_bits=qbits+8;
+   uint64_t maximum_count=(1ULL<<counter_size)-1;
+   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
+   onDiskMQF::init(qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser2");
+   onDiskMQF::init(qf2, (1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser2");
+
+   uint64_t nvals = (1ULL<<qbits);
+   //uint64_t nvals = 3;
+   uint64_t *vals;
+   uint64_t *nRepetitions;
+   vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
+   nRepetitions= (uint64_t*)malloc(nvals*sizeof(nRepetitions[0]));
+   uint64_t count;
+
+   for(uint64_t i=0;i<nvals;i++)
+   {
+     uint64_t newvalue=0;
+     while(newvalue==0){
+       newvalue=rand();
+       newvalue=(newvalue<<32)|rand();
+       newvalue=newvalue%(qf->metadata->range);
+       for(uint64_t j=0;j<i;j++)
+       {
+         if(vals[j]==newvalue)
+         {
+           newvalue=0;
+           break;
+         }
+       }
+     }
+     vals[i]=newvalue;
+
+
+     nRepetitions[i]=(rand()%1000)+1;
+   }
+   double loadFactor=(double)qf->metadata->noccupied_slots/(double)qf->metadata->nslots;
+   uint64_t insertedItems=0;
+   while(insertedItems<nvals && loadFactor<0.9){
+   //  printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
+     INFO("Inserting "<< vals[insertedItems] << " Repeated "<<nRepetitions[insertedItems]);
+     qf2->insert(vals[insertedItems],nRepetitions[insertedItems],false,false);
+     //qf_dump(&qf);
+     INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
+     count = qf2->count_key( vals[insertedItems]);
+     CHECK(count == nRepetitions[insertedItems]);
+     insertedItems++;
+     loadFactor=(double)qf2->metadata->noccupied_slots/(double)qf->metadata->nslots;
+
+   }
+   INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
+   qf2->migrate(qf);
+   for(uint64_t i=0;i<insertedItems;i++)
+   {
+     count = qf->count_key(vals[i]);
+     INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
+     CHECK(count == nRepetitions[i]);
+   }
+
+   delete qf,qf2;
+
+ }
 //
  TEST_CASE( "Counting Big counters(onDisk)","[onDisk]" ){
    onDiskMQF* qf;
