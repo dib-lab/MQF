@@ -69,12 +69,11 @@ namespace onDiskMQF_Namespace{
 	 	// 	return *this;
  		// }
 	};
+    class onDiskMQF;
 
-
-  template<uint64_t bitsPerSlot>
-	class onDiskMQFIterator {
+    class onDiskMQFIterator {
 	public:
-		_onDiskMQF<bitsPerSlot> *qf;
+		onDiskMQF* qf;
 		uint64_t run;
 		uint64_t current;
 		uint64_t cur_start_index;
@@ -218,7 +217,7 @@ namespace onDiskMQF_Namespace{
 	virtual uint64_t remove_tag(uint64_t key, bool lock=false, bool spin=false)=0;
 
 	/* Initialize an iterator */
-	//virtual bool getIterator(onDiskMQFIterator<bitsPerSlot> *qfi, uint64_t position)=0;
+	virtual bool getIterator(onDiskMQFIterator *qfi, uint64_t position)=0;
 
 
 
@@ -281,6 +280,10 @@ namespace onDiskMQF_Namespace{
 
 	//void onDiskMQF_migrate(onDiskMQF* source, onDiskMQF* destination);
 	virtual void migrateFromQF(QF* source)=0;
+
+
+	virtual  bool getForIterator(onDiskMQFIterator* qfi,uint64_t *key, uint64_t *value, uint64_t *count)=0;
+	virtual int nextForIterator(onDiskMQFIterator *qfi)=0;
 	};
 
 

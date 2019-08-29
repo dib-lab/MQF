@@ -223,7 +223,7 @@ uint64_t get_tag(uint64_t key)override;
 uint64_t remove_tag(uint64_t key, bool lock=false, bool spin=false)override;
 
 /* Initialize an iterator */
-bool getIterator(onDiskMQFIterator<bitsPerSlot> *qfi, uint64_t position);
+bool getIterator(onDiskMQFIterator *qfi, uint64_t position);
 
 
 
@@ -286,6 +286,8 @@ void general_unlock()override;
 
 //void onDiskMQF_migrate(onDiskMQF* source, onDiskMQF* destination);
 void migrateFromQF(QF* source) override;
+bool getForIterator(onDiskMQFIterator* qfi,uint64_t *key, uint64_t *value, uint64_t *count);
+int nextForIterator(onDiskMQFIterator *qfi);
 };
 //#define BITMASK(nbits) ((nbits) == 64 ? 0xffffffffffffffff : (1ULL << (nbits)) \
 												- 1ULL)
@@ -2671,7 +2673,7 @@ uint64_t _onDiskMQF<bitsPerSlot>::count_key(uint64_t key)
  * to the position index
  */
 template<uint64_t bitsPerSlot>
-bool _onDiskMQF<bitsPerSlot>::getIterator(onDiskMQFIterator<bitsPerSlot> *qfi, uint64_t position)
+bool _onDiskMQF<bitsPerSlot>::getIterator(onDiskMQFIterator *qfi, uint64_t position)
 {
 	_onDiskMQF<bitsPerSlot>* qf=this;
 	if(position > qf->metadata->xnslots){
@@ -2692,7 +2694,7 @@ bool _onDiskMQF<bitsPerSlot>::getIterator(onDiskMQFIterator<bitsPerSlot> *qfi, u
 	qfi->qf = qf;
 	qfi->num_clusters = 0;
 	qfi->run = position;
-	qfi->current = position == 0 ? 0 : run_end(qfi->qf, position-1) + 1;
+	qfi->current = position == 0 ? 0 : run_end( position-1) + 1;
 	if (qfi->current < position)
 		qfi->current = position;
 
@@ -2704,56 +2706,56 @@ bool _onDiskMQF<bitsPerSlot>::getIterator(onDiskMQFIterator<bitsPerSlot> *qfi, u
 }
 
 template<uint64_t bitsPerSlot>
-int onDiskMQFIterator<bitsPerSlot>::get(uint64_t *key, uint64_t *value, uint64_t *count)
+bool _onDiskMQF<bitsPerSlot>::getForIterator(onDiskMQFIterator* qfi,uint64_t *key, uint64_t *value, uint64_t *count)
 {
-	onDiskMQFIterator<bitsPerSlot> *qfi=this;
-	if(qfi->current > qfi->qf->metadata->xnslots){
+	if(qfi->current > metadata->xnslots){
 		throw std::out_of_range("onDiskMQFIterator_get is called with hash index out of range");
 	}
 	uint64_t current_remainder, current_count;
-	decode_counter(qfi->qf, qfi->current, &current_remainder, &current_count);
-	*key = (qfi->run << qfi->qf->metadata->key_remainder_bits) | current_remainder;
-	*value = _get_tag(qfi->qf,qfi->current);   // for now we are not using value
+	decode_counter(qfi->current, &current_remainder, &current_count);
+	*key = (qfi->run << metadata->key_remainder_bits) | current_remainder;
+	*value = _get_tag(qfi->current);   // for now we are not using value
 	*count = current_count;
+}
 
-	qfi->qf->metadata->ndistinct_elts++;
-	qfi->qf->metadata->nelts += current_count;
-
-	/*qfi->current = end_index;*/ 		//get should not change the current index
-																		//of the iterator
-	return 0;
+int onDiskMQFIterator::get(uint64_t *key, uint64_t *value, uint64_t *count)
+{
+	return qf->getForIterator(this,key,value,count);
+}
+int onDiskMQFIterator::next()
+{
+	return qf->nextForIterator(this);
 }
 template<uint64_t bitsPerSlot>
-int onDiskMQFIterator<bitsPerSlot>::next()
+int _onDiskMQF<bitsPerSlot>::nextForIterator(onDiskMQFIterator *qfi)
 {
-	onDiskMQFIterator<bitsPerSlot> *qfi=this;
-	if (onDiskMQFIterator_end(qfi))
+	if (qfi->end())
 		return 1;
 	else {
 		/* move to the end of the current counter*/
 		uint64_t current_remainder, current_count;
-		qfi->current = decode_counter(qfi->qf, qfi->current, &current_remainder,
+		qfi->current = decode_counter(qfi->current, &current_remainder,
 																	&current_count);
 
-		if (!is_runend(qfi->qf, qfi->current)) {
+		if (!is_runend( qfi->current)) {
 			qfi->current++;
 
-			if (qfi->current > qfi->qf->metadata->xnslots)
+			if (qfi->current > metadata->xnslots)
 				return 1;
 			return 0;
 		}
 		else {
 
 			uint64_t block_index = qfi->run / SLOTS_PER_BLOCK;
-			uint64_t rank = bitrank(qfi->qf->get_block(block_index)->occupieds[0],
+			uint64_t rank = bitrank(get_block(block_index)->occupieds[0],
 															qfi->run % SLOTS_PER_BLOCK);
-			uint64_t next_run = bitselect(qfi->qf->get_block(block_index)->occupieds[0],
+			uint64_t next_run = bitselect(get_block(block_index)->occupieds[0],
 																		rank);
 			if (next_run == 64) {
 				rank = 0;
 				while (next_run == 64 && block_index < qfi->qf->metadata->nblocks) {
 					block_index++;
-					next_run = bitselect(qfi->qf->get_block(block_index)->occupieds[0],
+					next_run = bitselect(get_block(block_index)->occupieds[0],
 															 rank);
 				}
 			}
@@ -2772,10 +2774,10 @@ int onDiskMQFIterator<bitsPerSlot>::next()
 	}
 }
 
-template<uint64_t bitsPerSlot>
-inline int onDiskMQFIterator<bitsPerSlot>::end()
+
+int onDiskMQFIterator::end()
 {
-	onDiskMQFIterator<bitsPerSlot> *qfi=this;
+	onDiskMQFIterator *qfi=this;
 	if (qfi->current >= qfi->qf->metadata->xnslots /*&& is_runend(qfi->qf, qfi->current)*/)
 		return 1;
 	else
