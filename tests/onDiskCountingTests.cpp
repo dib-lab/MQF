@@ -165,7 +165,6 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )(onDisk)" 
    do {
      uint64_t key, value, count;
      qfi.get(&key, &value, &count);
-     count=qf->count_key(key);
      if(key==vals[0]){
        CHECK(count >= 5);
      }
@@ -555,7 +554,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(onD
    do {
      uint64_t key, value, count;
      qfi.get(&key, &value, &count);
-     count=qf->count_key(key);
+     //count=qf->count_key(key);
      CHECK(count >= 50);
    } while(!qfi.next());
 
