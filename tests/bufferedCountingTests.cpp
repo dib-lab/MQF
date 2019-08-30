@@ -152,20 +152,19 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )(buffered)
     count = bufferedMQF_count_key(&qf, vals[i]);
     CHECK(count >= 1);
   }
-  // bufferedMQFIterator qfi;
-  // bufferedMQF_iterator(&qf, &qfi, 0);
-  // do {
-  //   uint64_t key, value, count;
-  //   qfi_get(&qfi, &key, &value, &count);
-  //   count=bufferedMQF_count_key(&qf, key);
-  //   if(key==vals[0]){
-  //     CHECK(count >= 5);
-  //   }
-  //   else{
-  //     CHECK(count >= 1);
-  //   }
-  //
-  // } while(!qfi_next(&qfi));
+  bufferedMQFIterator* qfi= bufferedMQF_iterator(&qf, 0);
+  do {
+    uint64_t key, value, count;
+    qfi->get(&key, &value, &count);
+
+    if(key==vals[0]){
+      REQUIRE(count >= 5);
+    }
+    else{
+      REQUIRE(count >= 1);
+    }
+
+  } while(!qfi->next());
 
   bufferedMQF_destroy(&qf);
 
@@ -385,6 +384,21 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(buf
     INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
     CHECK(count == nRepetitions[i]);
   }
+
+  bufferedMQFIterator* qfi= bufferedMQF_iterator(&qf, 0);
+  do {
+    uint64_t key, value, count;
+    qfi->get(&key, &value, &count);
+
+    if(key==vals[0]){
+      REQUIRE(count >= 5);
+    }
+    else{
+      REQUIRE(count >= 1);
+    }
+
+  } while(!qfi->next());
+
 
   bufferedMQF_destroy(&qf);
 

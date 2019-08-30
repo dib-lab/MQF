@@ -6,6 +6,63 @@
 #include <iostream>
 
 using namespace std;
+
+
+bufferedMQFIterator::bufferedMQFIterator(QFi* bit,onDiskMQF_Namespace::onDiskMQFIterator* dit){
+    bufferIt=bit;
+    diskIt=dit;
+    next();
+}
+
+int bufferedMQFIterator::get(uint64_t *key, uint64_t *value, uint64_t *count){
+    *key=currentKey;
+    *value=currentTag;
+    *count=currentCount;
+
+
+}
+
+
+/* Advance to next entry.  Returns whether or not another entry is
+     found.  */
+int bufferedMQFIterator::next()
+{
+    if(end()) return 1;
+    if(diskIt->end())
+    {
+        qfi_get(bufferIt,&currentKey,&currentTag,&currentCount);
+        qfi_next(bufferIt);
+        return 0;
+    }
+
+    if(qfi_end(bufferIt))
+    {
+        diskIt->get(&currentKey,&currentTag,&currentCount);
+        diskIt->next();
+        return 0;
+    }
+
+    if(diskIt->current < bufferIt->current)
+    {
+		diskIt->get(&currentKey,&currentTag,&currentCount);
+		diskIt->next();
+        return 0;
+    }
+    else{
+        qfi_get(bufferIt,&currentKey,&currentTag,&currentCount);
+        qfi_next(bufferIt);
+        return 0;
+    }
+    
+}
+
+/* Check to see if the if the end of the QF */
+int bufferedMQFIterator::end(){
+    if(diskIt->end() && qfi_end(bufferIt) ) return 1;
+    return 0;
+}
+
+
 void bufferedMQF_init(bufferedMQF *qf, uint64_t nslots_buffer ,uint64_t nslots
 	, uint64_t key_bits, uint64_t value_bits,uint64_t fixed_counter_size, const char *path){
 
@@ -96,14 +153,18 @@ void bufferedMQF_BatchQuery( bufferedMQF* qf,QF* Batch){
 
 //
 // /* Initialize an iterator */
-// bool bufferedMQF_iterator(bufferedMQF *qf, bufferedMQFIterator* qfi, uint64_t position){
-// 	if(qfi ==NULL)
-// 		qfi=new bufferedMQFIterator();
-// 	bool res=false;
-// 	res|=qf_iterator(qf->memoryBuffer,qfi->firstLayerIterator,position);
-// 	res|=qf_iterator(qf->disk,qfi->diskIterator,position);
-// 	return res;
-// }
+bufferedMQFIterator* bufferedMQF_iterator(bufferedMQF *qf, uint64_t position){
+// 	if(qfi !=NULL)
+// 		delete qfi;
+ 	bool res=false;
+ 	onDiskMQF_Namespace::onDiskMQFIterator* dit=new onDiskMQF_Namespace::onDiskMQFIterator();
+ 	QFi* bit=new QFi();
+
+ 	res|=qf_iterator(qf->memoryBuffer,bit,position);
+ 	res|=qf->disk->getIterator(dit,position);
+	return new bufferedMQFIterator(bit,dit);
+
+ }
 //
 // /* Returns 0 if the iterator is still valid (i.e. has not reached the
 // 	 end of the QF. */

@@ -11,8 +11,31 @@ extern "C" {
 #endif
 
 
+typedef class bufferedMQFIterator {
+public:
+    onDiskMQF_Namespace::onDiskMQFIterator* diskIt;
+	QFi* bufferIt;
+	uint64_t currentKey;
+	uint64_t currentTag;
+	uint64_t currentCount;
+    bufferedMQFIterator(){};
+	bufferedMQFIterator(QFi* bit,onDiskMQF_Namespace::onDiskMQFIterator* dit);
 
-	typedef class bufferedMQF {
+
+	int get(uint64_t *key, uint64_t *value, uint64_t *count);
+
+	/* Advance to next entry.  Returns whether or not another entry is
+         found.  */
+	int next();
+
+	/* Check to see if the if the end of the QF */
+	int end();
+
+
+} bufferedMQFIterator;
+
+
+typedef class bufferedMQF {
 	public:
 		QF* memoryBuffer;
 		onDiskMQF_Namespace::onDiskMQF* disk;
@@ -26,10 +49,6 @@ extern "C" {
 			delete disk;
 		}
 	} bufferedMQF;
-
-
-
-
 
 
 	void bufferedMQF_init(bufferedMQF *qf, uint64_t nslots_buffer ,uint64_t nslots, uint64_t key_bits, uint64_t value_bits,uint64_t fixed_counter_size,const char *path);
@@ -116,6 +135,7 @@ extern "C" {
 
 	int bufferedMQF_space(bufferedMQF *qf);
 
+    bufferedMQFIterator*  bufferedMQF_iterator(bufferedMQF *qf, uint64_t position);
 #ifdef __cplusplus
 }
 #endif
