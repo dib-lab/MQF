@@ -21,7 +21,7 @@ In other words, Fixed-size counters is used in counting and marking the slots us
   - MQF supports counting and removing items. MQF uses variable size counters; therefore, It is memory efficient when count data that follows zipfian distribution where most the items occur once or twice but few items can happen in very high counts..
   - MQF has lower bits per element than Bloom filter and Count-min sketches ([Ref](https://www3.cs.stonybrook.edu/~ppandey/files/p775-pandey.pdf)).
   - MQF  has good data locality which makes it efficient when running on secondary storage.
-  - MQF supports add/remove tags for the item.
+  - MQF supports add/remove labels for the item.
   - MQF can be iterated to get the items and counts inserted in the filter.
   - MQF supports merging function. Two or more filters can be merged into one filter.
   - MQF can be resized to bigger/ smaller filter.
@@ -36,7 +36,7 @@ make test NH=1
 ./mqf_test
 ```
 ### Initialization
-MQF Initialization requires the estimation of some parameters: number of slots, Key bits, fixed counter size, and tag size.
+MQF Initialization requires the estimation of some parameters: number of slots, Key bits, fixed counter size, and labels size.
 
 Fixed-size counter size is estimated from the shape of data distribution. If most of the items are singletons. The fixed-size counter should be limited to 1 bit. However, If a big portion of items is repeated more than one time, a bigger fixed-size counter will hold more counts and thus save slots.
 
@@ -46,19 +46,19 @@ Key bits equal to log2(number of slots) + the remaining part bits. the remaining
 
 ![eqn](https://raw.githubusercontent.com/shokrof/MQF/mqfDevelopmenet/r_eqn.gif)
 
-Tag size is straightforward to be estimated. it can be set to zero if tags are not necessary.
+Label size is straightforward to be estimated. it can be set to zero if labels are not necessary.
 
 
 1. qf_init
 Initialize mqf .
 ```c++
-void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_counter_size, bool mem, const char *path, uint32_t seed);
+void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t label_bits,uint64_t fixed_counter_size, bool mem, const char *path, uint32_t seed);
 ```
 
   * Qf* qf : pointer to the Filter.
   * uint64_t nslots : Number of slots in the filter. Should be of power of two. Maximum number of items to be inserted depends on this number.
   * uint64_t key_bits: Number of bits in the hash values.
-  * uint64_t tag_bits: Number of bits in tag value.
+  * uint64_t label_bits: Number of bits in label value.
   * uint64_t fixed_counter_size: Fixed counter size. must be > 0.
   * bool mem: Flag to create the filter on memory. IF false, mmap is used.
   * const char * path: In case of mmap. Path of the file used to pack the filter.
@@ -100,15 +100,15 @@ bool qf_remove(QF *qf, uint64_t hash, uint64_t count, bool lock, bool spin);
   * bool lock: For Multithreading, Lock the slot used by the current thread so that other threads can't change the value
   * bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
 
-4. Add/Remove tag to elements
+4. Add/Remove label to elements
 ```c++
-uint64_t qf_add_tag(const QF *qf, uint64_t key, uint64_t tag, bool lock, bool spin);
-uint64_t qf_get_tag(const QF *qf, uint64_t key);
-uint64_t qf_remove_tag(const QF *qf, uint64_t key, bool lock, bool spin);
+uint64_t qf_add_label(const QF *qf, uint64_t key, uint64_t label, bool lock, bool spin);
+uint64_t qf_get_label(const QF *qf, uint64_t key);
+uint64_t qf_remove_label(const QF *qf, uint64_t key, bool lock, bool spin);
 ```
   * Qf* qf : pointer to the Filter
   * uint64_t key : hash of the item.
-  * uint64_t tag: tag for the item.
+  * uint64_t label: label for the item.
   * bool lock: For Multithreading, Lock the slot used by the current thread so that other threads can't change the value
   * bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
 
@@ -129,7 +129,7 @@ void qf_merge(QF *qfa, QF *qfb, QF *qfc);
 void qf_multi_merge(QF *qf_arr[], int nqf, QF *qfr);
 ```
 7. Invertible Merge: Invertible merge offers addiotinal functionality to normal merge. Original source filter can be queried for each key.
-Invertiable merge function adds tag for each key and creates index structure. The index is map of an integer and vector of integers where the integer is the value of the tags and vector on integers is the ids of the source filters.
+Invertiable merge function adds label for each key and creates index structure. The index is map of an integer and vector of integers where the integer is the value of the labels and vector on integers is the ids of the source filters.
 ```c++
 void qf_invertable_merge(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t, std::vector<int> > *inverted_index_ptr);
 ```
@@ -142,7 +142,7 @@ void qf_invertable_merge(QF *qf_arr[], int nqf, QF *qfr,std::map<uint64_t, std::
 
 
 7. Compare:
-check if two filters have the same items, counts and tags.
+check if two filters have the same items, counts and labels.
 ```c++
 bool qf_equals(QF *qfa, QF *qfb);
 ```
