@@ -16,7 +16,7 @@ public:
     onDiskMQF_Namespace::onDiskMQFIterator* diskIt;
 	QFi* bufferIt;
 	uint64_t currentKey;
-	uint64_t currentTag;
+	uint64_t currentLabel;
 	uint64_t currentCount;
     bufferedMQFIterator(){};
 	bufferedMQFIterator(QFi* bit,onDiskMQF_Namespace::onDiskMQFIterator* dit);
@@ -69,35 +69,35 @@ typedef class bufferedMQF {
 
 
 		/*!
-			@breif Add Tag to item.
+			@breif Add label to item.
 
 			@param Qf* qf : pointer to the Filter
 			@param uint64_t key : hash of the item to be insertedItems
-			@param uint64_t tag: tag to be added
+			@param uint64_t label: label to be added
 			@param bool lock: For Multithreading, Lock the slot used by the current thread so that other threads can't change the value
 			@param bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
 
 			@return bool: True if the item is inserted correctly.
 		 */
-		uint64_t bufferedMQF_add_tag(const QF *qf, uint64_t key, uint64_t tag, bool lock=false, bool spin=false);
+		uint64_t bufferedMQF_add_label(const QF *qf, uint64_t key, uint64_t label, bool lock=false, bool spin=false);
 		/*!
-		@breif Return the tag associated with a given item.
+		@breif Return the label associated with a given item.
 
 		@param Qf* qf : pointer to the Filter.
 		@param uint64_t key : hash of the item.
 
-		@return uint64_t the tag associated with the input key.
+		@return uint64_t the label associated with the input key.
 				*/
-		uint64_t bufferedMQF_get_tag(const QF *qf, uint64_t key);
+		uint64_t bufferedMQF_get_label(const QF *qf, uint64_t key);
 		/*!
-		@breif delete the tag associated with a given item.
+		@breif delete the label associated with a given item.
 
 		@param Qf* qf : pointer to the Filter.
 		@param uint64_t key : hash of the item.
 
 		@return bool: Returns true if the item is removed successfully.
 				*/
-		uint64_t bufferedMQF_remove_tag(const QF *qf, uint64_t key, bool lock=false, bool spin=false);
+		uint64_t bufferedMQF_remove_label(const QF *qf, uint64_t key, bool lock=false, bool spin=false);
 
 
 

@@ -72,3 +72,6 @@ ThirdParty/stxxl
 **/*.cbp
 **/CMakeScripts
 **/compile_commands.json
+
+.idea/*
+build/*

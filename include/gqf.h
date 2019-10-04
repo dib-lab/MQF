@@ -46,8 +46,8 @@ extern "C" {
 		uint64_t nslots;
 		uint64_t xnslots;
 		uint64_t key_bits;
-		uint64_t tag_bits;
-		uint64_t BlockTag_bits;
+		uint64_t label_bits;
+		uint64_t BlockLabel_bits;
 		uint64_t fixed_counter_size;
 		uint64_t key_remainder_bits;
 		uint64_t bits_per_slot;
@@ -61,7 +61,7 @@ extern "C" {
 		uint64_t num_locks;
 		uint64_t maximum_count;
 		bool mem;
-		std::map<uint64_t, std::vector<int> > * tags_map;
+		std::map<uint64_t, std::vector<int> > * labels_map;
 	} quotient_filter_metadata;
 
 	typedef quotient_filter_metadata qfmetadata;
@@ -97,13 +97,13 @@ extern "C" {
 	@param Qf* qf : pointer to the Filter.
 	@param uint64_t nslots : Number of slots in the filter. Maximum number of items to be inserted depends on this number.
 	@param uint64_t key_bits: Number of bits in the hash values. This number should equal log2(nslots) +r. Accuracy depends on r.
-	@param uint64_t tag_bits: Number of bits in tag value.
+	@param uint64_t label_bits: Number of bits in label value.
 	@param uint64_t fixed_counter_size: Fixed counter size. must be > 0.
 	@param bool mem: Flag to create the filter on memeory. IF false, mmap is used.
 	@param const char * path: In case of mmap. Path of the file used to pack the filter.
 	@param uint32_t seed: useless value. To be removed
 		  */
-	void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_counter_size,uint64_t blocksTagSize, bool mem, const char *path, uint32_t seed);
+	void qf_init(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t label_bits,uint64_t fixed_counter_size,uint64_t blocksLabelSize, bool mem, const char *path, uint32_t seed);
 
 	void qf_reset(QF *qf);
 
@@ -171,39 +171,39 @@ extern "C" {
 
 
 	/*!
-		@breif Add Tag to item.
+		@breif Add Label to item.
 
 		@param Qf* qf : pointer to the Filter
 		@param uint64_t key : hash of the item to be insertedItems
-		@param uint64_t tag: tag to be added
+		@param uint64_t label: label to be added
 		@param bool lock: For Multithreading, Lock the slot used by the current thread so that other threads can't change the value
 		@param bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
 
 		@return bool: True if the item is inserted correctly.
 	 */
-	uint64_t qf_add_tag(const QF *qf, uint64_t key, uint64_t tag, bool lock=false, bool spin=false);
+	uint64_t qf_add_label(const QF *qf, uint64_t key, uint64_t label, bool lock=false, bool spin=false);
 	/*!
-	@breif Return the tag associated with a given item.
+	@breif Return the label associated with a given item.
 
 	@param Qf* qf : pointer to the Filter.
 	@param uint64_t key : hash of the item.
 
-	@return uint64_t the tag associated with the input key.
+	@return uint64_t the label associated with the input key.
 			*/
-	uint64_t qf_get_tag(const QF *qf, uint64_t key);
+	uint64_t qf_get_label(const QF *qf, uint64_t key);
 
 
-	char* qf_getBlockTag_pointer_byBlock(const QF *qf, uint64_t index);
-	bool qf_getBlockTag_pointer_byItem(const QF *qf, uint64_t key,char *&res);
+	char* qf_getBlockLabel_pointer_byBlock(const QF *qf, uint64_t index);
+	bool qf_getBlockLabel_pointer_byItem(const QF *qf, uint64_t key,char *&res);
 	/*!
-	@breif delete the tag associated with a given item.
+	@breif delete the label associated with a given item.
 
 	@param Qf* qf : pointer to the Filter.
 	@param uint64_t key : hash of the item.
 
 	@return bool: Returns true if the item is removed successfully.
 			*/
-	uint64_t qf_remove_tag(const QF *qf, uint64_t key, bool lock=false, bool spin=false);
+	uint64_t qf_remove_label(const QF *qf, uint64_t key, bool lock=false, bool spin=false);
 
 
 	void qf_setCounter(QF* qf,uint64_t key, uint64_t count, bool lock=false, bool spin=false);
@@ -245,7 +245,7 @@ extern "C" {
 	void qf_multi_merge(QF *qf_arr[], int nqf, QF *qfr);
 
 
-	/*! @breif Invertiable merge function adds tag for each key and creates index structure. The index is map of an integer and vector of integers where the integer is the value of the tags and vector on integers is the ids of the source filters.
+	/*! @breif Invertiable merge function adds label for each key and creates index structure. The index is map of an integer and vector of integers where the integer is the value of the labels and vector on integers is the ids of the source filters.
 
 	@param Qf* qf_arr : input array of filters
 	@param int nqf: number of filters

@@ -26,7 +26,7 @@ vector<int> key_to_vector_int(const string& key){
   return res;
 }
 
-void save_tags_map(std::map<uint64_t, std::vector<int> > * index,const char * fileName)
+void save_labels_map(std::map<uint64_t, std::vector<int> > * index,const char * fileName)
 {
   ofstream out(fileName);
   auto it=index->begin();
@@ -44,7 +44,7 @@ void save_tags_map(std::map<uint64_t, std::vector<int> > * index,const char * fi
 }
 
 
-std::map<uint64_t, std::vector<int> >* load_tags_map(const char * fileName)
+std::map<uint64_t, std::vector<int> >* load_labels_map(const char * fileName)
 {
   std::map<uint64_t, std::vector<int> >* res=new std::map<uint64_t, std::vector<int> >();
   ifstream out(fileName);

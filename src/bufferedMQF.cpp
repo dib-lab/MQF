@@ -16,7 +16,7 @@ bufferedMQFIterator::bufferedMQFIterator(QFi* bit,onDiskMQF_Namespace::onDiskMQF
 
 int bufferedMQFIterator::get(uint64_t *key, uint64_t *value, uint64_t *count){
     *key=currentKey;
-    *value=currentTag;
+    *value=currentLabel;
     *count=currentCount;
 
 
@@ -30,38 +30,38 @@ int bufferedMQFIterator::next()
     if(end()) return 1;
     if(diskIt->end())
     {
-        qfi_get(bufferIt,&currentKey,&currentTag,&currentCount);
+        qfi_get(bufferIt,&currentKey,&currentLabel,&currentCount);
         qfi_next(bufferIt);
         return 0;
     }
 
     if(qfi_end(bufferIt))
     {
-        diskIt->get(&currentKey,&currentTag,&currentCount);
+        diskIt->get(&currentKey,&currentLabel,&currentCount);
         diskIt->next();
         return 0;
     }
 
     if(diskIt->current < bufferIt->current)
     {
-		diskIt->get(&currentKey,&currentTag,&currentCount);
+		diskIt->get(&currentKey,&currentLabel,&currentCount);
 		diskIt->next();
         return 0;
     }
     else if(diskIt->current > bufferIt->current){
-        qfi_get(bufferIt,&currentKey,&currentTag,&currentCount);
+        qfi_get(bufferIt,&currentKey,&currentLabel,&currentCount);
         qfi_next(bufferIt);
         return 0;
     } else{
-        qfi_get(bufferIt,&currentKey,&currentTag,&currentCount);
+        qfi_get(bufferIt,&currentKey,&currentLabel,&currentCount);
         uint64_t tmpCount=0;
-        diskIt->get(&currentKey,&currentTag,&tmpCount);
+        diskIt->get(&currentKey,&currentLabel,&tmpCount);
         currentCount+=tmpCount;
         qfi_next(bufferIt);
         diskIt->next();
         return 0;
     }
-    
+
 }
 
 /* Check to see if the if the end of the QF */
@@ -183,7 +183,7 @@ void bufferedMQF_migrate(bufferedMQF* source, bufferedMQF* dest){
         uint64_t  tmpcount=bufferedMQF_count_key(dest,key);
         tmpcount++;
 
-//        bufferedMQF_add_tag((const bufferedMQF*)dest,key,value);
+//        bufferedMQF_add_label((const bufferedMQF*)dest,key,value);
     } while (!source_i->next());
     delete source_i;
 }

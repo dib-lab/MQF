@@ -104,7 +104,7 @@ namespace onDiskMQF_Namespace{
 		std::fstream diskMQFStream;
 		qfblock **blocksPointers;
 		diskParameters* diskParams;
-		static void init( onDiskMQF *&qf, uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_counter_size ,const char * path);
+		static void init( onDiskMQF *&qf, uint64_t nslots, uint64_t key_bits, uint64_t label_bits,uint64_t fixed_counter_size ,const char * path);
 
 	/*!
 	@breif initialize mqf .
@@ -112,7 +112,7 @@ namespace onDiskMQF_Namespace{
 	@param Qf* qf : pointer to the Filter.
 	@param uint64_t nslots : Number of slots in the filter. Maximum number of items to be inserted depends on this number.
 	@param uint64_t key_bits: Number of bits in the hash values. This number should equal log2(nslots) +r. Accuracy depends on r.
-	@param uint64_t tag_bits: Number of bits in tag value.
+	@param uint64_t label_bits: Number of bits in label value.
 	@param uint64_t fixed_counter_size: Fixed counter size. must be > 0.
 	@param bool mem: Flag to create the filter on memeory. IF false, mmap is used.
 	@param const char * path: In case of mmap. Path of the file used to pack the filter.
@@ -186,35 +186,35 @@ namespace onDiskMQF_Namespace{
 
 
 	/*!
-		@breif Add Tag to item.
+		@breif Add label to item.
 
 		@param Qf* qf : pointer to the Filter
 		@param uint64_t key : hash of the item to be insertedItems
-		@param uint64_t tag: tag to be added
+		@param uint64_t label: label to be added
 		@param bool lock: For Multithreading, Lock the slot used by the current thread so that other threads can't change the value
 		@param bool spin: For Multithreading, If there is a lock on the target slot. wait until the lock is freed and insert the count.
 
 		@return bool: True if the item is inserted correctly.
 	 */
-	virtual uint64_t add_tag( uint64_t key, uint64_t tag, bool lock=false, bool spin=false)=0;
+	virtual uint64_t add_label( uint64_t key, uint64_t label, bool lock=false, bool spin=false)=0;
 	/*!
-	@breif Return the tag associated with a given item.
+	@breif Return the label associated with a given item.
 
 	@param Qf* qf : pointer to the Filter.
 	@param uint64_t key : hash of the item.
 
-	@return uint64_t the tag associated with the input key.
+	@return uint64_t the label associated with the input key.
 			*/
-	virtual uint64_t get_tag(uint64_t key)=0;
+	virtual uint64_t get_label(uint64_t key)=0;
 	/*!
-	@breif delete the tag associated with a given item.
+	@breif delete the label associated with a given item.
 
 	@param Qf* qf : pointer to the Filter.
 	@param uint64_t key : hash of the item.
 
 	@return bool: Returns true if the item is removed successfully.
 			*/
-	virtual uint64_t remove_tag(uint64_t key, bool lock=false, bool spin=false)=0;
+	virtual uint64_t remove_label(uint64_t key, bool lock=false, bool spin=false)=0;
 
 	/* Initialize an iterator */
 	virtual bool getIterator(onDiskMQFIterator *qfi, uint64_t position)=0;
@@ -244,7 +244,7 @@ namespace onDiskMQF_Namespace{
 	// void onDiskMQF_multi_merge(onDiskMQF *qf_arr[], int nqf, onDiskMQF *qfr);
 	//
 
-	/*! @breif Invertiable merge function adds tag for each key and creates index structure. The index is map of an integer and vector of integers where the integer is the value of the tags and vector on integers is the ids of the source filters.
+	/*! @breif Invertiable merge function adds label for each key and creates index structure. The index is map of an integer and vector of integers where the integer is the value of the labels and vector on integers is the ids of the source filters.
 
 	@param Qf* qf_arr : input array of filters
 	@param int nqf: number of filters

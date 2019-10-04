@@ -176,47 +176,47 @@ TEST_CASE( "get/set slots" ) {
 // }
 
 
-TEST_CASE( "get/set Tags" ) {
+TEST_CASE( "get/set Labels" ) {
   QF qf;
-  for(uint64_t tag_size=1;tag_size<=5;tag_size++){
+  for(uint64_t label_size=1;label_size<=5;label_size++){
     uint64_t qbits=7;
     uint64_t num_hash_bits=qbits+8;
-    uint64_t maximum_count=(1ULL<<tag_size)-1;
-    INFO("Tag size = "<<tag_size);
-    qf_init(&qf, (1ULL<<qbits), num_hash_bits, tag_size,3,0, true, "", 2038074761);
+    uint64_t maximum_count=(1ULL<<label_size)-1;
+    INFO("Label size = "<<label_size);
+    qf_init(&qf, (1ULL<<qbits), num_hash_bits, label_size,3,0, true, "", 2038074761);
     uint64_t c;
     // test many set and get
     uint64_t last=0;
     for(uint64_t i=1;i<=maximum_count;i++){
-      REQUIRE( get_tag(&qf,99) == 0 );
-      CHECK( get_tag(&qf,100) == last );
-      REQUIRE( get_tag(&qf,101) == 0 );
-      set_tag(&qf,100,i);
-      REQUIRE( get_tag(&qf,99) == 0 );
-      CHECK( get_tag(&qf,100) == i );
-      REQUIRE( get_tag(&qf,101) == 0 );
+      REQUIRE( get_label(&qf,99) == 0 );
+      CHECK( get_label(&qf,100) == last );
+      REQUIRE( get_label(&qf,101) == 0 );
+      set_label(&qf,100,i);
+      REQUIRE( get_label(&qf,99) == 0 );
+      CHECK( get_label(&qf,100) == i );
+      REQUIRE( get_label(&qf,101) == 0 );
       last=i;
     }
 
     //test on block boundaries
 
-    REQUIRE( get_tag(&qf,63) == 0 );
-    REQUIRE( get_tag(&qf,64) == 0 );
-    REQUIRE( get_tag(&qf,65) == 0 );
+    REQUIRE( get_label(&qf,63) == 0 );
+    REQUIRE( get_label(&qf,64) == 0 );
+    REQUIRE( get_label(&qf,65) == 0 );
 
     c=1;
-    set_tag(&qf,63,c);
+    set_label(&qf,63,c);
     c=(c+1)%maximum_count;
-    set_tag(&qf,64,c);
+    set_label(&qf,64,c);
     c=(c+1)%maximum_count;
-    set_tag(&qf,65,c);
+    set_label(&qf,65,c);
 
     c=1;
-    REQUIRE( get_tag(&qf,63) == c );
+    REQUIRE( get_label(&qf,63) == c );
     c=(c+1)%maximum_count;
-    REQUIRE( get_tag(&qf,64) == c );
+    REQUIRE( get_label(&qf,64) == c );
     c=(c+1)%maximum_count;
-    REQUIRE( get_tag(&qf,65) == c );
+    REQUIRE( get_label(&qf,65) == c );
 
     // test special slots
     c=1;
@@ -227,9 +227,9 @@ TEST_CASE( "get/set Tags" ) {
     };
     for(uint64_t i=0;i<3;i++){
       INFO("Testing Special Slot "<<special_slots[i]);
-      REQUIRE( get_tag(&qf,special_slots[i]) == 0 );
-      set_tag(&qf,special_slots[i],c);
-      REQUIRE( get_tag(&qf,special_slots[i]) == c );
+      REQUIRE( get_label(&qf,special_slots[i]) == 0 );
+      set_label(&qf,special_slots[i],c);
+      REQUIRE( get_label(&qf,special_slots[i]) == c );
     }
 
     qf_destroy(&qf);

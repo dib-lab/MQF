@@ -47,7 +47,7 @@ TEST_CASE( "Writing and Reading to/from Disk") {
   uint64_t insertedItems=0;
   while(insertedItems<nvals && loadFactor<0.9){
     qf_insert(&qf,vals[insertedItems],nRepetitions[insertedItems],false,false);
-    qf_add_tag(&qf,vals[insertedItems],insertedItems%8);
+    qf_add_label(&qf,vals[insertedItems],insertedItems%8);
     count = qf_count_key(&qf, vals[insertedItems]);
     CHECK(count >= nRepetitions[insertedItems]);
     insertedItems++;
@@ -67,7 +67,7 @@ TEST_CASE( "Writing and Reading to/from Disk") {
       count = qf_count_key(&qf2, vals[i]);
       INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
       CHECK(count >= nRepetitions[i]);
-      CHECK(qf_get_tag(&qf2,vals[i])== i%8);
+      CHECK(qf_get_label(&qf2,vals[i])== i%8);
     }
 
     qf_destroy(&qf2);
@@ -81,7 +81,7 @@ TEST_CASE( "Writing and Reading to/from Disk") {
       count = qf_count_key(&qf, vals[i]);
       INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
       CHECK(count >= nRepetitions[i]);
-      CHECK(qf_get_tag(&qf,vals[i])== i%8);
+      CHECK(qf_get_label(&qf,vals[i])== i%8);
     }
 
     qf_destroy(&qf);
@@ -90,15 +90,15 @@ TEST_CASE( "Writing and Reading to/from Disk") {
 
 
 }
-TEST_CASE("BLOCK Tag after loading")
+TEST_CASE("BLOCK label after loading")
 {
   QF qf;
-  int tag_size=8;
+  int label_size=8;
   uint64_t qbits=15;
   uint64_t num_hash_bits=qbits+8;
-  uint64_t maximum_count=(1ULL<<tag_size)-1;
-  INFO("Counter size = "<<tag_size<<" max count= "<<maximum_count);
-  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,3,tag_size, true, "", 2038074761);
+  uint64_t maximum_count=(1ULL<<label_size)-1;
+  INFO("Counter size = "<<label_size<<" max count= "<<maximum_count);
+  qf_init(&qf, (1ULL<<qbits), num_hash_bits, 0,3,label_size, true, "", 2038074761);
 
   uint64_t nvals = (1ULL<<qbits);
   uint64_t *vals;
@@ -112,8 +112,8 @@ TEST_CASE("BLOCK Tag after loading")
   double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   uint64_t insertedItems=0;
   uint64_t count;
-  unordered_map<uint64_t,uint64_t> tags_Map;
-  uint64_t currTag=0;
+  unordered_map<uint64_t,uint64_t> labels_Map;
+  uint64_t currLabel=0;
   while(loadFactor<0.9){
     qf_insert(&qf,vals[insertedItems],50,false,false);
     insertedItems++;
@@ -127,16 +127,16 @@ TEST_CASE("BLOCK Tag after loading")
     uint64_t key, value, count;
     qfi_get(&qfi, &key, &value, &count);
 
-    char* tag;
-    bool flag=qf_getBlockTag_pointer_byItem(&qf,key,tag);
+    char* label;
+    bool flag=qf_getBlockLabel_pointer_byItem(&qf,key,label);
     REQUIRE(flag==true);
     uint64_t block_index = qfi.current/64;
-    auto it=tags_Map.find(block_index);
-    if(it==tags_Map.end())
+    auto it=labels_Map.find(block_index);
+    if(it==labels_Map.end())
     {
-      tags_Map[block_index]=currTag++;
+      labels_Map[block_index]=currLabel++;
     }
-    *((uint64_t*)tag)=tags_Map[block_index];
+    *((uint64_t*)label)=labels_Map[block_index];
 
   } while(!qfi_next(&qfi));
 
@@ -151,12 +151,12 @@ TEST_CASE("BLOCK Tag after loading")
     qfi_get(&qfi, &key, &value, &count);
     count=qf_count_key(&qf2, key);
     CHECK(count >= 50);
-    char* tag;
-    bool flag=qf_getBlockTag_pointer_byItem(&qf2,key,tag);
+    char* label;
+    bool flag=qf_getBlockLabel_pointer_byItem(&qf2,key,label);
     REQUIRE(flag==true);
     uint64_t block_index = qfi.current/64;
-    CHECK(tags_Map[block_index]==*((uint64_t*)tag));
-    // count = qf_get_tag(&qf,key);2
+    CHECK(labels_Map[block_index]==*((uint64_t*)label));
+    // count = qf_get_label(&qf,key);2
     // CHECK(count == key%(maximum_count+1));
   } while(!qfi_next(&qfi));
 
@@ -208,7 +208,7 @@ TEST_CASE( "MMap test") {
   uint64_t insertedItems=0;
   while(insertedItems<nvals && loadFactor<0.9){
     qf_insert(&qf,vals[insertedItems],nRepetitions[insertedItems],false,false);
-    qf_add_tag(&qf,vals[insertedItems],insertedItems%8);
+    qf_add_label(&qf,vals[insertedItems],insertedItems%8);
     count = qf_count_key(&qf, vals[insertedItems]);
     CHECK(count >= nRepetitions[insertedItems]);
     insertedItems++;
@@ -222,7 +222,7 @@ TEST_CASE( "MMap test") {
     count = qf_count_key(&qf, vals[i]);
     INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
     CHECK(count >= nRepetitions[i]);
-    CHECK(qf_get_tag(&qf,vals[i])== i%8);
+    CHECK(qf_get_label(&qf,vals[i])== i%8);
   }
 
   qf_destroy(&qf);

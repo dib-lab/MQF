@@ -503,8 +503,8 @@ TEST_CASE( "invertable merge") {
   for(uint64_t i=1;i<nvals;i++)
   {
     count = qf_count_key(&cf2, vals[i]);
-    value=qf_get_tag(&cf2,vals[i]);
-    auto iit=cf2.metadata->tags_map->find(value);
+    value=qf_get_label(&cf2,vals[i]);
+    auto iit=cf2.metadata->labels_map->find(value);
 
     for(auto f:iit->second)
     {
@@ -515,7 +515,7 @@ TEST_CASE( "invertable merge") {
   qf_iterator(&cf2, &cfi, 0);
   do {
     qfi_get(&cfi, &key, &value, &count);
-    auto iit=cf2.metadata->tags_map->find(value);
+    auto iit=cf2.metadata->labels_map->find(value);
     for(auto f:iit->second)
     {
       CHECK(key%(f+1)==0);
@@ -580,7 +580,7 @@ TEST_CASE( "invertable merge no count") {
   for(uint64_t i=1;i<nvals;i++)
   {
     count = qf_count_key(&cf2, vals[i]);
-    auto iit=cf2.metadata->tags_map->find(count);
+    auto iit=cf2.metadata->labels_map->find(count);
     for(auto f:iit->second)
     {
       CHECK(vals[i]%(f+1)==0);
@@ -592,7 +592,7 @@ TEST_CASE( "invertable merge no count") {
   do {
 
     qfi_get(&cfi, &key, &value, &count);
-    auto iit=cf2.metadata->tags_map->find(count);
+    auto iit=cf2.metadata->labels_map->find(count);
     for(auto f:iit->second)
     {
       CHECK(key%(f+1)==0);
@@ -672,10 +672,10 @@ TEST_CASE( "hierarchical merge") {
   for(uint64_t i=1;i<nvals;i++)
   {
     count = qf_count_key(cf[0], vals[i]);
-    value=qf_get_tag(cf[0],vals[i]);
+    value=qf_get_label(cf[0],vals[i]);
     REQUIRE(count>0);
     INFO("Key "<<vals[i]);
-    auto iit=cf[0]->metadata->tags_map->find(value);
+    auto iit=cf[0]->metadata->labels_map->find(value);
 
     string t="";
     for(auto f:iit->second)
@@ -683,7 +683,7 @@ TEST_CASE( "hierarchical merge") {
       t+=(char)(f+49);
       t+=';';
     }
-    INFO("Tag "<<t);
+    INFO("label "<<t);
     for(auto f:iit->second)
     {
       CHECK(vals[i]%(f+1)==0);
@@ -693,7 +693,7 @@ TEST_CASE( "hierarchical merge") {
   qf_iterator(cf[0], &cfi, 0);
   do {
     qfi_get(&cfi, &key, &value, &count);
-    auto iit=cf[0]->metadata->tags_map->find(value);
+    auto iit=cf[0]->metadata->labels_map->find(value);
     INFO("Key "<<key);
     for(auto f:iit->second)
     {
