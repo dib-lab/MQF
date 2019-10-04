@@ -2458,7 +2458,7 @@ bool qfi_find(QF *qf,QFi *qfi, uint64_t key)
 int qfi_get(QFi *qfi, uint64_t *key, uint64_t *value, uint64_t *count)
 {
 
-	if(qfi->current > qfi->qf->metadata->xnslots){
+	if(qfi->current >= qfi->qf->metadata->xnslots){
 		throw std::out_of_range("qfi_get is called with hash index out of range");
 	}
 	uint64_t current_remainder, current_count;
@@ -2490,7 +2490,7 @@ int qfi_next(QFi *qfi)
 #ifdef LOG_CLUSTER_LENGTH
 			qfi->cur_length++;
 #endif
-			if (qfi->current > qfi->qf->metadata->xnslots)
+			if (qfi->current >= qfi->qf->metadata->xnslots)
 				return 1;
 			return 0;
 		}
@@ -2522,6 +2522,10 @@ int qfi_next(QFi *qfi)
 			qfi->current++;
 			if (qfi->current < qfi->run)
 				qfi->current = qfi->run;
+
+            if (qfi->current >= qfi->qf->metadata->xnslots)
+                return 1;
+
 #ifdef LOG_CLUSTER_LENGTH
 			if (qfi->current > old_current + 1) { /* new cluster. */
 				if (qfi->cur_length > 10) {

@@ -48,9 +48,17 @@ int bufferedMQFIterator::next()
 		diskIt->next();
         return 0;
     }
-    else{
+    else if(diskIt->current > bufferIt->current){
         qfi_get(bufferIt,&currentKey,&currentTag,&currentCount);
         qfi_next(bufferIt);
+        return 0;
+    } else{
+        qfi_get(bufferIt,&currentKey,&currentTag,&currentCount);
+        uint64_t tmpCount=0;
+        diskIt->get(&currentKey,&currentTag,&tmpCount);
+        currentCount+=tmpCount;
+        qfi_next(bufferIt);
+        diskIt->next();
         return 0;
     }
     
@@ -165,6 +173,20 @@ bufferedMQFIterator* bufferedMQF_iterator(bufferedMQF *qf, uint64_t position){
 	return new bufferedMQFIterator(bit,dit);
 
  }
+
+void bufferedMQF_migrate(bufferedMQF* source, bufferedMQF* dest){
+    bufferedMQFIterator* source_i=bufferedMQF_iterator(source,0);
+    do {
+        uint64_t key = 0, value = 0, count = 0;
+        source_i->get(&key, &value, &count);
+        bufferedMQF_insert(dest, key, count, true, true);
+        uint64_t  tmpcount=bufferedMQF_count_key(dest,key);
+        tmpcount++;
+
+//        bufferedMQF_add_tag((const bufferedMQF*)dest,key,value);
+    } while (!source_i->next());
+    delete source_i;
+}
 //
 // /* Returns 0 if the iterator is still valid (i.e. has not reached the
 // 	 end of the QF. */

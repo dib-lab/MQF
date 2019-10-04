@@ -135,6 +135,8 @@ typedef class bufferedMQF {
 
 	int bufferedMQF_space(bufferedMQF *qf);
 
+	void bufferedMQF_migrate(bufferedMQF* source, bufferedMQF* destination);
+
     bufferedMQFIterator*  bufferedMQF_iterator(bufferedMQF *qf, uint64_t position);
 #ifdef __cplusplus
 }

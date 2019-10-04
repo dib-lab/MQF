@@ -23,6 +23,8 @@
 #include "utils.h"
 #include <type_traits>
 #include <stxxl/vector>
+#include <stxxl/io>
+#include <stxxl/stream>
 
 namespace onDiskMQF_Namespace{
 /******************************************************************
@@ -99,7 +101,12 @@ private:
   bool _insert(__uint128_t hash, uint64_t count, bool lock, bool spin);
 
 public:
-  stxxl::vector<onDisk_qfblock<bitsPerSlot> > blocks;
+    typedef stxxl::vector< onDisk_qfblock<bitsPerSlot>, 4,
+            stxxl::lru_pager<8>,
+            sizeof(onDisk_qfblock<bitsPerSlot>)*1024,
+            stxxl::RC,
+            stxxl::uint64>  stxxlVector;
+    stxxlVector blocks;
 /*!
 @breif initialize mqf .
 
@@ -117,15 +124,15 @@ _onDiskMQF(uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_
 void reset() override;
 
 ~_onDiskMQF();
-inline typename stxxl::vector<onDisk_qfblock<bitsPerSlot> >::iterator  get_block(uint64_t block_index)
+inline typename stxxlVector::iterator  get_block(uint64_t block_index)
 {
-    typename stxxl::vector<onDisk_qfblock<bitsPerSlot> >::iterator it = this->blocks.begin();
+    typename stxxlVector::iterator it = this->blocks.begin();
     it+=block_index;
     return it;
 }
-inline typename stxxl::vector<onDisk_qfblock<bitsPerSlot> >::const_iterator get_block_const( uint64_t block_index)
+inline typename stxxlVector::const_iterator get_block_const( uint64_t block_index)
 {
-    typename stxxl::vector<onDisk_qfblock<bitsPerSlot> >::const_iterator it = this->blocks.cbegin();
+    typename stxxlVector::const_iterator it = this->blocks.cbegin();
     it+=block_index;
     return it;
 }
@@ -912,7 +919,7 @@ template<uint64_t bitsPerSlot>
   inline int _onDiskMQF<bitsPerSlot>::offset_lower_bound(uint64_t slot_index)
 {
 	_onDiskMQF<bitsPerSlot> *qf=this;
-	typename stxxl::vector<onDisk_qfblock<bitsPerSlot> >::const_iterator  b = qf->get_block_const( slot_index / SLOTS_PER_BLOCK);
+	typename stxxlVector::const_iterator  b = qf->get_block_const( slot_index / SLOTS_PER_BLOCK);
 	const uint64_t slot_offset = slot_index % SLOTS_PER_BLOCK;
 	const uint64_t boffset = b->offset;
 	const uint64_t occupieds = b->occupieds[0] & BITMASK(slot_offset+1);
@@ -1222,7 +1229,7 @@ template<uint64_t bitsPerSlot>
 	uint64_t insert_index = overwrite_index + noverwrites;
 	if(qf->metadata->noccupied_slots+ninserts > qf->metadata->maximum_occupied_slots )
 	{
-		throw std::overflow_error("QF is 95% full, cannot insert more items.");
+		throw std::overflow_error("Buffered QF is 95% full, cannot insert more items.");
 	}
 	//printf("remainder =%lu ,overwrite_index = %lu , insert_index=%lu , operation=%d, noverwites=%lu total_remainders=%lu nnserts=%lu \n", remainders[0],overwrite_index,insert_index,operation,noverwrites,total_remainders,ninserts);
 	if (ninserts > 0) {
@@ -2182,6 +2189,7 @@ bool _onDiskMQF<bitsPerSlot>::remove(uint64_t hash, uint64_t count , bool lock, 
 template<uint64_t bitsPerSlot>
 _onDiskMQF<bitsPerSlot>::_onDiskMQF( uint64_t nslots, uint64_t key_bits, uint64_t tag_bits,uint64_t fixed_counter_size ,const char * path)
 {
+    using stxxl::file;
 	//qf=(QF*)calloc(sizeof(QF),1);
 	uint64_t num_slots, xnslots, nblocks;
 	uint64_t key_remainder_bits, bits_per_slot;
@@ -2245,8 +2253,8 @@ _onDiskMQF<bitsPerSlot>::_onDiskMQF( uint64_t nslots, uint64_t key_bits, uint64_
 	mem->locks = (volatile int *)calloc(metadata->num_locks,
 																					sizeof(volatile int));
 
-
-	blocks=stxxl::vector<onDisk_qfblock<bitsPerSlot> >(metadata->nblocks,stxxlBufferSize/16);
+    stxxl::syscall_file OutputFile(path, file::RDWR | file::CREAT | file::DIRECT);
+	blocks=stxxlVector (&OutputFile,metadata->nblocks,stxxlBufferSize/16);
 	// for(uint64_t i=0;i<metadata->nblocks;i++)
 	// 	blocks[i]=onDisk_qfblock<bitsPerSlot>();
   //
@@ -2716,6 +2724,7 @@ bool _onDiskMQF<bitsPerSlot>::getForIterator(onDiskMQFIterator* qfi,uint64_t *ke
 	*key = (qfi->run << metadata->key_remainder_bits) | current_remainder;
 	*value = _get_tag(qfi->current);   // for now we are not using value
 	*count = current_count;
+	return true;
 }
 
 int onDiskMQFIterator::get(uint64_t *key, uint64_t *value, uint64_t *count)
