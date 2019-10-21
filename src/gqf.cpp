@@ -1072,7 +1072,11 @@ static inline void insert_replace_slots_and_shift_remainders_and_runends_and_off
 		//printf("shift %lu, ninserts=%lu\n",insert_index,ninserts );
 
 		find_next_n_empty_slots(qf, insert_index, ninserts, empties);
+
 		for (i = 0; i < ninserts - 1; i++){
+			if(empties[i]>=qf->metadata->xnslots||empties[i+1]>=qf->metadata->xnslots)
+				throw std::overflow_error("QF is not full but we reached the end");
+
 			shift_slots(qf, empties[i+1] + 1, empties[i] - 1, i + 1);
 		}
 		shift_slots(qf, insert_index, empties[ninserts - 1] - 1, ninserts);
@@ -2014,6 +2018,7 @@ void qf_destroy(QF *qf)
 	close(qf->mem->fd);
 	}
 
+
 }
 
 void qf_close(QF *qf)
@@ -2370,13 +2375,16 @@ bool qf_iterator(QF *qf, QFi *qfi, uint64_t position)
 			uint64_t block_index = position/64;
 			uint64_t idx = bitselect(get_block(qf, block_index)->occupieds[0], 0);
 			if (idx == 64) {
-				while(idx == 64 && block_index < qf->metadata->nblocks) {
+				while(idx == 64 && block_index < qf->metadata->nblocks-1) {
 					block_index++;
 					idx = bitselect(get_block(qf, block_index)->occupieds[0], 0);
 				}
 			}
-			//cout<<"Here "<<idx<<endl;
-			position = block_index * SLOTS_PER_BLOCK + idx;
+
+			if(block_index==qf->metadata->nblocks)
+			    position = block_index*SLOTS_PER_BLOCK -1;
+			else
+			    position = block_index * SLOTS_PER_BLOCK + idx;
 		}
 	}
 
@@ -2507,7 +2515,7 @@ int qfi_next(QFi *qfi)
 																		rank);
 			if (next_run == 64) {
 				rank = 0;
-				while (next_run == 64 && block_index < qfi->qf->metadata->nblocks) {
+				while (next_run == 64 && block_index < qfi->qf->metadata->nblocks-1) {
 					block_index++;
 					next_run = bitselect(get_block(qfi->qf, block_index)->occupieds[0],
 															 rank);
@@ -2659,18 +2667,22 @@ void _qf_merge(QF *qfa, QF *qfb, QF *qfc,
 		if (keya < keyb) {
 			mergeFn(keya,labela,counta,0,0,0,&keyc,&labelc,&countc);
 			qfi_next(&qfia);
-			qfi_get(&qfia, &keya, &labela, &counta);
+			if(!qfi_end(&qfia))
+				qfi_get(&qfia, &keya, &labela, &counta);
 		}
 		else if(keya > keyb) {
 			mergeFn(0,0,0,keyb,labelb,countb,&keyc,&labelc,&countc);
 			qfi_next(&qfib);
-			qfi_get(&qfib, &keyb, &labelb, &countb);
+			if(!qfi_end(&qfib))
+				qfi_get(&qfib, &keyb, &labelb, &countb);
 		}
 		else{
 			mergeFn(keya,labela,counta,keyb,labelb,countb,&keyc,&labelc,&countc);
 			qfi_next(&qfia);
 			qfi_next(&qfib);
-			qfi_get(&qfia, &keya, &labela, &counta);
+			if(!qfi_end(&qfia))
+				qfi_get(&qfia, &keya, &labela, &counta);
+			if(!qfi_end(&qfib))
 			qfi_get(&qfib, &keyb, &labelb, &countb);
 		}
 		if(countc!=0){
@@ -2743,6 +2755,8 @@ bool qf_equals(QF *qfa, QF *qfb)
 			}
 			qfi_next(&qfib);
 			qfi_next(&qfia);
+			if(qfi_end(&qfia) || qfi_end(&qfib))
+				break;
 			qfi_get(&qfia, &keya, &valuea, &counta);
 			qfi_get(&qfib, &keyb, &valueb, &countb);
 		}
@@ -3083,7 +3097,8 @@ QF* qf_resize(QF* qf, int newQ, const char * originalFilename, const char * newF
 			qf_insert(newQF, keya, counta);
 			qf_add_label(newQF,keya,valuea);
 			qfi_next(&qfi);
-			qfi_get(&qfi, &keya, &valuea, &counta);
+			if(!qfi_end(&qfi))
+				qfi_get(&qfi, &keya, &valuea, &counta);
 	} while(!qfi_end(&qfi));
 	qf_destroy(qf);
 	return newQF;

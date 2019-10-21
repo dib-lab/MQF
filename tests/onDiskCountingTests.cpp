@@ -21,7 +21,7 @@ TEST_CASE( "simple counting test(onDisk)","[onDisk] ") {
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   uint64_t count,fixed_counter;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-  onDiskMQF::init(qf ,(1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser");
+  onDiskMQF::init(qf ,(1ULL<<diskQbits), num_hash_bits, 0,counter_size, "tmp.ser");
 //  qf=new  onDiskMQF_Namespace::_onDiskMQF<10>((1ULL<<qbits),num_hash_bits,0,counter_size,"tmp.ser");
 
   for(uint64_t i=0;i<=10;i++){
@@ -236,8 +236,8 @@ TEST_CASE( "copy (onDisk)","[onDisk][!hide]" ) {
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-  onDiskMQF::init(qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser");
-//  onDiskMQF::init(qf2, (1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser");
+  onDiskMQF::init(qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, "tmpcp.ser");
+  onDiskMQF::init(qf2, (1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp5.ser");
   uint64_t nvals = (1ULL<<diskQbits);
   //uint64_t nvals = 3;
   uint64_t *vals;

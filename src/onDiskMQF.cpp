@@ -2254,7 +2254,7 @@ _onDiskMQF<bitsPerSlot>::_onDiskMQF( uint64_t nslots, uint64_t key_bits, uint64_
 																					sizeof(volatile int));
 
     stxxl::syscall_file OutputFile(path, file::RDWR | file::CREAT | file::DIRECT);
-	blocks=stxxlVector (&OutputFile,metadata->nblocks,stxxlBufferSize/16);
+	blocks=stxxlVector (metadata->nblocks,stxxlBufferSize/16);
 	// for(uint64_t i=0;i<metadata->nblocks;i++)
 	// 	blocks[i]=onDisk_qfblock<bitsPerSlot>();
   //
@@ -2314,19 +2314,20 @@ _onDiskMQF<bitsPerSlot>::_onDiskMQF( uint64_t nslots, uint64_t key_bits, uint64_
  template<uint64_t bitsPerSlot>
  void _onDiskMQF<bitsPerSlot>::copy(onDiskMQF *dest)
  {
+     migrate(dest);
     // ( onDiskMQF *&qf, uint64_t nslots, uint64_t key_bits, uint64_t label_bits,uint64_t fixed_counter_size ,const char * path)
- 	_onDiskMQF<bitsPerSlot>* src=this;
+ 	//_onDiskMQF<bitsPerSlot>* src=this;
    // dest = new _onDiskMQF(uint64_t nslots, uint64_t key_bits, uint64_t label_bits,uint64_t fixed_counter_size,const char * path);
-   init(dest, src->metadata->nslots, src->metadata->key_bits, src->metadata->label_bits, src->metadata->fixed_counter_size, "");
+  // init(dest, src->metadata->nslots, src->metadata->key_bits, src->metadata->label_bits, src->metadata->fixed_counter_size, "");
    // throw std::logic_error("not implemented yet");
- 	memcpy(dest->mem, src->mem, sizeof(qfmem));
- 	memcpy(dest->metadata, src->metadata, sizeof(qfmetadata));
+ //	memcpy(dest->mem, src->mem, sizeof(qfmem));
+ //	memcpy(dest->metadata, src->metadata, sizeof(qfmetadata));
  	// memcpy(dest->blocks, src->blocks, src->metadata->size);
 
- 	if(src->metadata->labels_map!=NULL){
- 		dest->metadata->labels_map=
- 		new std::map<uint64_t, std::vector<int> >(*src->metadata->labels_map);
- 	}
+// 	if(src->metadata->labels_map!=NULL){
+// 		dest->metadata->labels_map=
+// 		new std::map<uint64_t, std::vector<int> >(*src->metadata->labels_map);
+// 	}
  }
 
 

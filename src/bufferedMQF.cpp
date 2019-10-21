@@ -91,8 +91,8 @@ void bufferedMQF_reset(bufferedMQF *qf){
 }
 
 void bufferedMQF_destroy(bufferedMQF *qf){
-	qf_destroy(qf->memoryBuffer);
-	delete qf->disk;
+//	qf_destroy(qf->memoryBuffer);
+//	delete qf->disk;
 }
 
 void bufferedMQF_copy(bufferedMQF *dest, bufferedMQF *src){
@@ -105,8 +105,15 @@ void bufferedMQF_copy(bufferedMQF *dest, bufferedMQF *src){
 bool bufferedMQF_insert(bufferedMQF *qf, uint64_t key, uint64_t count,
 							 bool lock, bool spin){
   key=key%qf->memoryBuffer->metadata->range;
-	qf_insert(qf->memoryBuffer,key,count,lock,spin);
-	if(qf_space(qf->memoryBuffer)>90)
+    try {
+        qf_insert(qf->memoryBuffer, key, count, lock, spin);
+    }
+    catch (exception& e)
+    {
+        bufferedMQF_syncBuffer(qf);
+        qf_insert(qf->memoryBuffer, key, count, lock, spin);
+    }
+	if(qf_space(qf->memoryBuffer)>80)
 	{
 		bufferedMQF_syncBuffer(qf);
 	}
@@ -179,7 +186,15 @@ void bufferedMQF_migrate(bufferedMQF* source, bufferedMQF* dest){
     do {
         uint64_t key = 0, value = 0, count = 0;
         source_i->get(&key, &value, &count);
-        bufferedMQF_insert(dest, key, count, true, true);
+        try {
+            bufferedMQF_insert(dest, key, count, false, false);
+        }
+        catch(exception& e)
+        {
+            cout << e.what() << '\n';
+        }
+
+
         uint64_t  tmpcount=bufferedMQF_count_key(dest,key);
         tmpcount++;
 
