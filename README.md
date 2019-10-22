@@ -1,5 +1,5 @@
 # MQF
-[![Build Status](https://travis-ci.org/shokrof/MQF.svg?branch=mqfDevelopmenet)](https://travis-ci.org/shokrof/MQF)
+[![Build Status](https://travis-ci.org/dib-lab/MQF.svg?branch=master)](https://travis-ci.org/dib-lab/MQF)
 [![codecov](https://codecov.io/gh/shokrof/MQF/branch/mqfDevelopmenet/graph/badge.svg)](https://codecov.io/gh/shokrof/MQF)
 
 [Approximate membership query (AMQ)](http://www.cs.cmu.edu/~lblum/flac/Presentations/Szabo-Wexler_ApproximateSetMembership.pdf) data structures provide approximate representation for data using a smaller amount of memory compared to the real data size. As the name suggests, AMQ answers if a particular element exists or not in a given dataset but with possible false positive errors. AMQ has many examples such as [bloom filter](https://en.wikipedia.org/wiki/Bloom_filter), [count-min sketch](https://en.wikipedia.org/wiki/Count%E2%80%93min_sketch), [Quotient Filter](https://en.wikipedia.org/wiki/Quotient_filter), and Counting Quotient Filter([CQF](https://github.com/splatlab/cqf)). Here, we are proposing a new AMQ data structure called Mixed Counting Quotient Filter (MQF).
