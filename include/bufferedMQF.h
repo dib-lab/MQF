@@ -65,7 +65,7 @@ typedef class bufferedMQF {
 								 bool lock, bool spin);
 
 	/* Remove count instances of this key/value combination. */
-	bool bufferedMQF_remove(QF *qf, uint64_t hash, uint64_t count,  bool lock=false, bool spin=false);
+	bool bufferedMQF_remove(bufferedMQF *qf, uint64_t hash, uint64_t count,  bool lock=false, bool spin=false);
 
 
 		/*!
