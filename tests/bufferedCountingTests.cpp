@@ -391,7 +391,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(buf
   }
  // bufferedMQF_syncBuffer(&qf);
   bufferedMQFIterator* qfi= bufferedMQF_iterator(&qf, 0);
-  do {
+  while(!qfi->end()) {
     uint64_t key, value, count;
     qfi->get(&key, &value, &count);
     REQUIRE(count == gold[key]);
@@ -402,8 +402,9 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(buf
     else{
       REQUIRE(count >= 1);
     }
+    qfi->next();
 
-  } while(!qfi->next());
+  }
   REQUIRE(gold.size()==0);
 
   bufferedMQF_destroy(&qf);

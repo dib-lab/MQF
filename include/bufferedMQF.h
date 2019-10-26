@@ -18,6 +18,7 @@ public:
 	uint64_t currentKey;
 	uint64_t currentLabel;
 	uint64_t currentCount;
+	bool finished;
     bufferedMQFIterator(){};
 	bufferedMQFIterator(QFi* bit,onDiskMQF_Namespace::onDiskMQFIterator* dit);
 

@@ -11,6 +11,7 @@ using namespace std;
 bufferedMQFIterator::bufferedMQFIterator(QFi* bit,onDiskMQF_Namespace::onDiskMQFIterator* dit){
     bufferIt=bit;
     diskIt=dit;
+    finished=false;
     next();
 }
 
@@ -27,7 +28,10 @@ int bufferedMQFIterator::get(uint64_t *key, uint64_t *value, uint64_t *count){
      found.  */
 int bufferedMQFIterator::next()
 {
-    if(end()) return 1;
+    if(diskIt->end() && qfi_end(bufferIt)){
+        finished=true;
+        return 1;
+    };
     if(diskIt->end())
     {
         qfi_get(bufferIt,&currentKey,&currentLabel,&currentCount);
@@ -72,7 +76,7 @@ int bufferedMQFIterator::next()
 
 /* Check to see if the if the end of the QF */
 int bufferedMQFIterator::end(){
-    if(diskIt->end() && qfi_end(bufferIt) ) return 1;
+    if(finished ) return 1;
     return 0;
 }
 
