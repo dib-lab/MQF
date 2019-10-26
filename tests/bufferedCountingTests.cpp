@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include<iostream>
 #include "catch.hpp"
+#include <unordered_map>
 using namespace std;
 
 
@@ -340,6 +341,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(buf
   vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
   nRepetitions= (uint64_t*)malloc(nvals*sizeof(nRepetitions[0]));
   uint64_t count;
+  unordered_map<uint64_t,uint64_t> gold;
 
   for(uint64_t i=0;i<nvals;i++)
   {
@@ -368,9 +370,11 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(buf
   //  printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
     INFO("Inserting "<< vals[insertedItems] << " Repeated "<<nRepetitions[insertedItems]);
     bufferedMQF_insert(&qf,vals[insertedItems],nRepetitions[insertedItems],false,false);
+    gold[vals[insertedItems]]=nRepetitions[insertedItems];
     //qf_dump(&qf);
     INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
     count = bufferedMQF_count_key(&qf, vals[insertedItems]);
+
     CHECK(count == nRepetitions[insertedItems]);
     insertedItems++;
     loadFactor=bufferedMQF_space(&qf);
@@ -383,13 +387,15 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(buf
     count = bufferedMQF_count_key(&qf, vals[i]);
     INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
     CHECK(count == nRepetitions[i]);
+      CHECK(gold[vals[i]] == nRepetitions[i]);
   }
-
+ // bufferedMQF_syncBuffer(&qf);
   bufferedMQFIterator* qfi= bufferedMQF_iterator(&qf, 0);
   do {
     uint64_t key, value, count;
     qfi->get(&key, &value, &count);
-
+    REQUIRE(count == gold[key]);
+    gold.erase(key);
     if(key==vals[0]){
       REQUIRE(count >= 5);
     }
@@ -398,7 +404,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(buf
     }
 
   } while(!qfi->next());
-
+  REQUIRE(gold.size()==0);
 
   bufferedMQF_destroy(&qf);
 

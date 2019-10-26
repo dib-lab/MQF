@@ -41,22 +41,28 @@ int bufferedMQFIterator::next()
         diskIt->next();
         return 0;
     }
-
-    if(diskIt->current < bufferIt->current)
+    uint64_t diskKey, diskLabel, diskCount, memoryKey, memoryLabel, memoryCount;
+    diskIt->get(&diskKey,&diskLabel,&diskCount);
+    qfi_get(bufferIt,&memoryKey,&memoryLabel,&memoryCount);
+    if(diskKey < memoryKey)
     {
-		diskIt->get(&currentKey,&currentLabel,&currentCount);
+		currentKey=diskKey;
+		currentLabel=diskLabel;
+		currentCount=diskCount;
 		diskIt->next();
         return 0;
     }
-    else if(diskIt->current > bufferIt->current){
-        qfi_get(bufferIt,&currentKey,&currentLabel,&currentCount);
+    else if(diskKey > memoryKey){
+        currentKey=memoryKey;
+        currentLabel=memoryLabel;
+        currentCount=memoryCount;
         qfi_next(bufferIt);
         return 0;
     } else{
-        qfi_get(bufferIt,&currentKey,&currentLabel,&currentCount);
-        uint64_t tmpCount=0;
-        diskIt->get(&currentKey,&currentLabel,&tmpCount);
-        currentCount+=tmpCount;
+        currentKey=diskKey;
+        currentLabel=diskLabel;
+        currentCount=diskCount+memoryCount;
+
         qfi_next(bufferIt);
         diskIt->next();
         return 0;
