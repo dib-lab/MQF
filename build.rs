@@ -5,10 +5,7 @@ extern crate cmake;
 use cmake::Config;
 
 fn main() {
-    let dst = Config::new(".")
-        .define("BUILD_STATIC_LIBS", "ON")
-        .define("CMAKE_BUILD_TYPE", "Release")
-        .build();
+    let dst = Config::new(".").define("BUILD_STATIC_LIBS", "ON").build();
 
     let target = env::var("TARGET").unwrap();
     if target.contains("apple") {
@@ -19,11 +16,16 @@ fn main() {
         unimplemented!();
     }
 
+    // TODO: static libs are being generated in lib too, but should use
+    // something like this instead:
+    /*
     println!("cargo:rustc-link-search=native={}/build/src", dst.display());
     println!(
         "cargo:rustc-link-search=native={}/build/ThirdParty/stxxl/lib",
         dst.display()
     );
+    */
+    println!("cargo:rustc-link-search=native=lib");
 
     println!("cargo:rustc-link-lib=static=MQF");
     println!("cargo:rustc-link-lib=static=stxxl");
@@ -37,8 +39,9 @@ fn main() {
         .clang_arg("-std=c++11")
         .header("include/gqf.h")
         .whitelist_type("QF")
-        .whitelist_function("qf_*")
         .whitelist_function("qf_init")
+        .whitelist_function("qf_insert")
+        .whitelist_function("qf_count_key")
         .blacklist_type("std::*")
         //.opaque_type("QF")
         .generate()

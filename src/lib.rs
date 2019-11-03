@@ -43,35 +43,35 @@ mod tests {
             );
         }
 
-        /*
         for i in 0..=10 {
-            qf_insert(&qf, 100, 1, false, false);
-            count = qf_count_key(&qf, 100);
-            //fixed_counter=qf_get_fixed_counter(&qf,100);
+            unsafe {
+                qf_insert(&mut qf, 100, 1, false, false);
+            };
+            count = unsafe { qf_count_key(&qf, 100) };
             dbg!((count, fixed_counter));
             assert_eq!(count, 1 + i);
         }
 
-        qf_insert(&qf,1500,50,false,false);
+        unsafe {
+            qf_insert(&mut qf, 1500, 50, false, false);
+        }
 
-        count = qf_count_key(&qf, 1500);
-        //  fixed_counter=qf_get_fixed_counter(&qf,1500);
-        INFO("Counter = "<<count<<" fixed counter = "<<fixed_counter)
-        CHECK(count == (50));
+        count = unsafe { qf_count_key(&qf, 1500) };
+        dbg!((count, fixed_counter));
+        assert_eq!(count, 50);
 
-        qf_insert(&qf,1600,60,false,false);
-        count = qf_count_key(&qf, 1600);
-        //  fixed_counter=qf_get_fixed_counter(&qf,1600);
-        INFO("Counter = "<<count<<" fixed counter = "<<fixed_counter)
-        CHECK(count == (60));
+        unsafe {
+            qf_insert(&mut qf, 1600, 60, false, false);
+        }
+        count = unsafe { qf_count_key(&qf, 1600) };
+        dbg!((count, fixed_counter));
+        assert_eq!(count, 60);
 
-
-
-        qf_insert(&qf,2000,4000,false,false);
-        count = qf_count_key(&qf, 2000);
-        //  fixed_counter=qf_get_fixed_counter(&qf,2000);
-        INFO("Counter = "<<count<<" fixed counter = "<<fixed_counter)
-        CHECK(count == (4000));
-        */
+        unsafe {
+            qf_insert(&mut qf, 2000, 4000, false, false);
+        }
+        count = unsafe { qf_count_key(&qf, 2000) };
+        dbg!((count, fixed_counter));
+        assert_eq!(count, 4000);
     }
 }
