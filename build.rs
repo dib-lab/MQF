@@ -7,6 +7,7 @@ use cmake::Config;
 fn main() {
     let dst = Config::new(".").define("BUILD_STATIC_LIBS", "ON").build();
 
+    // TODO: there are probably better ways to do this...
     let target = env::var("TARGET").unwrap();
     if target.contains("apple") {
         println!("cargo:rustc-link-lib=dylib=c++");
@@ -28,12 +29,13 @@ fn main() {
     println!("cargo:rustc-link-search=native=lib");
 
     println!("cargo:rustc-link-lib=static=MQF");
-    println!("cargo:rustc-link-lib=static=stxxl");
+    // TODO: there are two names for stxxl, depending on being built on release
+    // or debug mode...
+    //println!("cargo:rustc-link-lib=static=stxxl");
+    println!("cargo:rustc-link-lib=static=stxxl_debug");
 
     let bindings = bindgen::Builder::default()
         .clang_arg("-I./include")
-        //.clang_arg("-I./ThirdParty/stxxl/include/stxxl")
-        //.clang_arg("-I./ThirdParty/stxxl/include")
         .clang_arg("-x")
         .clang_arg("c++")
         .clang_arg("-std=c++11")
@@ -43,7 +45,6 @@ fn main() {
         .whitelist_function("qf_insert")
         .whitelist_function("qf_count_key")
         .blacklist_type("std::*")
-        //.opaque_type("QF")
         .generate()
         .expect("Unable to generate bindings");
 
