@@ -75,3 +75,6 @@ ThirdParty/stxxl
 
 .idea/*
 build/*
+
+Cargo.lock
+target

@@ -1,0 +1,11 @@
+[package]
+name = "mqf"
+version = "0.1.0"
+authors = ["Luiz Irber <rust@luizirber.org>"]
+links = "libmqf"
+
+[build-dependencies]
+bindgen = "0.51"
+cmake = "0.1.42"
+
+[dependencies]
