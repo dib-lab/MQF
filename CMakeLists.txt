@@ -65,7 +65,7 @@ if (NOT SUPRESS_BIN)
     add_subdirectory(bin)
 endif()
 
-if (NOT SUPRESS_BIN)
+if (NOT DSUPRESS_TESTS)
     message("Building MQF tests")
     enable_testing()
     add_subdirectory(tests)
