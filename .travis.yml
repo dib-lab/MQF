@@ -5,22 +5,36 @@ compiler:
 - g++
 os:
 - linux
-
-
-before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install -y make automake autotools-dev cmake
-script:
-  - mkdir -p build
-  - cd build
-  - cmake ..
-  - make
-  - ctest
-  - gcov -n -o . src/gqf.cpp > /dev/null;
 branches:
   only:
   - mqfDevelopmenet
   - master
+cache:
+  directories:
+    - "$HOME/.cargo"
+    - "target"
 
-after_success:
-  - bash <(curl -s https://codecov.io/bash)
+jobs:
+  include:
+    - &test
+      stage: test
+      before_install:
+        - sudo apt-get -qq update
+        - sudo apt-get install -y make automake autotools-dev cmake
+      script:
+        - mkdir -p build
+        - cd build
+        - cmake ..
+        - make
+        - ctest
+        - gcov -n -o . src/gqf.cpp > /dev/null;
+      after_success:
+        - bash <(curl -s https://codecov.io/bash)
+    - <<: *test
+      name: Rust FFI bindings
+      language: rust
+      rust: stable
+      env:
+        - RUSTFLAGS="-Clink-arg=-fuse-ld=gold"
+      script:
+        - cargo test
