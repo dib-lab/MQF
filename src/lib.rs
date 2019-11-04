@@ -68,6 +68,47 @@ impl MQF {
     pub fn count_key(&self, key: u64) -> u64 {
         unsafe { raw::qf_count_key(&self.inner, key) }
     }
+
+    pub fn iter(&mut self) -> MQFIter {
+        let mut cfi = raw::QFi {
+            qf: ptr::null_mut(),
+            run: 0,
+            current: 0,
+            cur_start_index: 0,
+            cur_length: 0,
+            num_clusters: 0,
+            c_info: ptr::null_mut(),
+        };
+
+        // TODO: treat false
+        let result = unsafe { raw::qf_iterator(&mut self.inner, &mut cfi, 0) };
+
+        MQFIter { inner: cfi }
+    }
+}
+
+pub struct MQFIter {
+    inner: raw::QFi,
+}
+
+impl Iterator for MQFIter {
+    type Item = (u64, u64, u64);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if unsafe { raw::qfi_end(&mut self.inner) } != 0 {
+            None
+        } else {
+            let mut key = 0;
+            let mut value = 0;
+            let mut count = 0;
+
+            unsafe {
+                raw::qfi_get(&mut self.inner, &mut key, &mut value, &mut count);
+                raw::qfi_next(&mut self.inner)
+            };
+            Some((key, value, count))
+        }
+    }
 }
 
 #[cfg(test)]
@@ -106,5 +147,26 @@ mod tests {
         count = qf.count_key(2000);
         dbg!((count, fixed_counter));
         assert_eq!(count, 4000);
+    }
+
+    #[test]
+    fn big_count() {
+        let mut qf = MQF::new(4, 5);
+        qf.insert(100, 100000);
+        let mut count = qf.count_key(100);
+        assert_eq!(count, 100000);
+    }
+
+    #[test]
+    fn iter_next() {
+        let mut qf = MQF::new(4, 5);
+        qf.insert(100, 100000);
+        qf.insert(101, 10000);
+        qf.insert(102, 1000);
+        qf.insert(103, 100);
+
+        let vals: Vec<(u64, u64, u64)> = qf.iter().collect();
+        dbg!(&vals);
+        assert_eq!(vals.len(), 4);
     }
 }
