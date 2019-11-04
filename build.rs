@@ -46,6 +46,8 @@ fn main() {
         .whitelist_function("qf_count_key")
         .whitelist_function("qf_destroy")
         .whitelist_function("qf_copy")
+        .whitelist_function("qf_serialize")
+        .whitelist_function("qf_deserialize")
         .whitelist_function("qf_iterator")
         .whitelist_function("qfi_get")
         .whitelist_function("qfi_next")

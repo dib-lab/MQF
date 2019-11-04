@@ -1,6 +1,7 @@
 mod raw;
 
 use std::ffi::CString;
+use std::path::Path;
 use std::ptr;
 
 pub struct MQF {
@@ -85,6 +86,27 @@ impl MQF {
 
         MQFIter { inner: cfi }
     }
+
+    pub fn serialize<P: AsRef<Path>>(&self, path: P) -> Result<(), Box<dyn std::error::Error>> {
+        let s = CString::new(path.as_ref().to_str().unwrap())?;
+
+        unsafe {
+            raw::qf_serialize(&self.inner, s.as_ptr());
+        }
+
+        Ok(())
+    }
+
+    pub fn deserialize<P: AsRef<Path>>(path: P) -> Result<MQF, Box<dyn std::error::Error>> {
+        let mut qf = MQF::default();
+        let s = CString::new(path.as_ref().to_str().unwrap())?;
+
+        unsafe {
+            raw::qf_deserialize(&mut qf.inner, s.as_ptr());
+        }
+
+        Ok(qf)
+    }
 }
 
 pub struct MQFIter {
@@ -168,5 +190,23 @@ mod tests {
         let vals: Vec<(u64, u64, u64)> = qf.iter().collect();
         dbg!(&vals);
         assert_eq!(vals.len(), 4);
+    }
+
+    #[test]
+    fn serde() {
+        let mut qf = MQF::new(4, 5);
+        qf.insert(100, 100000);
+        qf.insert(101, 10000);
+        qf.insert(102, 1000);
+        qf.insert(103, 100);
+
+        let vals: Vec<(u64, u64, u64)> = qf.iter().collect();
+
+        let mut file = tempfile::NamedTempFile::new().unwrap();
+        qf.serialize(file.path()).unwrap();
+
+        let mut new_qf = MQF::deserialize(file.path()).unwrap();
+        let new_vals: Vec<(u64, u64, u64)> = new_qf.iter().collect();
+        assert_eq!(vals, new_vals);
     }
 }
