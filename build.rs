@@ -17,16 +17,15 @@ fn main() {
         unimplemented!();
     }
 
-    // TODO: static libs are being generated in lib too, but should use
-    // something like this instead:
-    /*
     println!("cargo:rustc-link-search=native={}/build/src", dst.display());
     println!(
         "cargo:rustc-link-search=native={}/build/ThirdParty/stxxl/lib",
         dst.display()
     );
-    */
-    println!("cargo:rustc-link-search=native=lib");
+    // TODO: static libs are being generated in lib too,
+    // cmake seems to be just copying it from the right locations.
+    // But not sure we should be using them...
+    // println!("cargo:rustc-link-search=native=lib");
 
     println!("cargo:rustc-link-lib=static=MQF");
     // TODO: there are two names for stxxl, depending on being built on release
