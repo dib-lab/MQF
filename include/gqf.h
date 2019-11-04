@@ -109,7 +109,7 @@ extern "C" {
 
 	void qf_destroy(QF *qf);
 
-	void qf_copy(QF *dest, QF *src);
+	void qf_copy(QF *dest, const QF *src);
 
 	/*!
 	 	@breif Increment the counter for this item by count.

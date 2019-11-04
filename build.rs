@@ -43,6 +43,8 @@ fn main() {
         .whitelist_function("qf_init")
         .whitelist_function("qf_insert")
         .whitelist_function("qf_count_key")
+        .whitelist_function("qf_destroy")
+        .whitelist_function("qf_copy")
         .blacklist_type("std::*")
         .generate()
         .expect("Unable to generate bindings");

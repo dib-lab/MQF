@@ -19,6 +19,22 @@ impl Default for MQF {
     }
 }
 
+impl Drop for MQF {
+    fn drop(&mut self) {
+        unsafe { raw::qf_destroy(&mut self.inner) };
+    }
+}
+
+impl Clone for MQF {
+    fn clone(&self) -> Self {
+        let mut new_qf = MQF::default();
+        unsafe {
+            raw::qf_copy(&mut new_qf.inner, &self.inner);
+        };
+        new_qf
+    }
+}
+
 impl MQF {
     pub fn new(counter_size: u64, qbits: u64) -> MQF {
         let mut mqf = MQF::default();
