@@ -4,6 +4,7 @@ use std::ffi::CString;
 use std::path::Path;
 use std::ptr;
 
+#[derive(Debug)]
 pub struct MQF {
     inner: raw::QF,
 }
@@ -55,7 +56,7 @@ impl MQF {
                 0,             // blocksLabelSize
                 true,          // mem
                 s.as_ptr(),    // path
-                0,             // seed (doesn't matter)
+                2038074760,    // seed (doesn't matter)
             );
         };
 
@@ -82,7 +83,7 @@ impl MQF {
         };
 
         // TODO: treat false
-        let result = unsafe { raw::qf_iterator(&mut self.inner, &mut cfi, 0) };
+        let _ = unsafe { raw::qf_iterator(&mut self.inner, &mut cfi, 0) };
 
         MQFIter { inner: cfi }
     }
@@ -106,6 +107,14 @@ impl MQF {
         }
 
         Ok(qf)
+    }
+
+    pub fn merge(&mut self, other: &mut MQF) -> Result<(), Box<dyn std::error::Error>> {
+        unsafe {
+            raw::qf_migrate(&mut other.inner, &mut self.inner);
+        }
+
+        Ok(())
     }
 }
 

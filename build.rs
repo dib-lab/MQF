@@ -22,20 +22,7 @@ fn main() {
     }
 
     println!("cargo:rustc-link-search=native={}/build/src", dst.display());
-    println!(
-        "cargo:rustc-link-search=native={}/build/ThirdParty/stxxl/lib",
-        dst.display()
-    );
-    // TODO: static libs are being generated in lib too,
-    // cmake seems to be just copying it from the right locations.
-    // But not sure we should be using them...
-    // println!("cargo:rustc-link-search=native=lib");
-
     println!("cargo:rustc-link-lib=static=MQF");
-    // TODO: there are two names for stxxl, depending on being built on release
-    // or debug mode...
-    //println!("cargo:rustc-link-lib=static=stxxl");
-    println!("cargo:rustc-link-lib=static=stxxl_debug");
 
     let bindings = bindgen::Builder::default()
         .clang_arg("-I./include")
@@ -52,6 +39,7 @@ fn main() {
         .whitelist_function("qf_copy")
         .whitelist_function("qf_serialize")
         .whitelist_function("qf_deserialize")
+        .whitelist_function("qf_migrate")
         .whitelist_function("qf_iterator")
         .whitelist_function("qfi_get")
         .whitelist_function("qfi_next")
