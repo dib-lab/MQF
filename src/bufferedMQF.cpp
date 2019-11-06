@@ -115,6 +115,11 @@ void bufferedMQF_copy(bufferedMQF *dest, bufferedMQF *src){
 bool bufferedMQF_insert(bufferedMQF *qf, uint64_t key, uint64_t count,
 							 bool lock, bool spin){
   key=key%qf->memoryBuffer->metadata->range;
+    if(qf->memoryBuffer->metadata->noccupied_slots+ qf->disk->metadata->noccupied_slots >=
+       qf->disk->metadata->maximum_occupied_slots)
+    {
+        throw std::overflow_error("Buffered QF is 95% full, cannot insert more items.");
+    }
     try {
         qf_insert(qf->memoryBuffer, key, count, lock, spin);
     }
@@ -127,6 +132,7 @@ bool bufferedMQF_insert(bufferedMQF *qf, uint64_t key, uint64_t count,
 	{
 		bufferedMQF_syncBuffer(qf);
 	}
+
 	return true;
 
 
@@ -193,7 +199,7 @@ bufferedMQFIterator* bufferedMQF_iterator(bufferedMQF *qf, uint64_t position){
 
 void bufferedMQF_migrate(bufferedMQF* source, bufferedMQF* dest){
     bufferedMQFIterator* source_i=bufferedMQF_iterator(source,0);
-    do {
+    while(!source_i->end()) {
         uint64_t key = 0, value = 0, count = 0;
         source_i->get(&key, &value, &count);
         try {
@@ -207,9 +213,10 @@ void bufferedMQF_migrate(bufferedMQF* source, bufferedMQF* dest){
 
         uint64_t  tmpcount=bufferedMQF_count_key(dest,key);
         tmpcount++;
-
+        source_i->next();
 //        bufferedMQF_add_label((const bufferedMQF*)dest,key,value);
-    } while (!source_i->next());
+
+    } ;
     delete source_i;
 }
 //

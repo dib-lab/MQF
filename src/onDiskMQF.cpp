@@ -2253,7 +2253,7 @@ _onDiskMQF<bitsPerSlot>::_onDiskMQF( uint64_t nslots, uint64_t key_bits, uint64_
 	mem->locks = (volatile int *)calloc(metadata->num_locks,
 																					sizeof(volatile int));
 
-    stxxl::syscall_file OutputFile(path, file::RDWR | file::CREAT | file::DIRECT);
+   // stxxl::syscall_file OutputFile(path, file::RDWR | file::CREAT | file::DIRECT);
 	blocks=stxxlVector (metadata->nblocks,stxxlBufferSize/16);
 	// for(uint64_t i=0;i<metadata->nblocks;i++)
 	// 	blocks[i]=onDisk_qfblock<bitsPerSlot>();
@@ -3411,6 +3411,11 @@ void _onDiskMQF<bitsPerSlot>::general_unlock(){
 
 template<uint64_t bitsPerSlot>
 void onDiskMQF_Namespace::_onDiskMQF<bitsPerSlot>::migrateFromQF(QF* source){
+    if(source->metadata->noccupied_slots+ metadata->noccupied_slots >=
+       metadata->maximum_occupied_slots)
+    {
+        throw std::overflow_error("Buffered QF is 95% full, cannot insert more items.");
+    }
 	QFi source_i;
 	if (qf_iterator(source, &source_i, 0)) {
 		do {
