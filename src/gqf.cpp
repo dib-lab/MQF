@@ -1982,7 +1982,7 @@ bool qf_getBlockLabel_pointer_byItem(const QF *qf, uint64_t key,char *&res){
 
 /* The caller should call qf_init on the dest QF before calling this function.
  */
-void qf_copy(QF *dest, QF *src)
+void qf_copy(QF *dest, const QF *src)
 {
 	memcpy(dest->mem, src->mem, sizeof(qfmem));
 	memcpy(dest->metadata, src->metadata, sizeof(qfmetadata));
