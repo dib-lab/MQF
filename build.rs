@@ -24,6 +24,17 @@ fn main() {
     println!("cargo:rustc-link-search=native={}/build/src", dst.display());
     println!("cargo:rustc-link-lib=static=MQF");
 
+    println!(
+        "cargo:rustc-link-search=native={}/build/ThirdParty/stxxl/lib",
+        dst.display()
+    );
+
+    let mode = match env::var("PROFILE").unwrap().as_ref() {
+        "debug" => "_debug",
+        _ => "",
+    };
+    println!("cargo:rustc-link-lib=static=stxxl{}", mode);
+
     let bindings = bindgen::Builder::default()
         .clang_arg("-I./include")
         .clang_arg("-x")
