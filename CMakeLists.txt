@@ -1,25 +1,5 @@
 cmake_minimum_required(VERSION 3.2)
 
-
-# Options for enabling/disabling MQF binaries and tests
-
-option(SUPRESS_BIN "Suppress building MQF binaries" OFF)
-option(SUPRESS_TESTS "Suppress building MQF tests" OFF)
-
-if(SUPRESS_BIN)
-  add_definitions(-DSUPRESS_BIN=1)
-else()
-  add_definitions(-DSUPRESS_BIN=0)
-endif()
-if(SUPRESS_TESTS)
-  add_definitions(-DSUPRESS_TESTS=1)
-else()
-  add_definitions(-DSUPRESS_TESTS=0)
-endif()
-
-# ------------------ END Of Options ------------------
-
-
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3")
 
@@ -58,15 +38,7 @@ include_directories(${STXXL_INCLUDE_DIRS})
 
 
 add_subdirectory(src)
+add_subdirectory(bin)
 
-
-if (NOT SUPRESS_BIN)
-    message("Building MQF binaries")
-    add_subdirectory(bin)
-endif()
-
-if (NOT DSUPRESS_TESTS)
-    message("Building MQF tests")
-    enable_testing()
-    add_subdirectory(tests)
-endif()
+enable_testing()
+add_subdirectory(tests)

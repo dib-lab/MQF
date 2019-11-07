@@ -7,8 +7,7 @@ use cmake::Config;
 fn main() {
     let dst = Config::new(".")
         .define("BUILD_STATIC_LIBS", "ON")
-        .define("SUPRESS_BIN", "ON")
-        .define("SUPRESS_TESTS", "ON")
+        .build_target("MQF")
         .build();
 
     // TODO: there are probably better ways to do this...
