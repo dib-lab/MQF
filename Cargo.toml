@@ -1,7 +1,14 @@
 [package]
 name = "mqf"
-version = "0.1.0"
-authors = ["Luiz Irber <rust@luizirber.org>"]
+version = "1.0.0"
+authors = ["Mostafa Shokrof <mostafa.shokrof@gmail.com>", "Tamer Mansour <drtamermansour@gmail.com>", "Luiz Irber <rust@luizirber.org>"]
+description = "MQF, Mixed Quotient Filter, is a variant of CQF (Counting Quotient Filter)"
+license-file = "LICENSE.txt"
+repository = "https://github.com/dib-lab/MQF"
+homepage = "https://github.com/dib-lab/MQF"
+categories = ["science", "algorithms", "data-structures"]
+edition = "2018"
+readme = "README.md"
 links = "libmqf"
 
 [build-dependencies]
