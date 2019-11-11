@@ -19,7 +19,10 @@ public:
 	uint64_t currentLabel;
 	uint64_t currentCount;
 	bool finished;
-    bufferedMQFIterator(){};
+    bufferedMQFIterator(){
+    	diskIt=new onDiskMQF_Namespace::onDiskMQFIterator();
+    	bufferIt=new QFi();
+    };
 	bufferedMQFIterator(QFi* bit,onDiskMQF_Namespace::onDiskMQFIterator* dit);
 
 
@@ -31,6 +34,8 @@ public:
 
 	/* Check to see if the if the end of the QF */
 	int end();
+
+	void update();
 
 
 } bufferedMQFIterator;
@@ -137,6 +142,8 @@ typedef class bufferedMQF {
 	int bufferedMQF_space(bufferedMQF *qf);
 
 	void bufferedMQF_migrate(bufferedMQF* source, bufferedMQF* destination);
+
+    bool bufferedMQF_find(bufferedMQF*,bufferedMQFIterator *qfi, uint64_t key);
 
     bufferedMQFIterator*  bufferedMQF_iterator(bufferedMQF *qf, uint64_t position);
 #ifdef __cplusplus

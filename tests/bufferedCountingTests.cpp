@@ -592,6 +592,81 @@ TEST_CASE( "batch query" ,"[buffered]"){
    delete qf,qf2;
 
  }
+
+TEST_CASE( "test get_iterator(buffered)" ,"[buffered]"  ) {
+    bufferedMQF qf;
+    int counter_size=4;
+    srand (1);
+    uint64_t qbits=15;
+    uint64_t diskQbits=16;
+    uint64_t num_hash_bits=qbits+8;
+    uint64_t maximum_count=(1ULL<<counter_size)-1;
+    INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
+    bufferedMQF_init(&qf ,(1ULL<<qbits),(1ULL<<diskQbits), num_hash_bits, 0,counter_size, "tmp.ser");
+
+    uint64_t nvals = (1ULL<<qbits);
+    //nvals = 5000;
+    uint64_t *vals;
+    uint64_t *nRepetitions;
+    vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
+    nRepetitions= (uint64_t*)malloc(nvals*sizeof(nRepetitions[0]));
+    uint64_t count;
+
+    for(uint64_t i=0;i<nvals;i++)
+    {
+        uint64_t newvalue=0;
+        while(newvalue==0){
+            newvalue=rand();
+            newvalue=(newvalue<<32)|rand();
+            newvalue=newvalue%(qf.disk->metadata->range);
+            for(uint64_t j=0;j<i;j++)
+            {
+                if(vals[j]==newvalue)
+                {
+                    newvalue=0;
+                    break;
+                }
+            }
+        }
+        vals[i]=newvalue;
+
+
+        nRepetitions[i]=(rand()%1000)+1;
+    }
+    double loadFactor=(double)qf.disk->metadata->noccupied_slots/(double)qf.disk->metadata->nslots;
+    uint64_t insertedItems=0;
+    while(insertedItems<nvals && loadFactor<0.7){
+        //  printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
+        INFO("Inserting "<< vals[insertedItems] << " Repeated "<<nRepetitions[insertedItems]);
+        bufferedMQF_insert(&qf,vals[insertedItems],nRepetitions[insertedItems],false,false);
+        //qf_dump(&qf);
+        INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
+        count = bufferedMQF_count_key(&qf, vals[insertedItems]);
+        //  CHECK(count == nRepetitions[insertedItems]);
+        insertedItems++;
+        loadFactor=(double)qf.disk->metadata->noccupied_slots/(double)qf.disk->metadata->xnslots;
+
+    }
+    INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
+
+    for(uint64_t i=0;i<insertedItems/10;i++)
+    {
+        bufferedMQFIterator it;
+        bool res = bufferedMQF_find(&qf,&it, vals[i]);
+        uint64_t key,value,count,newkey;
+        it.get(&key,&value,&count);
+
+
+        INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
+        CHECK(count == nRepetitions[i]);
+
+
+    }
+
+    //qf_destroy(&qf);
+
+}
+
 //
 // TEST_CASE( "Counting Big counters" ){
 //   bufferedMQF qf;

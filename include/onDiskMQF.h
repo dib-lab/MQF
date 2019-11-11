@@ -287,6 +287,7 @@ namespace onDiskMQF_Namespace{
 
     virtual  bool getForIterator(onDiskMQFIterator* qfi,uint64_t *key, uint64_t *value, uint64_t *count)=0;
 	virtual int nextForIterator(onDiskMQFIterator *qfi)=0;
+	virtual bool findIterator(onDiskMQFIterator  *qfi, uint64_t key)=0;
 	};
 
 

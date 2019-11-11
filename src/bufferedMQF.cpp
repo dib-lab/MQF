@@ -19,9 +19,20 @@ int bufferedMQFIterator::get(uint64_t *key, uint64_t *value, uint64_t *count){
     *key=currentKey;
     *value=currentLabel;
     *count=currentCount;
-
-
 }
+
+void bufferedMQFIterator::update(){
+    uint64_t diskKey, diskLabel, diskCount, memoryKey, memoryLabel, memoryCount;
+    diskIt->get(&diskKey,&diskLabel,&diskCount);
+    if(!qfi_end(bufferIt))
+        qfi_get(bufferIt,&memoryKey,&memoryLabel,&memoryCount);
+    currentKey=diskKey;
+    currentLabel=diskLabel;
+    currentCount=diskCount;
+    if(diskKey == memoryKey)
+        currentCount+=memoryCount;
+}
+
 
 
 /* Advance to next entry.  Returns whether or not another entry is
@@ -181,7 +192,15 @@ void bufferedMQF_BatchQuery( bufferedMQF* qf,QF* Batch){
 	}
 }
 
-
+bool bufferedMQF_find(bufferedMQF* qf,bufferedMQFIterator *qfi, uint64_t key)
+{
+    bufferedMQF_syncBuffer(qf);
+    bool res=qf->disk->findIterator(qfi->diskIt,key);
+    qf_iterator(qf->memoryBuffer,qfi->bufferIt,0);
+    qfi->bufferIt->current=qf->memoryBuffer->metadata->xnslots+1;
+    qfi->update();
+    return res;
+}
 //
 // /* Initialize an iterator */
 bufferedMQFIterator* bufferedMQF_iterator(bufferedMQF *qf, uint64_t position){

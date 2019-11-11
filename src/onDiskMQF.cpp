@@ -232,6 +232,7 @@ uint64_t remove_label(uint64_t key, bool lock=false, bool spin=false)override;
 /* Initialize an iterator */
 bool getIterator(onDiskMQFIterator *qfi, uint64_t position);
 
+bool findIterator(onDiskMQFIterator  *qfi, uint64_t key);
 
 
 /* For debugging */
@@ -2675,8 +2676,49 @@ uint64_t _onDiskMQF<bitsPerSlot>::count_key(uint64_t key)
 	return 0;
 }
 
+template<uint64_t bitsPerSlot>
+bool _onDiskMQF<bitsPerSlot>::findIterator(onDiskMQFIterator  *qfi, uint64_t key)
+{
+	_onDiskMQF<bitsPerSlot>* qf=this;
+		 __uint128_t hash = key;
+		 uint64_t hash_remainder   = hash & BITMASK(qf->metadata->key_remainder_bits);
+		 int64_t hash_bucket_index = hash >> qf->metadata->key_remainder_bits;
 
+		 if (!is_occupied( hash_bucket_index))
+			 return 0;
 
+		 int64_t runstart_index = hash_bucket_index == 0 ? 0 : run_end(
+																	   hash_bucket_index-1)
+															   + 1;
+		 if (runstart_index < hash_bucket_index)
+			 runstart_index = hash_bucket_index;
+
+		 /* printf("MC RUNSTART: %02lx RUNEND: %02lx\n", runstart_index, runend_index); */
+
+		 uint64_t current_remainder, current_count, current_end;
+		 do {
+			 current_end = decode_counter(runstart_index, &current_remainder,
+										  &current_count);
+			 if (current_remainder == hash_remainder){
+				 // qf_iterator(qf,qfi,runstart_index/64);
+				 // uint64_t ckey,count,value;
+				 // qfi_get(qfi,&ckey,&value,&count);
+				 // while(ckey!=key){
+				 // 	qfi_next(qfi);
+				 // 	qfi_get(qfi,&ckey,&value,&count);
+				 // }
+				 //	uint64_t position=runstart_index;
+				 qfi->qf = qf;
+				 qfi->num_clusters = 0;
+				 qfi->run = hash_bucket_index;
+				 qfi->current=runstart_index;
+				 return true;
+			 }
+
+			 runstart_index = current_end + 1;
+		 } while (!is_runend(current_end));
+		 return false;
+	 }
 
 /* initialize the iterator at the run corresponding
  * to the position index
