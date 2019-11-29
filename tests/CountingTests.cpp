@@ -216,7 +216,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )" ) 
   QF qf;
   int counter_size=4;
   srand (1);
-  uint64_t qbits=16;
+  uint64_t qbits=22;
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
@@ -253,17 +253,23 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )" ) 
   }
   double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   uint64_t insertedItems=0;
-  while(insertedItems<nvals && loadFactor<0.9){
-  //  printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
-    INFO("Inserting "<< vals[insertedItems] << " Repeated "<<nRepetitions[insertedItems]);
-    qf_insert(&qf,vals[insertedItems],nRepetitions[insertedItems],false,false);
-    //qf_dump(&qf);
-    INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
-    count = qf_count_key(&qf, vals[insertedItems]);
-    CHECK(count == nRepetitions[insertedItems]);
-    insertedItems++;
-    loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
+  int oldLoadFactor=0;
+  while(insertedItems<nvals && loadFactor<0.9) {
+      //  printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
+      INFO("Inserting " << vals[insertedItems] << " Repeated " << nRepetitions[insertedItems]);
+      qf_insert(&qf, vals[insertedItems], nRepetitions[insertedItems], false, false);
+      //qf_dump(&qf);
+      INFO("Load factor = " << loadFactor << " inserted items = " << insertedItems);
+      count = qf_count_key(&qf, vals[insertedItems]);
+      CHECK(count == nRepetitions[insertedItems]);
+      insertedItems++;
+      loadFactor = (double) qf.metadata->noccupied_slots / (double) qf.metadata->nslots;
+      if ((int) loadFactor * 10.0 != oldLoadFactor) {
+          cout << loadFactor * 100.0 << endl;
+          oldLoadFactor = loadFactor * 10.0;
 
+
+      }
   }
   INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
 
@@ -319,6 +325,7 @@ TEST_CASE( "test kmers order" ) {
   }
   double loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->nslots;
   uint64_t insertedItems=0;
+  int oldLoadFactor=0;
   while(insertedItems<nvals && loadFactor<0.9){
   //  printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
     INFO("Inserting "<< vals[insertedItems] << " Repeated "<<nRepetitions[insertedItems]);
@@ -329,7 +336,7 @@ TEST_CASE( "test kmers order" ) {
   //  CHECK(count == nRepetitions[insertedItems]);
     insertedItems++;
     loadFactor=(double)qf.metadata->noccupied_slots/(double)qf.metadata->xnslots;
-
+  
   }
   INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
 

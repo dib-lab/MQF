@@ -112,8 +112,8 @@ void bufferedMQF_reset(bufferedMQF *qf){
 }
 
 void bufferedMQF_destroy(bufferedMQF *qf){
-//	qf_destroy(qf->memoryBuffer);
-//	delete qf->disk;
+	qf_destroy(qf->memoryBuffer);
+	delete qf->disk;
 }
 
 void bufferedMQF_copy(bufferedMQF *dest, bufferedMQF *src){

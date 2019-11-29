@@ -2348,16 +2348,9 @@ _onDiskMQF<bitsPerSlot>::~_onDiskMQF()
 		delete qf->metadata->labels_map;
 		qf->metadata->labels_map=NULL;
 	}
-	if (qf->metadata->mem) {
-		free(qf->mem);
-		free(qf->metadata);
-		qf->blocks.clear();
-		//free(qf->blocks);
-	} else {
-	//msync(qf->metadata, qf->metadata->size + sizeof(qfmetadata),MS_SYNC);
-//	munmap(qf->metadata, qf->metadata->size + sizeof(qfmetadata));
-	//close(qf->mem->fd);
-	}
+	free(qf->mem);
+	free(qf->metadata);
+	qf->blocks.clear();
 
 }
 
