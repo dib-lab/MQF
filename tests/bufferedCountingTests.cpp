@@ -328,8 +328,8 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(buf
   bufferedMQF qf;
   int counter_size=4;
   srand (1);
-  uint64_t qbits=20;
-  uint64_t diskQbits=22;
+  uint64_t qbits=15;
+  uint64_t diskQbits=16;
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
