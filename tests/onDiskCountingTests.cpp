@@ -174,7 +174,7 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )(onDisk)" 
 
    } while(qfi.next());
     delete qf;
-  //onDiskMQF_destroy(&qf);
+//  onDiskMQF_destroy(&qf);
 
 }
 //
@@ -357,7 +357,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(onD
     CHECK(count == nRepetitions[i]);
   }
     delete qf;
-  //onDiskMQF_destroy(&qf);
+ // onDiskMQF_destroy(&qf);
 
 }
 
@@ -370,8 +370,8 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(onD
    uint64_t num_hash_bits=qbits+8;
    uint64_t maximum_count=(1ULL<<counter_size)-1;
    INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-   onDiskMQF::init(qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser2");
-   onDiskMQF::init(qf2, (1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser2");
+   onDiskMQF::init(qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser22");
+   onDiskMQF::init(qf2, (1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser33");
 
    uint64_t nvals = (1ULL<<qbits);
    //uint64_t nvals = 3;

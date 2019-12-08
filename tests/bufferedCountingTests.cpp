@@ -168,7 +168,7 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )(buffered)
 
   } while(!qfi->next());
 
-  bufferedMQF_destroy(qf);
+// bufferedMQF_destroy(qf);
   delete qf;
 }
 
@@ -271,7 +271,6 @@ TEST_CASE( "batch query(singletons)" ,"[buffered]") {
   //
   // } while(!qfi_next(&qfi));
 
-  bufferedMQF_destroy(&qf);
 
 }
 
@@ -319,7 +318,7 @@ TEST_CASE( "batch query(singletons)" ,"[buffered]") {
 //     CHECK(count >= 50);
 //   } while(!qfi_next(&qfi));
 //
-//   bufferedMQF_destroy(&qf);
+
 //
 // }
 //
@@ -409,7 +408,6 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(buf
   }
   //REQUIRE(gold.size()==0);
 
-  bufferedMQF_destroy(&qf);
 
 }
 TEST_CASE( "batch query" ,"[buffered]"){
@@ -503,7 +501,7 @@ TEST_CASE( "batch query" ,"[buffered]"){
     CHECK(count >= nRepetitions[j]);
   }
 
-  bufferedMQF_destroy(&qf);
+
 
 }
 
@@ -519,8 +517,8 @@ TEST_CASE( "batch query" ,"[buffered]"){
    uint64_t num_hash_bits=qbits+8;
    uint64_t maximum_count=(1ULL<<counter_size)-1;
    INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-   bufferedMQF_init(qf ,(1ULL<<qbits),(1ULL<<diskQbits), num_hash_bits, 0,counter_size, "tmp.ser");
-   bufferedMQF_init(qf2 ,(1ULL<<qbits),(1ULL<<diskQbits), num_hash_bits, 0,counter_size, "tmp.ser2");
+   bufferedMQF_init(qf ,(1ULL<<qbits),(1ULL<<diskQbits), num_hash_bits, 0,counter_size, "tmp.buffered.ser");
+   bufferedMQF_init(qf2 ,(1ULL<<qbits),(1ULL<<diskQbits), num_hash_bits, 0,counter_size, "tmp.buffered.ser2");
 
 
    uint64_t nvals = (1ULL<<qbits);
@@ -555,7 +553,7 @@ TEST_CASE( "batch query" ,"[buffered]"){
 
    double loadFactor=(double)qf2->disk->metadata->noccupied_slots/(double)qf2->disk->metadata->nslots;
    uint64_t insertedItems=0;
-   while(insertedItems<nvals && loadFactor<0.75){
+   while(insertedItems<nvals && loadFactor<0.6){
    //  printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
 
      INFO("Inserting "<< vals[insertedItems] << " Repeated "<<nRepetitions[insertedItems]);
@@ -588,10 +586,11 @@ TEST_CASE( "batch query" ,"[buffered]"){
 
    free(vals);
    free(nRepetitions);
-   bufferedMQF_destroy(qf);
-   bufferedMQF_destroy(qf2);
+   delete qf ,qf2;
+   //bufferedMQF_destroy(qf);
+   //bufferedMQF_destroy(qf2);
 
-   delete qf,qf2;
+
 
  }
 
@@ -665,7 +664,7 @@ TEST_CASE( "test get_iterator(buffered)" ,"[buffered]"  ) {
 
     }
 
-    //qf_destroy(&qf);
+
 
 }
 
@@ -719,7 +718,7 @@ TEST_CASE( "test get_iterator(buffered)" ,"[buffered]"  ) {
 //     CHECK(count >= nRepetitions[i]);
 //   }
 //
-//   bufferedMQF_destroy(&qf);
+//
 //
 //
 // }
@@ -798,6 +797,6 @@ TEST_CASE( "test get_iterator(buffered)" ,"[buffered]"  ) {
 //     CHECK(count >= 50);
 //   } while(!qfi_next(&qfi));
 //
-//   bufferedMQF_destroy(&qf);
+//
 //
 // }

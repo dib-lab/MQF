@@ -2254,8 +2254,8 @@ _onDiskMQF<bitsPerSlot>::_onDiskMQF( uint64_t nslots, uint64_t key_bits, uint64_
 	mem->locks = (volatile int *)calloc(metadata->num_locks,
 																					sizeof(volatile int));
 
-   // stxxl::syscall_file OutputFile(path, file::RDWR | file::CREAT | file::DIRECT);
-	blocks=stxxlVector (metadata->nblocks,stxxlBufferSize/16);
+    stxxl::syscall_file OutputFile(path, file::RDWR | file::CREAT | file::DIRECT |file::TRUNC);
+	blocks=stxxlVector (&OutputFile, metadata->nblocks,stxxlBufferSize/16);
 	// for(uint64_t i=0;i<metadata->nblocks;i++)
 	// 	blocks[i]=onDisk_qfblock<bitsPerSlot>();
   //

@@ -51,6 +51,7 @@ typedef class bufferedMQF {
 		}
 		~bufferedMQF()
 		{
+			qf_destroy(memoryBuffer);
 			delete memoryBuffer;
 			delete disk;
 		}
