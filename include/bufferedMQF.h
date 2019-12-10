@@ -36,6 +36,9 @@ public:
 	int end();
 
 	void update();
+	~bufferedMQFIterator(){
+		delete diskIt ,bufferIt;
+	}
 
 
 } bufferedMQFIterator;
