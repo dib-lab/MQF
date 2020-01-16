@@ -11,13 +11,7 @@ pub struct MQF {
 
 impl Default for MQF {
     fn default() -> MQF {
-        MQF {
-            inner: raw::QF {
-                mem: ptr::null_mut(),
-                metadata: ptr::null_mut(),
-                blocks: ptr::null_mut(),
-            },
-        }
+        MQF::new(1, 18)
     }
 }
 
@@ -41,7 +35,13 @@ unsafe impl Sync for MQF {}
 
 impl MQF {
     pub fn new(counter_size: u64, qbits: u64) -> MQF {
-        let mut mqf = MQF::default();
+        let mut mqf = MQF {
+            inner: raw::QF {
+                mem: ptr::null_mut(),
+                metadata: ptr::null_mut(),
+                blocks: ptr::null_mut(),
+            },
+        };
 
         let num_hash_bits = qbits + 8;
 
