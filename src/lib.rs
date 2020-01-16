@@ -31,8 +31,6 @@ impl Clone for MQF {
     }
 }
 
-unsafe impl Sync for MQF {}
-
 impl MQF {
     pub fn new(counter_size: u64, qbits: u64) -> MQF {
         let mut mqf = MQF {
@@ -65,8 +63,7 @@ impl MQF {
     }
 
     pub fn insert(&mut self, key: u64, count: u64) {
-        unsafe { raw::qf_insert(&mut self.inner, key, count, true, true) };
-        //unsafe { raw::qf_insert(&mut self.inner, key, count, false, false) };
+        unsafe { raw::qf_insert(&mut self.inner, key, count, false, false) };
     }
 
     pub fn count_key(&self, key: u64) -> u64 {
