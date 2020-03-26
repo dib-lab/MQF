@@ -106,8 +106,9 @@ public:
             sizeof(onDisk_qfblock<bitsPerSlot>)*1024,
             stxxl::RC,
             stxxl::uint64>  stxxlVector;
-    stxxlVector blocks;
+    stxxlVector* blocks;
     string filename;
+	stxxl::syscall_file* OutputFile;
 /*!
 @breif initialize mqf .
 
@@ -137,19 +138,22 @@ void reset() override;
 	}
 	free(qf->mem);
 	free(qf->metadata);
-	qf->blocks.flush();
-//	qf->blocks=stxxlVector();
-	cout<<"it should be destructred"<<endl;
+
+	qf->blocks->flush();
+	delete blocks;
+	delete OutputFile;
+
 }
 inline typename stxxlVector::iterator  get_block(uint64_t block_index)
 {
-    typename stxxlVector::iterator it = this->blocks.begin();
+    typename stxxlVector::iterator it = (this->blocks)->begin();
+
     it+=block_index;
     return it;
 }
 inline typename stxxlVector::const_iterator get_block_const( uint64_t block_index)
 {
-    typename stxxlVector::const_iterator it = this->blocks.cbegin();
+    typename stxxlVector::const_iterator it = this->blocks->cbegin();
     it+=block_index;
     return it;
 }
@@ -2486,9 +2490,14 @@ _onDiskMQF<bitsPerSlot>::_onDiskMQF( uint64_t nslots, uint64_t key_bits, uint64_
 	mem->general_lock = 0;
 	mem->locks = (volatile int *)calloc(metadata->num_locks,
 																					sizeof(volatile int));
+    file::unlink(path); // delete output file
+	OutputFile=new stxxl::syscall_file(path, file::RDWR | file::CREAT | file::DIRECT );
+	blocks=new stxxlVector (OutputFile, metadata->nblocks,stxxlBufferSize/16);
 
-    stxxl::syscall_file OutputFile(path, file::RDWR | file::CREAT | file::DIRECT |file::TRUNC);
-	blocks=stxxlVector (&OutputFile, metadata->nblocks,stxxlBufferSize/16);
+
+
+
+
 	// for(uint64_t i=0;i<metadata->nblocks;i++)
 	// 	blocks[i]=onDisk_qfblock<bitsPerSlot>();
   //
@@ -2679,9 +2688,7 @@ void _onDiskMQF<bitsPerSlot>::serialize()
 	/* we don't serialize the locks */
 	//fwrite(qf->blocks, qf->metadata->size, 1, fout);
 	fclose(fout);
-	blocks.flush();
-	//blocks=stxxlVector();
-	cout<<"it should be serialiczd"<<endl;
+    blocks->flush();
 	if(qf->metadata->labels_map!=NULL)
 	{
 		string labelsMapOutName=string(filename)+".labels_map";
@@ -2719,8 +2726,8 @@ _onDiskMQF<bitsPerSlot>::_onDiskMQF(const char *filename)
 	stxxlBufferSize= (uint64_t)((double)(size)*0.2/(1024.0*1024.0));
 	stxxlBufferSize=max(stxxlBufferSize,(uint64_t)16);
 
-	stxxl::syscall_file OutputFile(filename, file::RDWR  | file::DIRECT );
-	blocks=stxxlVector (&OutputFile, metadata->nblocks,stxxlBufferSize/16);
+	OutputFile= new stxxl::syscall_file(filename, file::RDWR  | file::DIRECT );
+	blocks=new stxxlVector (OutputFile, metadata->nblocks,stxxlBufferSize/16);
     //blocks=stxxlVector (&OutputFile);
 
 	//qf->blocks = (qfblock *)calloc(qf->metadata->size, 1);

@@ -99,7 +99,7 @@ void bufferedMQF_init(bufferedMQF *qf, uint64_t nslots_buffer ,uint64_t nslots
 		{
 			qf= new bufferedMQF();
 		}
-
+        qf->filename=path;
 		qf_init(qf->memoryBuffer,nslots_buffer,key_bits,value_bits,fixed_counter_size,0,true,"",2038074761);
 
 		onDiskMQF_Namespace::onDiskMQF::init(qf->disk,nslots,key_bits,value_bits,fixed_counter_size,path);
@@ -237,6 +237,46 @@ void bufferedMQF_migrate(bufferedMQF* source, bufferedMQF* dest){
 
     } ;
     delete source_i;
+}
+
+
+void bufferedMQF_serialize(bufferedMQF *qf)
+{
+    bufferedMQF_syncBuffer(qf);
+    qf->disk->serialize();
+
+    FILE *fout;
+    string metadataFile=string(qf->filename)+".bufferedMem.metadata";
+    fout = fopen(metadataFile.c_str(), "wb+");
+    if (fout == NULL) {
+        perror("Error opening file for serializing\n");
+        exit(EXIT_FAILURE);
+    }
+    fwrite(qf->memoryBuffer->metadata, sizeof(qfmetadata), 1, fout);
+    /* we don't serialize the locks */
+    //fwrite(qf->blocks, qf->metadata->size, 1, fout);
+    fclose(fout);
+
+}
+
+/* read data structure off the disk */
+void bufferedMQF_deserialize(bufferedMQF *qf, const char *filename){
+    FILE *fin;
+    string metadataFile=string(filename)+".bufferedMem.metadata";
+    fin = fopen(metadataFile.c_str(), "rb");
+    if (fin == NULL) {
+        perror("Error opening file for deserializing\n");
+        exit(EXIT_FAILURE);
+    }
+    qfmetadata* metadata = (qfmetadata *)calloc(sizeof(qfmetadata), 1);
+    fread(metadata, sizeof(qfmetadata), 1, fin);
+
+
+    qf_init(qf->memoryBuffer,metadata->nslots,metadata->key_bits,metadata->label_bits,metadata->fixed_counter_size,0,true,"",2038074761);
+    delete metadata;
+
+
+    onDiskMQF_Namespace::onDiskMQF::load(qf->disk,filename);
 }
 //
 // /* Returns 0 if the iterator is still valid (i.e. has not reached the

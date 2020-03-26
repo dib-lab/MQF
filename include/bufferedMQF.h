@@ -48,6 +48,7 @@ typedef class bufferedMQF {
 	public:
 		QF* memoryBuffer;
 		onDiskMQF_Namespace::onDiskMQF* disk;
+		string filename;
 		bufferedMQF(){
 			memoryBuffer=new QF();
 			//disk=new onDiskMQF_Namespace::onDiskMQF();
@@ -123,7 +124,7 @@ typedef class bufferedMQF {
 	void bufferedMQF_dump(const bufferedMQF *);
 
 	/* write data structure of to the disk */
-	void bufferedMQF_serialize(const bufferedMQF *qf, const char *filename);
+	void bufferedMQF_serialize(bufferedMQF *qf);
 
 	/* read data structure off the disk */
 	void bufferedMQF_deserialize(bufferedMQF *qf, const char *filename);

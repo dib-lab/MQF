@@ -637,47 +637,6 @@ TEST_CASE( "test get_iterator (onDisk)","[onDisk]" ) {
 
 
 TEST_CASE( "Writing and Reading to/from Disk (onDisk)","[onDisk]" ) {
-  class st{
-  public:
-      int a;
-      int b;
-      st(int aa,int bb)
-      {
-        a=aa;
-        b=bb;
-      }
-      st(){
-        a=0;
-        b=0;
-      }
-  };
-  string output_path="tmptest";
-  using stxxl::file;
-  file::unlink(output_path.c_str()); // delete output file
-  stxxl::timer tm(true); // start a timer
-  // input file object
-  //stxxl::syscall_file InputFile(input_path, file::RDONLY | file::DIRECT);
-  // output file object
-  stxxl::syscall_file OutputFile(output_path, file::RDWR | file::CREAT | file::DIRECT);
-  typedef stxxl::vector<st> vector_type;
-
-  // InputVector is mapped to InputFile
-  //vector_type InputVector(&InputFile);
-  vector_type InputVector(10);
-  vector_type OutputVector(&OutputFile,262784, 1); // OutputVector is mapped to OutputFile
-  // std::cout << "File " << input_path << " has size " << InputVector.size() << " bytes." << std::endl;
-
-  for(int i=0;i<1000000;i++)
-    OutputVector.push_back(st(i,i+1));
-
-  OutputVector.flush();
-//    for(int i=0;i<1000;i++)
-//        cout<<InputVector[i].a<<" "<<InputVector[i].b<<endl;
-
-  OutputVector.export_files("/home/mostafa/Desktop/tmp");
-
-
-
     onDiskMQF* qf;
     int counter_size=2;
     uint64_t qbits=24;
@@ -730,18 +689,18 @@ TEST_CASE( "Writing and Reading to/from Disk (onDisk)","[onDisk]" ) {
     delete qf;
 
 
-    //onDiskMQF* qf2;
-//    onDiskMQF::load(qf2,"tmp.ser2");
-//    INFO("nslots ="<<qf2->metadata->nslots);
-//    for(uint64_t i=0;i<insertedItems;i++)
-//    {
-//        count = qf2->count_key(vals[i]);
-//        INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
-//        REQUIRE(count >= nRepetitions[i]);
-//
-//    }
-//
-//    delete qf2;
+    onDiskMQF* qf2;
+    onDiskMQF::load(qf2,"tmp.ser2");
+    INFO("nslots ="<<qf2->metadata->nslots);
+    for(uint64_t i=0;i<insertedItems;i++)
+    {
+        count = qf2->count_key(vals[i]);
+        INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
+        REQUIRE(count >= nRepetitions[i]);
+
+    }
+
+    delete qf2;
 
 
 
