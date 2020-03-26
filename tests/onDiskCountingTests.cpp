@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include<iostream>
 #include "catch.hpp"
+#include <stxxl/io>
+#include <stxxl/vector>
+#include <stxxl/stream>
 using namespace std;
 
 
@@ -628,6 +631,120 @@ TEST_CASE( "test get_iterator (onDisk)","[onDisk]" ) {
 
 
     }
+
+
+}
+
+
+TEST_CASE( "Writing and Reading to/from Disk (onDisk)","[onDisk]" ) {
+  class st{
+  public:
+      int a;
+      int b;
+      st(int aa,int bb)
+      {
+        a=aa;
+        b=bb;
+      }
+      st(){
+        a=0;
+        b=0;
+      }
+  };
+  string output_path="tmptest";
+  using stxxl::file;
+  file::unlink(output_path.c_str()); // delete output file
+  stxxl::timer tm(true); // start a timer
+  // input file object
+  //stxxl::syscall_file InputFile(input_path, file::RDONLY | file::DIRECT);
+  // output file object
+  stxxl::syscall_file OutputFile(output_path, file::RDWR | file::CREAT | file::DIRECT);
+  typedef stxxl::vector<st> vector_type;
+
+  // InputVector is mapped to InputFile
+  //vector_type InputVector(&InputFile);
+  vector_type InputVector(10);
+  vector_type OutputVector(&OutputFile,262784, 1); // OutputVector is mapped to OutputFile
+  // std::cout << "File " << input_path << " has size " << InputVector.size() << " bytes." << std::endl;
+
+  for(int i=0;i<1000000;i++)
+    OutputVector.push_back(st(i,i+1));
+
+  OutputVector.flush();
+//    for(int i=0;i<1000;i++)
+//        cout<<InputVector[i].a<<" "<<InputVector[i].b<<endl;
+
+  OutputVector.export_files("/home/mostafa/Desktop/tmp");
+
+
+
+    onDiskMQF* qf;
+    int counter_size=2;
+    uint64_t qbits=24;
+    uint64_t num_hash_bits=qbits+8;
+    uint64_t maximum_count=(1ULL<<counter_size)-1;
+    INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
+    onDiskMQF::init(qf, (1ULL<<qbits), num_hash_bits, 0,counter_size, "tmp.ser2");
+
+    //uint64_t nvals = (1ULL<<qbits);
+    uint64_t nvals = (1ULL<<10);
+    uint64_t *vals;
+    uint64_t *nRepetitions;
+    vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
+    nRepetitions= (uint64_t*)malloc(nvals*sizeof(nRepetitions[0]));
+    uint64_t count;
+
+    for(uint64_t i=0;i<nvals;i++)
+    {
+        uint64_t newvalue=0;
+        while(newvalue==0){
+            newvalue=rand();
+            newvalue=(newvalue<<32)|rand();
+            newvalue=newvalue%(qf->metadata->range);
+            for(uint64_t j=0;j<i;j++)
+            {
+                if(vals[j]==newvalue)
+                {
+                    newvalue=0;
+                    break;
+                }
+            }
+        }
+        vals[i]=newvalue;
+
+        nRepetitions[i]=(rand()%257)+1;
+    }
+    double loadFactor=(double)qf->metadata->noccupied_slots/(double)qf->metadata->nslots;
+    uint64_t insertedItems=0;
+    while(insertedItems<nvals && loadFactor<0.7){
+        qf->insert(vals[insertedItems],nRepetitions[insertedItems],false,false);
+
+        count = qf->count_key( vals[insertedItems]);
+        CHECK(count >= nRepetitions[insertedItems]);
+        insertedItems++;
+        loadFactor=(double)qf->metadata->noccupied_slots/(double)qf->metadata->nslots;
+    }
+    INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
+    INFO("nslots ="<<qf->metadata->nslots);
+    qf->serialize();
+    delete qf;
+
+
+    //onDiskMQF* qf2;
+//    onDiskMQF::load(qf2,"tmp.ser2");
+//    INFO("nslots ="<<qf2->metadata->nslots);
+//    for(uint64_t i=0;i<insertedItems;i++)
+//    {
+//        count = qf2->count_key(vals[i]);
+//        INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
+//        REQUIRE(count >= nRepetitions[i]);
+//
+//    }
+//
+//    delete qf2;
+
+
+
 
 
 }

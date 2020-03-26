@@ -107,6 +107,7 @@ public:
             stxxl::RC,
             stxxl::uint64>  stxxlVector;
     stxxlVector blocks;
+    string filename;
 /*!
 @breif initialize mqf .
 
@@ -121,9 +122,25 @@ public:
     */
 
 _onDiskMQF(uint64_t nslots, uint64_t key_bits, uint64_t label_bits,uint64_t fixed_counter_size,const char * path);
+_onDiskMQF(const char * path);
+
 void reset() override;
 
-~_onDiskMQF();
+~_onDiskMQF(){
+	_onDiskMQF<bitsPerSlot>* qf=this;
+	//assert(qf->blocks != NULL);
+
+	qf->metadata->noccupied_slots=0;
+	if(qf->metadata->labels_map!=NULL){
+		delete qf->metadata->labels_map;
+		qf->metadata->labels_map=NULL;
+	}
+	free(qf->mem);
+	free(qf->metadata);
+	qf->blocks.flush();
+//	qf->blocks=stxxlVector();
+	cout<<"it should be destructred"<<endl;
+}
 inline typename stxxlVector::iterator  get_block(uint64_t block_index)
 {
     typename stxxlVector::iterator it = this->blocks.begin();
@@ -240,10 +257,10 @@ void dump()override;
 void dump_block(uint64_t i)override;
 //
 // /*! write data structure of to the disk */
- void serialize(const char *filename)override;
+ void serialize()override;
 //
 // /* read data structure off the disk */
-void deserialize(const char *filename)override;
+//void deserialize(onDiskMQF* qff,const char *filename);
 //
 // /* mmap the QF from disk. */
  void read( const char *path)override;
@@ -2186,6 +2203,221 @@ bool _onDiskMQF<bitsPerSlot>::remove(uint64_t hash, uint64_t count , bool lock, 
 	 //qf->insert(100,1,false,false);
 	 //cout<<qf->count_key(100)<<endl;
  }
+ void onDiskMQF::load(onDiskMQF*& qf,const char *filename){
+	 FILE *fin;
+	 string metadataFile=string(filename)+".ondisk.metadata";
+	 fin = fopen(metadataFile.c_str(), "rb");
+	 if (fin == NULL) {
+		 perror("Error opening file for deserializing\n");
+		 exit(EXIT_FAILURE);
+	 }
+
+
+	 qfmetadata * metadata = (qfmetadata *)calloc(sizeof(qfmetadata), 1);
+
+	 fread(metadata, sizeof(qfmetadata), 1, fin);
+
+	 uint64_t bitsPerslot=metadata->key_remainder_bits+metadata->fixed_counter_size+metadata->label_bits;
+
+	 fclose(fin);
+	 free(metadata);
+     switch (bitsPerslot) {
+         case 1:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<1>(filename);
+             break;
+         case 2:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<2>(filename);
+             break;
+         case 3:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<3>(filename);
+             break;
+         case 4:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<4>(filename);
+             break;
+         case 5:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<5>(filename);
+             break;
+         case 6:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<6>(filename);
+             break;
+         case 7:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<7>(filename);
+             break;
+         case 8:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<8>(filename);
+             break;
+         case 9:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<9>(filename);
+             break;
+         case 10:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<10>(filename);
+             break;
+         case 11:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<11>(filename);
+             break;
+         case 12:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<12>(filename);
+             break;
+         case 13:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<13>(filename);
+             break;
+         case 14:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<14>(filename);
+             break;
+         case 15:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<15>(filename);
+             break;
+         case 16:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<16>(filename);
+             break;
+         case 17:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<17>(filename);
+             break;
+         case 18:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<18>(filename);
+             break;
+         case 19:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<19>(filename);
+             break;
+         case 20:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<20>(filename);
+             break;
+         case 21:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<21>(filename);
+             break;
+         case 22:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<22>(filename);
+             break;
+         case 23:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<23>(filename);
+             break;
+         case 24:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<24>(filename);
+             break;
+         case 25:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<25>(filename);
+             break;
+         case 26:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<26>(filename);
+             break;
+         case 27:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<27>(filename);
+             break;
+         case 28:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<28>(filename);
+             break;
+         case 29:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<29>(filename);
+             break;
+         case 30:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<30>(filename);
+             break;
+         case 31:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<31>(filename);
+             break;
+         case 32:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<32>(filename);
+             break;
+         case 33:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<33>(filename);
+             break;
+         case 34:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<34>(filename);
+             break;
+         case 35:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<35>(filename);
+             break;
+         case 36:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<36>(filename);
+             break;
+         case 37:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<37>(filename);
+             break;
+         case 38:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<38>(filename);
+             break;
+         case 39:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<39>(filename);
+             break;
+         case 40:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<40>(filename);
+             break;
+         case 41:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<41>(filename);
+             break;
+         case 42:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<42>(filename);
+             break;
+         case 43:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<43>(filename);
+             break;
+         case 44:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<44>(filename);
+             break;
+         case 45:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<45>(filename);
+             break;
+         case 46:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<46>(filename);
+             break;
+         case 47:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<47>(filename);
+             break;
+         case 48:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<48>(filename);
+             break;
+         case 49:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<49>(filename);
+             break;
+         case 50:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<50>(filename);
+             break;
+         case 51:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<51>(filename);
+             break;
+         case 52:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<52>(filename);
+             break;
+         case 53:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<53>(filename);
+             break;
+         case 54:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<54>(filename);
+             break;
+         case 55:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<55>(filename);
+             break;
+         case 56:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<56>(filename);
+             break;
+         case 57:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<57>(filename);
+             break;
+         case 58:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<58>(filename);
+             break;
+         case 59:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<59>(filename);
+             break;
+         case 60:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<60>(filename);
+             break;
+         case 61:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<61>(filename);
+             break;
+         case 62:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<62>(filename);
+             break;
+         case 63:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<63>(filename);
+             break;
+         case 64:
+             qf=new  onDiskMQF_Namespace::_onDiskMQF<64>(filename);
+             break;
+
+     }
+
+ }
 
 template<uint64_t bitsPerSlot>
 _onDiskMQF<bitsPerSlot>::_onDiskMQF( uint64_t nslots, uint64_t key_bits, uint64_t label_bits,uint64_t fixed_counter_size ,const char * path)
@@ -2196,6 +2428,7 @@ _onDiskMQF<bitsPerSlot>::_onDiskMQF( uint64_t nslots, uint64_t key_bits, uint64_
 	uint64_t key_remainder_bits, bits_per_slot;
 	uint64_t size;
 
+	filename=path;
 
 	if(popcnt(nslots) != 1){
 		throw std::domain_error("nslots must be a power of 2");
@@ -2337,22 +2570,25 @@ _onDiskMQF<bitsPerSlot>::_onDiskMQF( uint64_t nslots, uint64_t key_bits, uint64_
  *
  * It does not delete the file on disk for on-disk QF.
  */
-template<uint64_t bitsPerSlot>
-_onDiskMQF<bitsPerSlot>::~_onDiskMQF()
-{
-	_onDiskMQF<bitsPerSlot>* qf=this;
-	//assert(qf->blocks != NULL);
-
-	qf->metadata->noccupied_slots=0;
-	if(qf->metadata->labels_map!=NULL){
-		delete qf->metadata->labels_map;
-		qf->metadata->labels_map=NULL;
-	}
-	free(qf->mem);
-	free(qf->metadata);
-	qf->blocks.clear();
-
-}
+//template<uint64_t bitsPerSlot>
+//_onDiskMQF<bitsPerSlot>::~_onDiskMQF()
+//{
+//	_onDiskMQF<bitsPerSlot>* qf=this;
+//	//assert(qf->blocks != NULL);
+//
+//	qf->metadata->noccupied_slots=0;
+//	if(qf->metadata->labels_map!=NULL){
+//		delete qf->metadata->labels_map;
+//		qf->metadata->labels_map=NULL;
+//	}
+//	free(qf->mem);
+//	free(qf->metadata);
+//	qf->blocks.flush();
+////	qf->blocks=stxxlVector();
+//	cout<<"it should be destructred"<<endl;
+//	//qf->blocks.clear();
+//
+//}
 
 // template<uint64_t bitsPerSlot>
 // void _onDiskMQF<bitsPerSlot>::close()
@@ -2428,12 +2664,13 @@ void _onDiskMQF<bitsPerSlot>::reset()
 }
 
 template<uint64_t bitsPerSlot>
-void _onDiskMQF<bitsPerSlot>::serialize(const char *filename)
+void _onDiskMQF<bitsPerSlot>::serialize()
 {
-	throw std::logic_error("not implemented yet");
+
 	_onDiskMQF<bitsPerSlot>* qf=this;
 	FILE *fout;
-	fout = fopen(filename, "wb+");
+	string metadataFile=string(filename)+".ondisk.metadata";
+	fout = fopen(metadataFile.c_str(), "wb+");
 	if (fout == NULL) {
 		perror("Error opening file for serializing\n");
 		exit(EXIT_FAILURE);
@@ -2442,7 +2679,9 @@ void _onDiskMQF<bitsPerSlot>::serialize(const char *filename)
 	/* we don't serialize the locks */
 	//fwrite(qf->blocks, qf->metadata->size, 1, fout);
 	fclose(fout);
-
+	blocks.flush();
+	//blocks=stxxlVector();
+	cout<<"it should be serialiczd"<<endl;
 	if(qf->metadata->labels_map!=NULL)
 	{
 		string labelsMapOutName=string(filename)+".labels_map";
@@ -2452,36 +2691,46 @@ void _onDiskMQF<bitsPerSlot>::serialize(const char *filename)
 
 
 template<uint64_t bitsPerSlot>
-void _onDiskMQF<bitsPerSlot>::deserialize(const char *filename)
+_onDiskMQF<bitsPerSlot>::_onDiskMQF(const char *filename)
 {
-	throw std::logic_error("not implemented yet");
-	_onDiskMQF<bitsPerSlot>* qf=this;
+	using stxxl::file;
+
 	FILE *fin;
-	fin = fopen(filename, "rb");
+	string metadataFile=string(filename)+".ondisk.metadata";
+	fin = fopen(metadataFile.c_str(), "rb");
 	if (fin == NULL) {
 		perror("Error opening file for deserializing\n");
 		exit(EXIT_FAILURE);
 	}
 
-	qf->mem = (qfmem *)calloc(sizeof(qfmem), 1);
-	qf->metadata = (qfmetadata *)calloc(sizeof(qfmetadata), 1);
+	mem = (qfmem *)calloc(sizeof(qfmem), 1);
+	metadata = (qfmetadata *)calloc(sizeof(qfmetadata), 1);
 
-	fread(qf->metadata, sizeof(qfmetadata), 1, fin);
+	fread(metadata, sizeof(qfmetadata), 1, fin);
 
 	/* initlialize the locks in the QF */
-	qf->metadata->num_locks = (qf->metadata->xnslots/NUM_SLOTS_TO_LOCK)+2;
-	qf->mem->metadata_lock = 0;
+	metadata->num_locks = (metadata->xnslots/NUM_SLOTS_TO_LOCK)+2;
+	mem->metadata_lock = 0;
 	/* initialize all the locks to 0 */
-	qf->mem->locks = (volatile int *)calloc(qf->metadata->num_locks, sizeof(volatile int));
+	mem->locks = (volatile int *)calloc(metadata->num_locks, sizeof(volatile int));
+	fclose(fin);
+
+	uint64_t  size = metadata->nblocks * (sizeof(qfblock) + (8 * bitsPerSlot )) ;
+	stxxlBufferSize= (uint64_t)((double)(size)*0.2/(1024.0*1024.0));
+	stxxlBufferSize=max(stxxlBufferSize,(uint64_t)16);
+
+	stxxl::syscall_file OutputFile(filename, file::RDWR  | file::DIRECT );
+	blocks=stxxlVector (&OutputFile, metadata->nblocks,stxxlBufferSize/16);
+    //blocks=stxxlVector (&OutputFile);
 
 	//qf->blocks = (qfblock *)calloc(qf->metadata->size, 1);
 	//fread(qf->blocks, qf->metadata->size, 1, fin);
-	fclose(fin);
 
-	string labelsMapOutName=string(filename)+".labels_map";
-	if(file_exists(labelsMapOutName)){
-		qf->metadata->labels_map=load_labels_map(labelsMapOutName.c_str());
-	}
+
+//	string labelsMapOutName=string(filename)+".labels_map";
+//	if(file_exists(labelsMapOutName)){
+//		qf->metadata->labels_map=load_labels_map(labelsMapOutName.c_str());
+//	}
 
 
 }

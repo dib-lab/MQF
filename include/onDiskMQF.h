@@ -9,6 +9,8 @@
 #include "gqf.h"
 #include <fstream>
 
+#include <iostream>
+using namespace std;
 
 namespace onDiskMQF_Namespace{
 /* Can be
@@ -50,7 +52,26 @@ namespace onDiskMQF_Namespace{
 			memset(runends,0,METADATA_WORDS_PER_BLOCK*sizeof(uint64_t));
 			memset(slots,0,8*bitsPerSlot);
 		}
-		// template<uint64_t bits2>
+        friend ostream & operator << (ostream &out, const onDisk_qfblock<bitsPerSlot> &c)
+        {
+            out << c.offset;
+            for(int i=0;i<METADATA_WORDS_PER_BLOCK;i++)
+            {
+                out<<c.occupieds[i];
+            }
+            for(int i=0;i<METADATA_WORDS_PER_BLOCK;i++)
+            {
+                out<<c.runends[i];
+            }
+            for(int i=0;i<8*bitsPerSlot;i++)
+            {
+                out<<c.slots[i];
+            }
+
+            return out;
+        }
+//        friend istream & operator >> (istream &in,  Complex &c);
+        // template<uint64_t bits2>
 		// operator onDisk_qfblock<bits2>() {
     //
 		// }
@@ -105,7 +126,8 @@ namespace onDiskMQF_Namespace{
 		qfblock **blocksPointers;
 		diskParameters* diskParams;
 		static void init( onDiskMQF *&qf, uint64_t nslots, uint64_t key_bits, uint64_t label_bits,uint64_t fixed_counter_size ,const char * path);
-
+        static void load(onDiskMQF*& qff,const char *filename);
+        virtual ~onDiskMQF(){};
 	/*!
 	@breif initialize mqf .
 
@@ -226,10 +248,11 @@ namespace onDiskMQF_Namespace{
 	virtual void dump_block(uint64_t i)=0;
 	//
 	// /*! write data structure of to the disk */
-	virtual void serialize(const char *filename)=0;
+	virtual void serialize()=0;
 	//
 	// /* read data structure off the disk */
-	virtual void deserialize(const char *filename)=0;
+//	virtual void deserialize(const char *filename)=0;
+
 	//
 	// /* mmap the QF from disk. */
 	virtual void read( const char *path)=0;
