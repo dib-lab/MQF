@@ -1,6 +1,6 @@
 [package]
 name = "mqf"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Mostafa Shokrof <mostafa.shokrof@gmail.com>", "Tamer Mansour <drtamermansour@gmail.com>", "Luiz Irber <rust@luizirber.org>"]
 description = "MQF, Mixed Quotient Filter, is a variant of CQF (Counting Quotient Filter)"
 license-file = "LICENSE.txt"
@@ -13,7 +13,10 @@ links = "libmqf"
 
 [build-dependencies]
 bindgen = "0.51"
-cmake = "0.1.42"
+cc = "1.0"
 
 [dev-dependencies]
 tempfile = "3.1.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]

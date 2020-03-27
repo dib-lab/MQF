@@ -2074,7 +2074,7 @@ void qf_close(QF *qf)
 
 void qf_reset(QF *qf)
 {
-	assert(popcnt(nslots) == 1); /* nslots must be a power of 2 */
+	assert(popcnt(qf->metadata->nslots) == 1); /* nslots must be a power of 2 */
 
 	qf->metadata->nelts = 0;
 	qf->metadata->ndistinct_elts = 0;

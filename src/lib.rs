@@ -57,7 +57,7 @@ impl MQF {
                 0,             // blocksLabelSize
                 true,          // mem
                 s.as_ptr(),    // path
-                2038074760,    // seed (doesn't matter)
+                2_038_074_760, // seed (doesn't matter)
             );
         };
 
@@ -155,8 +155,8 @@ mod tests {
         let qbits = 5;
         let mut qf: MQF = MQF::new(counter_size, qbits);
 
-        let mut count = 0;
-        let mut fixed_counter = 0;
+        let mut count;
+        let fixed_counter = 0;
 
         for i in 0..=10 {
             qf.insert(100, 1);
@@ -186,7 +186,7 @@ mod tests {
     fn big_count() {
         let mut qf = MQF::new(4, 5);
         qf.insert(100, 100000);
-        let mut count = qf.count_key(100);
+        let count = qf.count_key(100);
         assert_eq!(count, 100000);
     }
 
@@ -213,7 +213,7 @@ mod tests {
 
         let vals: Vec<(u64, u64, u64)> = qf.iter().collect();
 
-        let mut file = tempfile::NamedTempFile::new().unwrap();
+        let file = tempfile::NamedTempFile::new().unwrap();
         qf.serialize(file.path()).unwrap();
 
         let mut new_qf = MQF::deserialize(file.path()).unwrap();
