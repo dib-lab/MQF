@@ -9,10 +9,6 @@ branches:
   only:
   - mqfDevelopmenet
   - master
-cache:
-  directories:
-    - "$HOME/.cargo"
-    - "target"
 
 jobs:
   include:
@@ -30,11 +26,3 @@ jobs:
         - gcov -n -o . src/gqf.cpp > /dev/null;
       after_success:
         - bash <(curl -s https://codecov.io/bash)
-    - <<: *test
-      name: Rust FFI bindings
-      language: rust
-      rust: stable
-      env:
-        - RUSTFLAGS="-Clink-arg=-fuse-ld=gold"
-      script:
-        - cargo test

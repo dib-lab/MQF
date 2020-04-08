@@ -26,9 +26,9 @@ mod tests {
         let counter_size = 2;
         let qbits = 5;
         let num_hash_bits = qbits + 8;
-        let maximum_count = (1u64 << counter_size) - 1;
-        let mut count = 0;
-        let mut fixed_counter = 0;
+        let _maximum_count = (1u64 << counter_size) - 1;
+        let mut count;
+        let fixed_counter = 0;
 
         let s = CString::new("").unwrap();
 

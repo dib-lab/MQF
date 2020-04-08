@@ -1,38 +1,14 @@
 use std::env;
 use std::path::PathBuf;
 
-extern crate cmake;
-use cmake::Config;
-
 fn main() {
-    let dst = Config::new(".")
-        .define("BUILD_STATIC_LIBS", "ON")
-        .build_target("MQF")
-        .build();
-
-    // TODO: there are probably better ways to do this...
-    let target = env::var("TARGET").unwrap();
-    if target.contains("apple") {
-        println!("cargo:rustc-link-lib=dylib=c++");
-    } else if target.contains("linux") {
-        println!("cargo:rustc-link-lib=dylib=stdc++");
-    } else {
-        unimplemented!();
-    }
-
-    println!("cargo:rustc-link-search=native={}/build/src", dst.display());
-    println!("cargo:rustc-link-lib=static=MQF");
-
-    println!(
-        "cargo:rustc-link-search=native={}/build/ThirdParty/stxxl/lib",
-        dst.display()
-    );
-
-    let mode = match env::var("PROFILE").unwrap().as_ref() {
-        "debug" => "_debug",
-        _ => "",
-    };
-    println!("cargo:rustc-link-lib=static=stxxl{}", mode);
+    cc::Build::new()
+        .cpp(true) // Switch to C++ library compilation.
+        .flag_if_supported("-std=c++11")
+        .include("include/")
+        .file("src/gqf.cpp")
+        .file("src/utils.cpp")
+        .compile("libmqf.a");
 
     let bindings = bindgen::Builder::default()
         .clang_arg("-I./include")
