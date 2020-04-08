@@ -2477,7 +2477,7 @@ _onDiskMQF<bitsPerSlot>::_onDiskMQF( uint64_t nslots, uint64_t key_bits, uint64_
 	metadata->nelts = 0;
 	metadata->ndistinct_elts = 0;
 	metadata->noccupied_slots = 0;
-	metadata->maximum_occupied_slots=(uint64_t)((double)metadata->xnslots *0.95);
+	metadata->maximum_occupied_slots=(uint64_t)((double)metadata->xnslots *0.85);
 	metadata->num_locks = (metadata->xnslots/NUM_SLOTS_TO_LOCK)+2;
 	metadata->maximum_count = 0;
 	metadata->labels_map=NULL;
