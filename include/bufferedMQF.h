@@ -37,7 +37,8 @@ public:
 
 	void update();
 	~bufferedMQFIterator(){
-		delete diskIt ,bufferIt;
+		delete diskIt;
+		delete bufferIt;
 	}
 
 
