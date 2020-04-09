@@ -2427,7 +2427,10 @@ bool _onDiskMQF<bitsPerSlot>::remove(uint64_t hash, uint64_t count , bool lock, 
  {
  	if(!isDiskInitialized) {
 		stxxl::config *cfg = stxxl::config::get_instance();
-		cfg->disk(0).path = std::tmpnam(nullptr);
+		char filename[] = "/tmp/stxxl.XXXXXX"; // template for our file.
+		int fd = mkstemp(filename);
+		close(fd);
+		cfg->disk(0).path = filename;
 		cfg->disk(0).size = 10 * 1024;
 		isDiskInitialized=true;
 	}
