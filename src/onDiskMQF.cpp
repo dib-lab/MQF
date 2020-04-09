@@ -2423,9 +2423,20 @@ bool _onDiskMQF<bitsPerSlot>::remove(uint64_t hash, uint64_t count , bool lock, 
 
  }
 
+ void initializeDisk()
+ {
+ 	if(!isDiskInitialized) {
+		stxxl::config *cfg = stxxl::config::get_instance();
+		cfg->disk(0).path = std::tmpnam(nullptr);
+		cfg->disk(0).size = 10 * 1024;
+		isDiskInitialized=true;
+	}
+ }
+
 template<uint64_t bitsPerSlot>
 _onDiskMQF<bitsPerSlot>::_onDiskMQF( uint64_t nslots, uint64_t key_bits, uint64_t label_bits,uint64_t fixed_counter_size ,const char * path)
 {
+	initializeDisk();
     using stxxl::file;
 	//qf=(QF*)calloc(sizeof(QF),1);
 	uint64_t num_slots, xnslots, nblocks;
@@ -2701,6 +2712,7 @@ template<uint64_t bitsPerSlot>
 _onDiskMQF<bitsPerSlot>::_onDiskMQF(const char *filename)
 {
 	using stxxl::file;
+	initializeDisk();
 
 	FILE *fin;
 	string metadataFile=string(filename)+".ondisk.metadata";

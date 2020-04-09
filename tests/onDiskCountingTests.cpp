@@ -203,7 +203,7 @@ TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor ) (onDisk
   double loadFactor=(double)qf->metadata->noccupied_slots/(double)qf->metadata->nslots;
   uint64_t insertedItems=0;
   uint64_t count;
-  while(loadFactor<0.9){
+  while(loadFactor<0.7){
     qf->insert(vals[insertedItems],50,false,false);
 
     insertedItems++;
@@ -272,7 +272,7 @@ TEST_CASE( "copy (onDisk)","[onDisk][!hide]" ) {
   }
   int loadFactor=qf->space();
   uint64_t insertedItems=0;
-  while(insertedItems<nvals && loadFactor<90){
+  while(insertedItems<nvals && loadFactor<0.7){
   //  printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
     INFO("Inserting "<< vals[insertedItems] << " Repeated "<<nRepetitions[insertedItems]);
     qf->insert(vals[insertedItems],nRepetitions[insertedItems],false,false);
@@ -339,7 +339,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(onD
   }
   int loadFactor=qf->space();
   uint64_t insertedItems=0;
-  while(insertedItems<nvals && loadFactor<90){
+  while(insertedItems<nvals && loadFactor<0.7){
   //  printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
     INFO("Inserting "<< vals[insertedItems] << " Repeated "<<nRepetitions[insertedItems]);
     qf->insert(vals[insertedItems],nRepetitions[insertedItems],false,false);
@@ -407,7 +407,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(onD
    }
    double loadFactor=(double)qf->metadata->noccupied_slots/(double)qf->metadata->nslots;
    uint64_t insertedItems=0;
-   while(insertedItems<nvals && loadFactor<0.9){
+   while(insertedItems<nvals && loadFactor<0.7){
    //  printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
      INFO("Inserting "<< vals[insertedItems] << " Repeated "<<nRepetitions[insertedItems]);
      qf2->insert(vals[insertedItems],nRepetitions[insertedItems],false,false);
@@ -461,7 +461,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(onD
    }
    double loadFactor=(double)qf->metadata->noccupied_slots/(double)qf->metadata->nslots;
    uint64_t insertedItems=0;
-   while(insertedItems<nvals && loadFactor<0.9){
+   while(insertedItems<nvals && loadFactor<0.7){
    //  printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
      INFO("Inserting "<< vals[insertedItems] << " Repeated "<<nRepetitions[insertedItems]);
      qf->insert(vals[insertedItems],nRepetitions[insertedItems],false,false);
@@ -518,7 +518,7 @@ TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor )(onD
    }
    double loadFactor=(double)qf->metadata->noccupied_slots/(double)qf->metadata->nslots;
    uint64_t insertedItems=0;
-   while(loadFactor<0.9){
+   while(loadFactor<0.7){
 
      qf->insert(vals[insertedItems],50,false,false);
      insertedItems++;
@@ -605,7 +605,7 @@ TEST_CASE( "test get_iterator (onDisk)","[onDisk]" ) {
     }
     double loadFactor=(double)qf->metadata->noccupied_slots/(double)qf->metadata->nslots;
     uint64_t insertedItems=0;
-    while(insertedItems<nvals && loadFactor<0.9){
+    while(insertedItems<nvals && loadFactor<0.7){
         //  printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
         INFO("Inserting "<< vals[insertedItems] << " Repeated "<<nRepetitions[insertedItems]);
         qf->insert(vals[insertedItems],nRepetitions[insertedItems],false,false);

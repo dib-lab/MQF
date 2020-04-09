@@ -114,9 +114,10 @@ namespace onDiskMQF_Namespace{
 
 	};
 
-
+    static bool isDiskInitialized=false;
 	class onDiskMQF {
 	public:
+
 		qfmem *mem;
 		qfmetadata *metadata;
 		uint64_t stxxlBufferSize;
