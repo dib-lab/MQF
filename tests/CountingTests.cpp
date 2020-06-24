@@ -159,7 +159,7 @@ TEST_CASE( "Inserting items( repeated 1 time) in cqf(90% load factor )" ) {
     }
 
   } while(!qfi_next(&qfi));
-
+  free(vals);
   qf_destroy(&qf);
 
 }

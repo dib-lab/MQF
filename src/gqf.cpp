@@ -2008,6 +2008,7 @@ void qf_destroy(QF *qf)
 		delete qf->metadata->labels_map;
 		qf->metadata->labels_map=NULL;
 	}
+	free(qf->mem->locks);
 	if (qf->metadata->mem) {
 		free(qf->mem);
 		free(qf->metadata);

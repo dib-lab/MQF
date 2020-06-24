@@ -139,7 +139,7 @@ bool bufferedMQF_insert(bufferedMQF *qf, uint64_t key, uint64_t count,
         bufferedMQF_syncBuffer(qf);
         qf_insert(qf->memoryBuffer, key, count, lock, spin);
     }
-	if(qf_space(qf->memoryBuffer)>80)
+	if(qf_space(qf->memoryBuffer)>75)
 	{
 		bufferedMQF_syncBuffer(qf);
 	}
