@@ -136,6 +136,7 @@ void reset() override;
 		delete qf->metadata->labels_map;
 		qf->metadata->labels_map=NULL;
 	}
+	free(qf->mem->locks);
 	free(qf->mem);
 	free(qf->metadata);
 
