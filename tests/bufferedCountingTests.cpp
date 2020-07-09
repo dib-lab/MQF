@@ -355,6 +355,89 @@ TEST_CASE( "Saving and loading(buffered)" ,"[buffered]") {
 }
 
 
+TEST_CASE( "Saving and loading and deleteing memory buffer(buffered)" ,"[buffered]") {
+  //except first item is inserted 5 times to full test _insert1
+  bufferedMQF* qf;
+  qf=new bufferedMQF();
+  int counter_size=2;
+  uint64_t qbits=16;
+  uint64_t diskQbits=18;
+  uint64_t num_hash_bits=qbits+8;
+  uint64_t maximum_count=(1ULL<<counter_size)-1;
+  INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
+  bufferedMQF_init(qf ,(1ULL<<qbits),(1ULL<<diskQbits), num_hash_bits, 0,counter_size, "tmp.ser");
+
+  uint64_t nvals = (1ULL<<diskQbits)*2;
+  uint64_t *vals;
+  vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
+  for(uint64_t i=0;i<nvals;i++)
+  {
+    vals[i]=rand();
+    vals[i]=(vals[i]<<32)|rand();
+    vals[i]=vals[i]%(qf->disk->metadata->range);
+  }
+
+  int loadFactor=bufferedMQF_space(qf);;
+  uint64_t insertedItems=0;
+
+  bufferedMQF_insert(qf,vals[0],1,false,false);
+  bufferedMQF_insert(qf,vals[0],1,false,false);
+  bufferedMQF_insert(qf,vals[0],1,false,false);
+  bufferedMQF_insert(qf,vals[0],1,false,false);
+  // for(uint64_t i=0;i<32;i++)
+  // {
+  //   cout<<get_fixed_counter(&qf,i)<<"-";
+  // }
+  //cout<<endl;
+  while(loadFactor<70){
+
+    bufferedMQF_insert(qf,vals[insertedItems],1,false,false);
+    // for(uint64_t i=0;i<32;i++)
+    // {
+    //   cout<<get_fixed_counter(&qf,i)<<"-";
+    // }
+    // cout<<endl;
+    insertedItems++;
+    loadFactor=bufferedMQF_space(qf);
+
+  }
+  INFO("Inserted Items = "<<insertedItems);
+  bufferedMQF_serialize(qf);
+  delete qf;
+
+  bufferedMQF* qf2=new bufferedMQF();
+  bufferedMQF_deserialize(qf2,"tmp.ser");
+  bufferedMQF_deleteMemoryBuffer(qf2);
+  uint64_t count;
+  //INFO("Fixed counter = "<<qf_get_fixed_counter(&qf,vals[0]));
+  count = bufferedMQF_count_key(qf2, vals[0]);
+  CHECK(count >= 5);
+
+  for(uint64_t i=1;i<insertedItems;i++)
+  {
+    count = bufferedMQF_count_key(qf2, vals[i]);
+    CHECK(count >= 1);
+  }
+  bufferedMQFIterator* qfi= bufferedMQF_iterator(qf2, 0);
+  do {
+    uint64_t key, value, count;
+    qfi->get(&key, &value, &count);
+
+    if(key==vals[0]){
+      REQUIRE(count >= 5);
+    }
+    else{
+      REQUIRE(count >= 1);
+    }
+
+  } while(!qfi->next());
+
+// bufferedMQF_destroy(qf);
+  delete qf2;
+}
+
+
+
 //
 //
 // TEST_CASE( "Inserting items( repeated 50 times) in cqf(90% load factor )" ) {
@@ -748,6 +831,95 @@ TEST_CASE( "test get_iterator(buffered)" ,"[buffered]"  ) {
 
 
 }
+
+TEST_CASE( "Inserting items( repeated 1-1000 times) in cqf(90% load factor ) and delete the memory buffer after insertion(buffered)","[buffered]" ) {
+  bufferedMQF qf;
+  int counter_size=4;
+  srand (1);
+  uint64_t qbits=15;
+  uint64_t diskQbits=16;
+  uint64_t num_hash_bits=qbits+8;
+  uint64_t maximum_count=(1ULL<<counter_size)-1;
+  INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
+  bufferedMQF_init(&qf ,(1ULL<<qbits),(1ULL<<diskQbits), num_hash_bits, 0,counter_size, "tmp.ser");
+
+  uint64_t nvals = (1ULL<<diskQbits);
+  //uint64_t nvals = 3;
+  uint64_t *vals;
+  uint64_t *nRepetitions;
+  vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
+  nRepetitions= (uint64_t*)malloc(nvals*sizeof(nRepetitions[0]));
+  uint64_t count;
+  unordered_map<uint64_t,uint64_t> gold;
+
+  for(uint64_t i=0;i<nvals;i++)
+  {
+    uint64_t newvalue=0;
+    while(newvalue==0){
+      newvalue=rand();
+      newvalue=(newvalue<<32)|rand();
+      newvalue=newvalue%(qf.memoryBuffer->metadata->range);
+      for(uint64_t j=0;j<i;j++)
+      {
+        if(vals[j]==newvalue)
+        {
+          newvalue=0;
+          break;
+        }
+      }
+    }
+    vals[i]=newvalue;
+
+
+    nRepetitions[i]=(rand()%1000)+1;
+  }
+  int loadFactor=bufferedMQF_space(&qf);
+  uint64_t insertedItems=0;
+  while(insertedItems<nvals && loadFactor<70){
+    //  printf("inserting %lu count = %lu\n",vals[insertedItems],nRepetitions[insertedItems] );
+    INFO("Inserting "<< vals[insertedItems] << " Repeated "<<nRepetitions[insertedItems]);
+    bufferedMQF_insert(&qf,vals[insertedItems],nRepetitions[insertedItems],false,false);
+    gold[vals[insertedItems]]=nRepetitions[insertedItems];
+    //qf_dump(&qf);
+    INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
+    //   count = bufferedMQF_count_key(&qf, vals[insertedItems]);
+
+    //  CHECK(count == nRepetitions[insertedItems]);
+    insertedItems++;
+    loadFactor=bufferedMQF_space(&qf);
+
+  }
+  INFO("Load factor = "<<loadFactor <<" inserted items = "<<insertedItems);
+
+//  for(uint64_t i=0;i<insertedItems;i++)
+//  {
+//    count = bufferedMQF_count_key(&qf, vals[i]);
+//    INFO("value = "<<vals[i]<<" Repeated " <<nRepetitions[i]);
+//    CHECK(count == nRepetitions[i]);
+//      CHECK(gold[vals[i]] == nRepetitions[i]);
+//  }
+  // bufferedMQF_syncBuffer(&qf);
+  bufferedMQF_deleteMemoryBuffer(&qf);
+  bufferedMQFIterator* qfi= bufferedMQF_iterator(&qf, 0);
+  while(!qfi->end()) {
+    uint64_t key, value, count;
+    qfi->get(&key, &value, &count);
+    REQUIRE(count == gold[key]);
+    //gold.erase(key);
+    if(key==vals[0]){
+      REQUIRE(count >= 5);
+    }
+    else{
+      REQUIRE(count >= 1);
+    }
+    qfi->next();
+
+  }
+  //REQUIRE(gold.size()==0);
+
+
+}
+
 
 //
 // TEST_CASE( "Counting Big counters" ){
