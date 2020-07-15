@@ -151,7 +151,7 @@ CountminKhmer_fpr_0_0001_bar = plt.bar(CountminKhmer_bar_positions, CountminKhme
                           bottom=CountminKhmer_res[1][3],
                           edgecolor=CountminKhmerColor,
                           linewidth=line_width,
-                          label='CountminKhmer FPR 0.0001')
+                          label='CMS Khmer FPR 0.0001')
 CountminKhmer_fpr_0_001_bar = plt.bar(CountminKhmer_bar_positions, CountminKhmer_res[0][2], bar_width-epsilon,
                           bottom=CountminKhmer_res[1][2],
                           alpha=opacity,
@@ -159,7 +159,7 @@ CountminKhmer_fpr_0_001_bar = plt.bar(CountminKhmer_bar_positions, CountminKhmer
                           edgecolor=CountminKhmerColor,
                           linewidth=line_width,
                           hatch='//',
-                          label='CountminKhmer FPR 0.001')
+                          label='CMS Khmer FPR 0.001')
 CountminKhmer_fpr_0_01_bar = plt.bar(CountminKhmer_bar_positions, CountminKhmer_res[0][1], bar_width-epsilon,
                            bottom=CountminKhmer_res[1][1],
                            alpha=opacity,
@@ -167,7 +167,7 @@ CountminKhmer_fpr_0_01_bar = plt.bar(CountminKhmer_bar_positions, CountminKhmer_
                            edgecolor=CountminKhmerColor,
                            linewidth=line_width,
                            hatch='0',
-                           label='CountminKhmer FPR 0.01')
+                           label='CMS Khmer FPR 0.01')
 
 CountminKhmer_fpr_0_1_bar = plt.bar(CountminKhmer_bar_positions, CountminKhmer_res[0][0], bar_width-epsilon,
                            bottom=CountminKhmer_res[1][0],
@@ -176,7 +176,7 @@ CountminKhmer_fpr_0_1_bar = plt.bar(CountminKhmer_bar_positions, CountminKhmer_r
                            edgecolor=CountminKhmerColor,
                            linewidth=line_width,
                            hatch='.',
-                           label='CountminKhmer FPR 0.1')
+                           label='CMS Khmer FPR 0.1')
 
 
 bmqf_fpr_0_0001_bar = plt.bar(bmqf_bar_positions, bmqf_res[0][3], bar_width- epsilon,
@@ -215,7 +215,7 @@ Countmin_fpr_0_0001_bar = plt.bar(Countmin_bar_positions, Countmin_res[0][3], ba
                           bottom=Countmin_res[1][3],
                           edgecolor=CountminColor,
                           linewidth=line_width,
-                          label='CountminKhmer FPR 0.0001')
+                          label='CMS FPR 0.0001')
 Countmin_fpr_0_001_bar = plt.bar(Countmin_bar_positions, Countmin_res[0][2], bar_width-epsilon,
                           bottom=Countmin_res[1][2],
                           alpha=opacity,
@@ -223,7 +223,7 @@ Countmin_fpr_0_001_bar = plt.bar(Countmin_bar_positions, Countmin_res[0][2], bar
                           edgecolor=CountminColor,
                           linewidth=line_width,
                           hatch='//',
-                          label='CountminKhmer FPR 0.001')
+                          label='CMS FPR 0.001')
 Countmin_fpr_0_01_bar = plt.bar(Countmin_bar_positions, Countmin_res[0][1], bar_width-epsilon,
                            bottom=Countmin_res[1][1],
                            alpha=opacity,
@@ -231,7 +231,7 @@ Countmin_fpr_0_01_bar = plt.bar(Countmin_bar_positions, Countmin_res[0][1], bar_
                            edgecolor=CountminColor,
                            linewidth=line_width,
                            hatch='0',
-                           label='CountminKhmer FPR 0.01')
+                           label='CMS FPR 0.01')
 
 Countmin_fpr_0_1_bar = plt.bar(Countmin_bar_positions, Countmin_res[0][0], bar_width-epsilon,
                            bottom=Countmin_res[1][0],
@@ -240,7 +240,7 @@ Countmin_fpr_0_1_bar = plt.bar(Countmin_bar_positions, Countmin_res[0][0], bar_w
                            edgecolor=CountminColor,
                            linewidth=line_width,
                            hatch='.',
-                           label='CountminKhmer FPR 0.1')
+                           label='CMS FPR 0.1')
 
 
 
@@ -251,8 +251,8 @@ legend_elements = [
     Patch(facecolor=mqfColor,label='MQF',linewidth=0.5,edgecolor='black'),
     Patch(facecolor=cqfColor,label='CQF',linewidth=0.5,edgecolor='black'),
     Patch(facecolor=bmqfColor,label='Bufferd MQF',linewidth=0.5,edgecolor='black'),
-    Patch(facecolor=CountminKhmerColor,label='Countmin Khmer',linewidth=0.5,edgecolor='black'),
-    Patch(facecolor=CountminColor,label='Countmin',linewidth=0.5,edgecolor='black')
+    Patch(facecolor=CountminKhmerColor,label='CMS Khmer',linewidth=0.5,edgecolor='black'),
+    Patch(facecolor=CountminColor,label='CMS',linewidth=0.5,edgecolor='black')
 ]
 fpr_leged=[Patch(facecolor="black",label='0.0001',linewidth=0.5,edgecolor='black'),
     Patch(facecolor="white",label='0.001',hatch='//',linewidth=0.5,edgecolor='black'),
