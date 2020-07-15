@@ -11,4 +11,4 @@ parallel --gnu -j1 './speedPerformance -z {2} -s 28  -f {1}  > res/speed.z{2}.s2
 
 python3 generateSpeedTable.py res/ restable
 python3 plotSpeed.py restable.insertion Insertions 
-python3 plotSpeed.py restable.queries Queries 
+python3 plotSpeed.py restable.query Queries 
