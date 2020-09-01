@@ -56,21 +56,20 @@ matrix:
 before_install:
     - eval "${MATRIX_EVAL}"
 
+
+script:
+    - mkdir -p build
+    - cd build
+    - cmake ..
+    - make
+    - ctest --verbose
+    - gcov -n -o . src/gqf.cpp > /dev/null;
+after_success:
+    - bash <(curl -s https://codecov.io/bash)
+
+
 branches:
   only:
   - mqfDevelopmenet
   - master
 
-jobs:
-  include:
-    - &test
-      stage: test      
-      script:
-        - mkdir -p build
-        - cd build
-        - cmake ..
-        - make
-        - ctest --verbose
-        - gcov -n -o . src/gqf.cpp > /dev/null;
-      after_success:
-        - bash <(curl -s https://codecov.io/bash)
