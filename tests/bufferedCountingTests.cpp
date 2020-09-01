@@ -207,7 +207,7 @@ TEST_CASE( "batch query(singletons)" ,"[buffered]") {
   //   cout<<get_fixed_counter(&qf,i)<<"-";
   // }
   //cout<<endl;
-  while(loadFactor<90){
+  while(loadFactor<80){
 
     bufferedMQF_insert(&qf,vals[insertedItems],1,false,false);
     // for(uint64_t i=0;i<32;i++)
@@ -284,7 +284,7 @@ TEST_CASE( "Saving and loading(buffered)" ,"[buffered]") {
   uint64_t num_hash_bits=qbits+8;
   uint64_t maximum_count=(1ULL<<counter_size)-1;
   INFO("Counter size = "<<counter_size<<" max count= "<<maximum_count);
-  bufferedMQF_init(qf ,(1ULL<<qbits),(1ULL<<diskQbits), num_hash_bits, 0,counter_size, "tmp.ser");
+  bufferedMQF_init(qf ,(1ULL<<qbits),(1ULL<<diskQbits), num_hash_bits, 0,counter_size, "tmp1.ser");
 
   uint64_t nvals = (1ULL<<diskQbits)*2;
   uint64_t *vals;
@@ -325,7 +325,7 @@ TEST_CASE( "Saving and loading(buffered)" ,"[buffered]") {
   delete qf;
 
   bufferedMQF* qf2=new bufferedMQF();
-  bufferedMQF_deserialize(qf2,"tmp.ser");
+  bufferedMQF_deserialize(qf2,"tmp1.ser");
   uint64_t count;
   //INFO("Fixed counter = "<<qf_get_fixed_counter(&qf,vals[0]));
   count = bufferedMQF_count_key(qf2, vals[0]);
