@@ -1,6 +1,7 @@
 # MQF
 [![Build Status](https://travis-ci.org/dib-lab/MQF.svg?branch=master)](https://travis-ci.org/dib-lab/MQF)
 [![codecov](https://codecov.io/gh/shokrof/MQF/branch/mqfDevelopmenet/graph/badge.svg)](https://codecov.io/gh/shokrof/MQF)
+
 MQF is a new variant of the CQF with novel counting and labeling systems. The new counting system adapts to a wider range of data distributions for increased space efficiency and is faster than the CQF for insertions and queries in most of the tested scenarios. A buffered version of the MQF can offload storage to disk, trading speed of insertions and queries for a significant memory reduction. The labeling system provides a flexible framework for assigning labels to member items while maintaining good data locality and a concise memory representation. These labels serve as a minimal perfect hash function but are ~10 fold faster than BBhash, with no need to re-analyze the original data for further insertions or deletions.
 
 ## Documentation
