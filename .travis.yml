@@ -22,7 +22,7 @@ jobs:
         - cd build
         - cmake ..
         - make
-        - ctest
+        - ctest --verbose
         - gcov -n -o . src/gqf.cpp > /dev/null;
       after_success:
         - bash <(curl -s https://codecov.io/bash)
