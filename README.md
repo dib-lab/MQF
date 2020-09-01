@@ -1,31 +1,7 @@
 # MQF
 [![Build Status](https://travis-ci.org/dib-lab/MQF.svg?branch=master)](https://travis-ci.org/dib-lab/MQF)
 [![codecov](https://codecov.io/gh/shokrof/MQF/branch/mqfDevelopmenet/graph/badge.svg)](https://codecov.io/gh/shokrof/MQF)
-
-[Approximate membership query (AMQ)](http://www.cs.cmu.edu/~lblum/flac/Presentations/Szabo-Wexler_ApproximateSetMembership.pdf) data structures provide approximate representation for data using a smaller amount of memory compared to the real data size. As the name suggests, AMQ answers if a particular element exists or not in a given dataset but with possible false positive errors. AMQ has many examples such as [bloom filter](https://en.wikipedia.org/wiki/Bloom_filter), [count-min sketch](https://en.wikipedia.org/wiki/Count%E2%80%93min_sketch), [Quotient Filter](https://en.wikipedia.org/wiki/Quotient_filter), and Counting Quotient Filter([CQF](https://github.com/splatlab/cqf)). Here, we are proposing a new AMQ data structure called Mixed Counting Quotient Filter (MQF).
-
-CQF splits the hash-bits of an item into two components: quotient and remaining parts. Quotient Part is used to determine the target slot. The remaining is inserted into the target slot. The insertion algorithm uses a variant of linear probing to resolve collisions. CQF allows counting the number of instances inserted by using slots following the item's reminder as a counter. CQF has relatively complex scheme to encode counters so that it can distinguish counters from item's reminder.
-
-![alt text](https://raw.githubusercontent.com/shokrof/MQF/mqfDevelopmenet/QuotientFilter_MQF.png)
-
-MQF, Mixed Quotient Filter, is a variant of CQF. MQF uses the same probing technique as CQF. MQF has more metadata called fixed size counters and different encoding for the counters. The improvement makes mqf more memory efficient for wider range of zipifan distribution.
-
-When an item is inserted more than one time, MQF first use the fixed size counter to the number of insertions(count). After the fixed size counter is full, MQF store the count in the following slot and fixed-size counter. MQF uses the necessary number of slots to store the count.
-
-In other words, Fixed-size counters is used in counting and marking the slots used for counting. Fixed-size counters for all slots related to the same item store the counter's maximum value except the last one should store value strictly less than the maximum. When the maximum is reached in the last fixed counter, a new slot is added with empty fixed-size counter.
-
-
-
-
-## Advantages:
-  - MQF supports counting and removing items. MQF uses variable size counters; therefore, It is memory efficient when count data that follows zipfian distribution where most the items occur once or twice but few items can happen in very high counts..
-  - MQF has lower bits per element than Bloom filter and Count-min sketches ([Ref](https://www3.cs.stonybrook.edu/~ppandey/files/p775-pandey.pdf)).
-  - MQF  has good data locality which makes it efficient when running on secondary storage.
-  - MQF supports add/remove labels for the item.
-  - MQF can be iterated to get the items and counts inserted in the filter.
-  - MQF supports merging function. Two or more filters can be merged into one filter.
-  - MQF can be resized to bigger/ smaller filter.
-
+MQF is a new variant of the CQF with novel counting and labeling systems. The new counting system adapts to a wider range of data distributions for increased space efficiency and is faster than the CQF for insertions and queries in most of the tested scenarios. A buffered version of the MQF can offload storage to disk, trading speed of insertions and queries for a significant memory reduction. The labeling system provides a flexible framework for assigning labels to member items while maintaining good data locality and a concise memory representation. These labels serve as a minimal perfect hash function but are ~10 fold faster than BBhash, with no need to re-analyze the original data for further insertions or deletions.
 
 ## Documentation
 ### Building
