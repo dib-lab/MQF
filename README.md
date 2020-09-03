@@ -14,7 +14,7 @@ To  download and compile the library:
 git clone git@github.com:dib-lab/MQF.git
 mkdir MQF/build
 cd MQF/build
-cmake ..
+cmake .. -DCMAKE_BUILD_TYPE=Release
 make
 ```
 
