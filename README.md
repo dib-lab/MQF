@@ -6,12 +6,32 @@ Mixed-counters quotient filter(MQF) is a new variant of the Counting quotient fi
 
 ## Documentation
 ### Building
+MQF requires g++ >7  and cmake >3.2.
+
+To  download and compile the library:
+
 ```bash
-apt-get install make g++ cmake zlib1g-dev libbz2-dev
-make NH=1
-make test NH=1
-./mqf_test
+git clone git@github.com:dib-lab/MQF.git
+mkdir MQF/build
+cd MQF/build
+cmake ..
+make
 ```
+
+To run the library tests:
+
+```bash
+ctest --verbose
+```
+
+to install the library on the system:
+
+```bash
+make install
+```
+
+
+
 ### Initialization
 MQF Initialization requires the estimation of some parameters: number of slots, Key bits, fixed counter size, and labels size.
 
