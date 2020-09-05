@@ -30,8 +30,11 @@ to install the library on the system:
 make install
 ```
 
+MQF shared library will be written at MQF/lib. To add MQF to your project
 
-
+```bash
+g++ -o main main.cpp -IMQF/include/ MQF/lib/libMQF.a
+```
 ### Initialization
 MQF Initialization requires the estimation of some parameters: number of slots, Key bits, fixed counter size, and labels size.
 
