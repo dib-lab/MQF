@@ -2,10 +2,12 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include "utils.h"
 
 using namespace std;
+using namespace MQF;
 
-std::vector<std::string> split(const std::string &text, char sep) {
+std::vector<std::string> MQF::split(const std::string &text, char sep) {
   std::vector<std::string> tokens;
   std::size_t start = 0, end = 0;
   while ((end = text.find(sep, start)) != std::string::npos) {
@@ -16,8 +18,8 @@ std::vector<std::string> split(const std::string &text, char sep) {
   return tokens;
 }
 
-vector<int> key_to_vector_int(const string& key){
-  vector<string> tokens=split(key,';');
+vector<int> MQF::key_to_vector_int(const string& key){
+  vector<string> tokens=MQF::split(key,';');
   vector<int> res;
   for(auto f:tokens)
   {
@@ -26,7 +28,7 @@ vector<int> key_to_vector_int(const string& key){
   return res;
 }
 
-void save_labels_map(std::map<uint64_t, std::vector<int> > * index,const char * fileName)
+void MQF::save_labels_map(std::map<uint64_t, std::vector<int> > * index,const char * fileName)
 {
   ofstream out(fileName);
   auto it=index->begin();
@@ -44,7 +46,7 @@ void save_labels_map(std::map<uint64_t, std::vector<int> > * index,const char * 
 }
 
 
-std::map<uint64_t, std::vector<int> >* load_labels_map(const char * fileName)
+std::map<uint64_t, std::vector<int> >* MQF::load_labels_map(const char * fileName)
 {
   std::map<uint64_t, std::vector<int> >* res=new std::map<uint64_t, std::vector<int> >();
   ifstream out(fileName);
@@ -52,7 +54,7 @@ std::map<uint64_t, std::vector<int> >* load_labels_map(const char * fileName)
   uint64_t id;
   while(out>>id>>key){
 
-    res->insert( make_pair(id,key_to_vector_int(key)) );
+    res->insert( make_pair(id,MQF::key_to_vector_int(key)) );
   }
   return res;
 }

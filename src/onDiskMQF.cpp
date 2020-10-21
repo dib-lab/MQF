@@ -2664,8 +2664,8 @@ _onDiskMQF<bitsPerSlot>::_onDiskMQF( uint64_t nslots, uint64_t key_bits, uint64_
 			 sizeof(volatile int));
 
 	string labelsMapOutName=string(path)+".labels_map";
-	if(file_exists(labelsMapOutName)){
-		qf->metadata->labels_map=load_labels_map(labelsMapOutName.c_str());
+	if(MQF::file_exists(labelsMapOutName)){
+		qf->metadata->labels_map=MQF::load_labels_map(labelsMapOutName.c_str());
 	}
 
 }
@@ -2707,7 +2707,7 @@ void _onDiskMQF<bitsPerSlot>::serialize()
 	if(qf->metadata->labels_map!=NULL)
 	{
 		string labelsMapOutName=string(filename)+".labels_map";
-		save_labels_map(qf->metadata->labels_map,labelsMapOutName.c_str());
+		MQF::save_labels_map(qf->metadata->labels_map,labelsMapOutName.c_str());
 	}
 }
 

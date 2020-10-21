@@ -1,4 +1,6 @@
 #include <stdlib.h>
+
+
 #if 0
 # include <assert.h>
 #else
@@ -22,6 +24,9 @@
 #include "utils.h"
 
 
+
+using namespace std;
+using namespace MQF;
 /******************************************************************
  * Code for managing the metadata bits and slots w/o interpreting *
  * the content of the slots.
