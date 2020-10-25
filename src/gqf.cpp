@@ -1463,7 +1463,7 @@ static inline bool insert1(QF *qf, __uint128_t hash, bool lock, bool spin)
 				insert_index = runstart_index;
 				new_value = hash_remainder;
 				new_fixedCounter=0;
-				/*modify_metadata(qf, &qf->metadata->ndistinct_elts, 1);*/
+				modify_metadata(qf, &qf->metadata->ndistinct_elts, 1);
 
 				/* This is the first time we're inserting this remainder, but
 					 there are larger remainders already in the run. */
@@ -1472,7 +1472,7 @@ static inline bool insert1(QF *qf, __uint128_t hash, bool lock, bool spin)
 				insert_index = runstart_index;
 				new_value = hash_remainder;
 				new_fixedCounter=0;
-				/*modify_metadata(qf, &qf->metadata->ndistinct_elts, 1);*/
+				modify_metadata(qf, &qf->metadata->ndistinct_elts, 1);
 
 
 				/* If there's exactly one instance of this remainder. */
