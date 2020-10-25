@@ -1534,6 +1534,9 @@ static inline bool insert1(QF *qf, __uint128_t hash, bool lock, bool spin)
 				}
 			}
 		}
+		else{
+            modify_metadata(qf, &qf->metadata->ndistinct_elts, 1);
+		}
 
 		if (operation >= 0) {
 			uint64_t empty_slot_index = find_first_empty_slot(qf, runend_index+1);
