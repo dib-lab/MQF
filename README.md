@@ -167,3 +167,24 @@ int qf_space(QF *qf);
 2. Copy
 3. Serialize/ Deserialize
 4. MMap read
+
+---
+
+Citation
+========
+The MQF project is [published on BMC Bioinformatics](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-021-03996-x); please, cite that paper if you use the MQF in your project.
+
+```bib
+@article{Shokrof2021,
+  doi = {10.1186/s12859-021-03996-x},
+  url = {https://doi.org/10.1186/s12859-021-03996-x},
+  year = {2021},
+  month = feb,
+  publisher = {Springer Science and Business Media {LLC}},
+  volume = {22},
+  number = {1},
+  author = {Moustafa Shokrof and C. Titus Brown and Tamer A. Mansour},
+  title = {{MQF} and buffered {MQF}: quotient filters for efficient storage of k-mers with their counts and metadata},
+  journal = {{BMC} Bioinformatics}
+}
+```
