@@ -309,7 +309,7 @@ void bufferedMQF_deserialize(bufferedMQF *qf, const char *filename){
         perror("Error opening file for deserializing\n");
         exit(EXIT_FAILURE);
     }
-    qfmetadata* metadata = (qfmetadata *)calloc(sizeof(qfmetadata), 1);
+    qfmetadata* metadata = new qfmetadata ();
     fread(metadata, sizeof(qfmetadata), 1, fin);
 
 
