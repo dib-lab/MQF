@@ -3244,7 +3244,11 @@ uint64_t itemOrder(QF* qf,uint64_t item){
 		return 0;
 	}
 	char* blockLabel;
-	qf_getBlockLabel_pointer_byItem(qf,item,blockLabel);
+	bool res=qf_getBlockLabel_pointer_byItem(qf,item,blockLabel);
+	if(!res)
+	{
+	    throw std::logic_error("item not found!");
+	}
 	uint32_t order=0;
 	order=*((uint32_t*)blockLabel);
 	QFi itemIt,blockIT;
