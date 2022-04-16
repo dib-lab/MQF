@@ -3,6 +3,8 @@
 [![codecov](https://codecov.io/gh/dib-lab/MQF/branch/master/graph/badge.svg)](https://codecov.io/gh/dib-lab/MQF)
 
 Mixed-counters quotient filter(MQF) is a new variant of the Counting quotient filter([CQF](https://github.com/splatlab/cqf)) with novel counting and labeling systems. The new counting system adapts to a wider range of data distributions for increased space efficiency and is faster than the CQF for insertions and queries in most of the tested scenarios. A buffered version of the MQF can offload storage to disk, trading speed of insertions and queries for a significant memory reduction. The labeling system provides a flexible framework for assigning labels to member items while maintaining good data locality and a concise memory representation. These labels serve as a minimal perfect hash function but are ~10 fold faster than BBhash, with no need to re-analyze the original data for further insertions or deletions.
+## Cite
+Shokrof, M., Brown, C.T. & Mansour, T.A. MQF and buffered MQF: quotient filters for efficient storage of k-mers with their counts and metadata. BMC Bioinformatics 22, 71 (2021). https://doi.org/10.1186/s12859-021-03996-x
 
 ## Documentation
 ### Building
